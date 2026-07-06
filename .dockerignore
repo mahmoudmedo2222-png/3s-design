@@ -1,0 +1,13 @@
+.git
+.turbo
+.next
+**/.next
+**/dist
+**/node_modules
+**/*.log
+.postgres-data
+.postgres-log
+.env
+.env.*
+!.env.example
+!.env.production.example

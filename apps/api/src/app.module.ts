@@ -1,0 +1,34 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { AiDiscoveryModule } from './ai-discovery/ai-discovery.module';
+import { AdminAssetsModule } from './admin/assets/admin-assets.module';
+import { AdminCatalogModule } from './admin/catalog/admin-catalog.module';
+import { AdminProductsModule } from './admin/products/admin-products.module';
+import { AuthModule } from './auth/auth.module';
+import { DatabaseModule } from './database/database.module';
+import { DownloadsModule } from './downloads/downloads.module';
+import { HealthModule } from './health/health.module';
+import { OrdersModule } from './orders/orders.module';
+import { PaymentsModule } from './payments/payments.module';
+import { ProductsModule } from './products/products.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['../../.env', '.env'],
+    }),
+    AiDiscoveryModule,
+    AuthModule,
+    DatabaseModule,
+    DownloadsModule,
+    HealthModule,
+    AdminAssetsModule,
+    AdminCatalogModule,
+    AdminProductsModule,
+    OrdersModule,
+    PaymentsModule,
+    ProductsModule,
+  ],
+})
+export class AppModule {}

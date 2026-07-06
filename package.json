@@ -1,0 +1,42 @@
+{
+  "name": "3s-design",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo build",
+    "db:dev:start": "powershell -ExecutionPolicy Bypass -File ./scripts/start-dev-db.ps1",
+    "db:dev:status": "powershell -ExecutionPolicy Bypass -File ./scripts/status-dev-db.ps1",
+    "db:dev:stop": "powershell -ExecutionPolicy Bypass -File ./scripts/stop-dev-db.ps1",
+    "db:generate": "pnpm --filter @3s-design/db db:generate",
+    "db:push": "pnpm --filter @3s-design/db db:push",
+    "db:studio": "pnpm --filter @3s-design/db db:studio",
+    "dev": "turbo dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "quality": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "quality:local": "corepack pnpm format:check && corepack pnpm lint && corepack pnpm --filter @3s-design/web typecheck && corepack pnpm --filter @3s-design/api typecheck && corepack pnpm --filter @3s-design/db typecheck && corepack pnpm --filter @3s-design/web test && corepack pnpm --filter @3s-design/api test && corepack pnpm --filter @3s-design/api test:auth && corepack pnpm --filter @3s-design/api test:cart && corepack pnpm --filter @3s-design/api test:checkout && corepack pnpm --filter @3s-design/api test:sales-flow",
+    "test": "turbo test",
+    "test:auth": "pnpm --filter @3s-design/api test:auth",
+    "test:cart": "pnpm --filter @3s-design/api test:cart",
+    "test:checkout": "pnpm --filter @3s-design/api test:checkout",
+    "test:sales-flow": "pnpm --filter @3s-design/api test:sales-flow",
+    "typecheck": "turbo typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.2.10",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
+    "prettier": "^3.3.3",
+    "prettier-plugin-packagejson": "^2.5.8",
+    "tsx": "^4.19.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.62.1"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

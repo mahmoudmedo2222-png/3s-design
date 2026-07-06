@@ -1,0 +1,69 @@
+yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+early_access: true
+
+reviews:
+  profile: chill
+  high_level_summary: false
+  request_changes_workflow: false
+  review_status: false
+  commit_status: false
+  walkthrough: false
+  poem: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: false
+    base_branches:
+      - main
+
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/.next/**"
+    - "!**/.turbo/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/coverage/**"
+    - "!**/*.log"
+    - "!**/*.tsbuildinfo"
+    - "!.env"
+    - "!.env.*"
+    - "!_bmad/**"
+    - "!_bmad-output/**"
+    - "!.agents/**"
+    - "!tools/**/*.exe"
+
+  path_instructions:
+    - path: "apps/web/**"
+      instructions: |
+        Next.js web app change. Check user-visible behavior, loading/error states,
+        accessibility basics, API URL handling, and whether the change needs a focused web test.
+
+    - path: "apps/api/src/**"
+      instructions: |
+        NestJS API change. Check validation, authorization, error handling, audit/security impact,
+        and whether high-risk flows need negative-path tests.
+
+    - path: "packages/db/**"
+      instructions: |
+        Database package change. Check schema compatibility, migration safety, relations,
+        indexes, and whether API code or tests need updates.
+
+    - path: "docs/**/*.md"
+      instructions: |
+        Documentation change. Check internal links and whether the docs match current commands,
+        ports, scripts, and project behavior.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        CI/CD change. Check secret usage, branch triggers, install commands, cache behavior,
+        and whether local quality checks still match CI.
+
+chat:
+  auto_reply: true
+
+issue_enrichment:
+  auto_enrich:
+    enabled: false

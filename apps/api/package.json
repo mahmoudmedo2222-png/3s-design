@@ -1,0 +1,52 @@
+{
+  "name": "@3s-design/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nest build",
+    "dev": "tsx watch src/main.ts",
+    "lint": "eslint \"src/**/*.ts\"",
+    "seed:admin": "tsx src/scripts/seed-admin.ts",
+    "seed:demo": "tsx src/scripts/seed-demo.ts",
+    "seed:launch-starter": "tsx src/scripts/seed-launch-starter.ts",
+    "start": "tsx src/main.ts",
+    "start:prod": "node dist/main.js",
+    "test": "node --import tsx --test test/auth-policy.test.ts",
+    "test:auth": "tsx test/auth-regression.test.ts",
+    "test:cart": "tsx test/cart-regression.test.ts",
+    "test:checkout": "tsx test/checkout-regression.test.ts",
+    "test:sales-flow": "tsx test/sales-flow-regression.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@3s-design/db": "workspace:*",
+    "@aws-sdk/client-s3": "^3.682.0",
+    "@aws-sdk/s3-request-presigner": "^3.682.0",
+    "@fastify/cors": "9.0.1",
+    "@fastify/helmet": "^11.1.1",
+    "@nestjs/common": "^10.4.15",
+    "@nestjs/config": "^3.3.0",
+    "@nestjs/core": "^10.4.15",
+    "@nestjs/jwt": "^10.2.0",
+    "@nestjs/mapped-types": "^2.0.6",
+    "@nestjs/platform-fastify": "^10.4.15",
+    "bcryptjs": "^2.4.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.38.4",
+    "pg": "^8.13.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.4.8",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

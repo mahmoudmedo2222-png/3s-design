@@ -1,0 +1,98 @@
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+  web:
+    image: ${REGISTRY_IMAGE_WEB:-3s-design-web:latest}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: /api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: /api
+    depends_on:
+      - api
+
+  api:
+    image: ${REGISTRY_IMAGE_API:-3s-design-api:latest}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_AI_DISCOVERY_MODEL: ${OPENAI_AI_DISCOVERY_MODEL}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME}
+      R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL}
+      R2_SIGNED_UPLOAD_TTL_SECONDS: ${R2_SIGNED_UPLOAD_TTL_SECONDS}
+      R2_SIGNED_DOWNLOAD_TTL_SECONDS: ${R2_SIGNED_DOWNLOAD_TTL_SECONDS}
+      R2_REQUIRE_UPLOAD_CHECKSUM: ${R2_REQUIRE_UPLOAD_CHECKSUM}
+      PAYMENT_WEBHOOK_SECRET_MANUAL: ${PAYMENT_WEBHOOK_SECRET_MANUAL}
+      PAYPAL_CHECKOUT_URL_TEMPLATE: ${PAYPAL_CHECKOUT_URL_TEMPLATE}
+      PAYMENT_WEBHOOK_SECRET_PAYPAL: ${PAYMENT_WEBHOOK_SECRET_PAYPAL}
+      PAYMOB_CHECKOUT_URL_TEMPLATE: ${PAYMOB_CHECKOUT_URL_TEMPLATE}
+      PAYMENT_WEBHOOK_SECRET_PAYMOB: ${PAYMENT_WEBHOOK_SECRET_PAYMOB}
+      FAWRY_CHECKOUT_URL_TEMPLATE: ${FAWRY_CHECKOUT_URL_TEMPLATE}
+      PAYMENT_WEBHOOK_SECRET_FAWRY: ${PAYMENT_WEBHOOK_SECRET_FAWRY}
+      SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
+  redis_data:

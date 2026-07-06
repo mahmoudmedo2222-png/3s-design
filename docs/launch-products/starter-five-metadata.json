@@ -1,0 +1,104 @@
+{
+  "products": [
+    {
+      "title": "Noir Dining Launch Kit",
+      "slug": "noir-dining-launch-kit",
+      "subtitle": "Cinematic launch visuals for premium restaurants and dining brands",
+      "description": "A premium launch kit for restaurants that need to look bookable, polished, and exclusive across Instagram, stories, and menu reveal moments.",
+      "price": "29.00",
+      "currency": "USD",
+      "category": "Restaurants and Cafes",
+      "tags": ["restaurant", "luxury", "launch", "instagram", "menu"],
+      "dna": {
+        "industry": ["restaurant", "hospitality"],
+        "mood": ["premium", "cinematic", "exclusive", "confident"],
+        "style": ["editorial", "luxury", "modern"],
+        "color": ["black", "gold", "ivory"],
+        "platform": ["instagram", "social"],
+        "format": ["post", "story", "menu"],
+        "audience": ["restaurant owners", "hospitality brands"]
+      },
+      "frames": ["Instagram post 1080x1080", "Instagram story 1080x1920", "Menu cover", "Website hero preview 1600x1200"]
+    },
+    {
+      "title": "Glow Clinic Launch Kit",
+      "slug": "glow-clinic-launch-kit",
+      "subtitle": "Clean premium service launch visuals for beauty clinics and skincare studios",
+      "description": "A calm and credible beauty launch kit for clinics and skincare studios announcing a premium service with trust, softness, and luxury.",
+      "price": "39.00",
+      "currency": "USD",
+      "category": "Beauty and Wellness",
+      "tags": ["beauty", "clinic", "skincare", "luxury", "booking"],
+      "dna": {
+        "industry": ["beauty", "wellness", "clinic"],
+        "mood": ["clean", "safe", "luxurious", "soft"],
+        "style": ["minimal", "premium", "clinical"],
+        "color": ["white", "champagne", "sage"],
+        "platform": ["instagram", "social"],
+        "format": ["carousel", "story", "offer post"],
+        "audience": ["beauty clinics", "skincare studios", "spa owners"]
+      },
+      "frames": ["Carousel cover 1080x1080", "Carousel detail slide 1080x1080", "Offer post 1080x1080", "Story booking frame 1080x1920"]
+    },
+    {
+      "title": "Signature Property Carousel",
+      "slug": "signature-property-carousel",
+      "subtitle": "High-ticket property carousel for agents, brokerages, and developers",
+      "description": "A premium real estate carousel that helps serious buyers inspect property value, location, amenities, and trust signals without visual noise.",
+      "price": "45.00",
+      "currency": "USD",
+      "category": "Real Estate and Property",
+      "tags": ["real estate", "property", "carousel", "premium", "listing"],
+      "dna": {
+        "industry": ["real estate", "property"],
+        "mood": ["confident", "spacious", "trusted", "high-ticket"],
+        "style": ["clean", "corporate", "premium"],
+        "color": ["white", "deep green", "steel blue", "muted gold"],
+        "platform": ["instagram", "social"],
+        "format": ["carousel", "story", "listing card"],
+        "audience": ["real estate agents", "brokerages", "property developers"]
+      },
+      "frames": ["Carousel cover 1080x1080", "Property details slide 1080x1080", "Amenities slide 1080x1080", "Story teaser 1080x1920"]
+    },
+    {
+      "title": "Luxury Sale Without Noise",
+      "slug": "luxury-sale-without-noise",
+      "subtitle": "Elegant sale campaign visuals for premium ecommerce and fashion brands",
+      "description": "A restrained sale campaign kit for brands that need conversion and urgency while protecting a premium visual identity.",
+      "price": "36.00",
+      "currency": "USD",
+      "category": "Fashion and Ecommerce",
+      "tags": ["fashion", "ecommerce", "sale", "premium", "campaign"],
+      "dna": {
+        "industry": ["fashion", "ecommerce"],
+        "mood": ["urgent", "elegant", "selective", "commercial"],
+        "style": ["minimal", "premium", "editorial"],
+        "color": ["cream", "black", "saffron"],
+        "platform": ["instagram", "website", "social"],
+        "format": ["post", "story", "banner", "promo card"],
+        "audience": ["boutiques", "premium stores", "fashion sellers"]
+      },
+      "frames": ["Instagram post 1080x1080", "Story sale frame 1080x1920", "Website banner 1600x900", "Product promo card 1080x1080"]
+    },
+    {
+      "title": "Elegant Wedding Invitation Suite",
+      "slug": "elegant-wedding-invitation-suite",
+      "subtitle": "Timeless print and digital invitation suite for weddings and private events",
+      "description": "A premium invitation suite for weddings and private events that feels ceremonial, personal, elegant, and ready for both print and social delivery.",
+      "price": "42.00",
+      "currency": "USD",
+      "category": "Events and Invitations",
+      "tags": ["wedding", "invitation", "event", "elegant", "print"],
+      "dna": {
+        "industry": ["wedding", "events"],
+        "mood": ["ceremonial", "elegant", "timeless", "warm"],
+        "style": ["classic", "luxury", "romantic"],
+        "color": ["ivory", "pearl", "gold"],
+        "platform": ["print", "instagram", "social"],
+        "format": ["invitation", "rsvp", "story", "menu"],
+        "audience": ["wedding planners", "couples", "event designers"]
+      },
+      "frames": ["Invitation front 5x7 ratio", "RSVP card 5x7 ratio", "Story announcement 1080x1920", "Detail card/menu"]
+    }
+  ]
+}
