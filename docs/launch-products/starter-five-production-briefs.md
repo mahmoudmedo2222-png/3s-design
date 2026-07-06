@@ -25,6 +25,8 @@ Category: Restaurants and cafes
 Primary buyer: Premium restaurant owner  
 Core emotion: expensive before booking
 
+AI mood reference: `docs/launch-products/moodboards/noir-dining-launch-kit-mood-v1.png`
+
 ### Figma Frames
 
 | Frame                    | Size      | Purpose                      |
@@ -60,6 +62,12 @@ CTA options:
 - Use one hero food/dining image.
 - Add small gold rule lines, but avoid heavy decoration.
 - Keep a clear reservation or menu moment.
+
+### AI Mood Prompt
+
+```txt
+Create a cinematic mood board for a luxury restaurant launch kit called Noir Dining Launch Kit. Use an elegant fine dining atmosphere with dark editorial surfaces, black marble, warm candlelight, subtle gold accents, premium menu paper, close-up plated dish details, and a refined reservation moment. The output should feel like a high-end editorial photography mood board, not a finished template. Use deep black, soft gold, warm ivory, muted charcoal, and subtle amber highlights. Avoid cheap restaurant flyer style, busy discount graphics, stock-looking smiles, neon signage, cluttered typography, excessive decoration, fake brand names, logos, and readable text.
+```
 
 ### Canva Handoff
 
