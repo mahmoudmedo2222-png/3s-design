@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import test from 'node:test';
-import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { PaymentsService } from '../src/payments/payments.service';
 
 function createService(config: Record<string, string | undefined>) {
@@ -122,5 +122,65 @@ void test('payment webhook policy: valid paymob hmac passes the authenticity gat
   await assert.rejects(
     () => service.handleProviderWebhook('paymob', paymobPayload, undefined, paymobHmac('expected-paymob-hmac-secret')),
     /database should not be reached/,
+  );
+});
+
+void test('payment webhook policy: paymob amount mismatch is rejected before delivery unlock', () => {
+  const service = createService({
+    NODE_ENV: 'production',
+    PAYMOB_HMAC_SECRET: 'expected-paymob-hmac-secret',
+  });
+
+  assert.throws(
+    () =>
+      (
+        service as unknown as {
+          assertProviderWebhookMatchesPayment(provider: string, input: unknown, payment: unknown): void;
+        }
+      ).assertProviderWebhookMatchesPayment(
+        'paymob',
+        {
+          providerPaymentId: 'paymob_test_payment',
+          status: 'paid',
+          payload: paymobPayload,
+        },
+        {
+          provider: 'paymob',
+          providerPaymentId: 'paymob_test_payment',
+          amount: '27.00',
+          currency: 'EGP',
+        },
+      ),
+    BadRequestException,
+  );
+});
+
+void test('payment webhook policy: paymob currency mismatch is rejected before delivery unlock', () => {
+  const service = createService({
+    NODE_ENV: 'production',
+    PAYMOB_HMAC_SECRET: 'expected-paymob-hmac-secret',
+  });
+
+  assert.throws(
+    () =>
+      (
+        service as unknown as {
+          assertProviderWebhookMatchesPayment(provider: string, input: unknown, payment: unknown): void;
+        }
+      ).assertProviderWebhookMatchesPayment(
+        'paymob',
+        {
+          providerPaymentId: 'paymob_test_payment',
+          status: 'paid',
+          payload: paymobPayload,
+        },
+        {
+          provider: 'paymob',
+          providerPaymentId: 'paymob_test_payment',
+          amount: '28.00',
+          currency: 'USD',
+        },
+      ),
+    BadRequestException,
   );
 });

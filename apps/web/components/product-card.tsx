@@ -101,7 +101,7 @@ export function ProductCard({
   }
 
   return (
-    <article className="product-card group rounded-lg border border-white/[0.12] bg-white/[0.06] text-white shadow-[0_18px_58px_rgba(0,0,0,0.18)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.35] hover:bg-white/[0.09]">
+    <article className="product-card group rounded-lg border border-white/[0.14] bg-[#101513]/90 text-white shadow-[0_18px_58px_rgba(0,0,0,0.18)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.45] hover:bg-[#16201c]/95">
       <Link
         href={detailHref}
         className="product-card__preview relative block aspect-[4/3] overflow-hidden"
@@ -118,7 +118,7 @@ export function ProductCard({
             {product.match.score}% fit
           </Badge>
         ) : null}
-        <span className="absolute bottom-2 start-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-1 rounded border border-white/[0.15] bg-black/[0.35] px-2 py-1 text-[0.68rem] font-bold text-gold shadow-sm backdrop-blur-md">
+        <span className="absolute bottom-2 start-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-1 rounded border border-white/[0.18] bg-black/[0.62] px-2 py-1 text-[0.68rem] font-bold text-[#ffe09a] shadow-sm backdrop-blur-md">
           <Sparkles size={13} />
           <span className="truncate">{feeling}</span>
         </span>
@@ -127,8 +127,8 @@ export function ProductCard({
       <div className="flex flex-1 flex-col gap-2.5 p-3">
         <div className="space-y-1">
           <Link href={detailHref} className="group/title inline-flex items-start gap-1">
-            <h3 className="line-clamp-2 text-sm font-black text-white transition group-hover/title:text-gold">{product.title}</h3>
-            <ArrowUpRight className="mt-0.5 shrink-0 text-white/[0.45] transition group-hover/title:text-gold" size={14} />
+            <h3 className="line-clamp-2 text-sm font-black text-white transition group-hover/title:text-[#ffe09a]">{product.title}</h3>
+            <ArrowUpRight className="mt-0.5 shrink-0 text-white/[0.65] transition group-hover/title:text-[#ffe09a]" size={14} />
           </Link>
           {!compact && product.subtitle ? <p className="line-clamp-1 text-xs leading-5 text-white/[0.62]">{product.subtitle}</p> : null}
         </div>
@@ -139,7 +139,7 @@ export function ProductCard({
               <span className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-[var(--3s-pine-bright)]">
                 {product.match?.decisionTag ?? 'Matched your profile'}
               </span>
-              <span className="text-[0.68rem] font-black text-white/55">{product.match?.confidenceLabel ?? 'Personalized'}</span>
+              <span className="text-[0.68rem] font-black text-white/70">{product.match?.confidenceLabel ?? 'Personalized'}</span>
             </div>
             {!compact ? (
               <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/62">
@@ -151,7 +151,7 @@ export function ProductCard({
                 {visibleMatchSignals.map((signal, index) => (
                   <span
                     key={`${signal}-${index}`}
-                    className="rounded border border-white/[0.1] bg-black/20 px-2 py-0.5 text-[0.68rem] font-bold text-white/60"
+                    className="rounded border border-white/[0.12] bg-black/35 px-2 py-0.5 text-[0.68rem] font-bold text-white/75"
                   >
                     {signal}
                   </span>
@@ -169,11 +169,11 @@ export function ProductCard({
             </span>
             <div className="grid gap-1.5 rounded border border-white/[0.1] bg-black/20 p-2">
               <span className="flex items-center justify-between gap-2">
-                <span className="text-white/42">Best for</span>
+                <span className="text-white/65">Best for</span>
                 <span className="min-w-0 truncate text-end font-black text-white/72">{bestFor || 'Brand-ready campaign'}</span>
               </span>
               <span className="flex items-center justify-between gap-2">
-                <span className="text-white/42">Delivery</span>
+                <span className="text-white/65">Delivery</span>
                 <span className="min-w-0 truncate text-end font-black text-white/72">{deliveryCue}</span>
               </span>
             </div>
@@ -182,7 +182,7 @@ export function ProductCard({
                 {quickSignals.map((signal, index) => (
                   <span
                     key={`${signal}-${index}`}
-                    className="rounded border border-white/[0.1] bg-white/[0.05] px-2 py-1 text-[0.68rem] font-bold text-white/58"
+                    className="rounded border border-white/[0.12] bg-black/30 px-2 py-1 text-[0.68rem] font-bold text-white/75"
                   >
                     {signal}
                   </span>
@@ -193,7 +193,7 @@ export function ProductCard({
         ) : null}
 
         <div className="mt-auto flex items-center justify-between gap-3">
-          <span className="text-base font-black text-gold">
+          <span className="text-base font-black text-[#ffe09a]">
             {displayCurrency} {displayPrice}
           </span>
           <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ export function ProductCard({
           </div>
         </div>
         {authNotice ? (
-          <div className="rounded border border-[#f7d17e]/30 bg-[#f7d17e]/10 p-2 text-xs font-bold leading-5 text-[#f7d17e]">
+          <div className="rounded border border-[#f7d17e]/35 bg-[#fff8e8] p-2 text-xs font-bold leading-5 text-[#101513]">
             Sign in first so we can protect purchases, downloads, and fraud checks.{' '}
             <Link href={`/login?next=${encodeURIComponent(detailHref)}` as Route} className="underline">
               Sign in

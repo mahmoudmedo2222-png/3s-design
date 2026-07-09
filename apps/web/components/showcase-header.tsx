@@ -60,7 +60,7 @@ export function ShowcaseHeader({ locale }: { locale: AppLocale }) {
           <Button
             type="submit"
             size="sm"
-            className="h-7 rounded-full border-transparent bg-[#101513] px-3 py-1 text-xs font-black text-[#fff8e8] hover:bg-[#22594b]"
+            className="h-7 rounded-full border-transparent bg-[#101513] px-3 py-1 text-xs font-black text-white hover:bg-[#22594b]"
           >
             {locale === 'ar' ? 'ابحث' : 'Find'}
           </Button>
@@ -86,7 +86,7 @@ export function ShowcaseHeader({ locale }: { locale: AppLocale }) {
               </Link>
               <Link
                 href="/register"
-                className="hidden h-10 min-w-24 items-center justify-center gap-2 rounded-full bg-[#fff8e8] px-4 text-sm font-black text-[#101513] transition hover:bg-[#f7d17e] lg:inline-flex"
+                className="hidden h-10 min-w-24 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#101513] shadow-sm transition hover:bg-[#ffe09a] lg:inline-flex"
               >
                 <UserPlus className="shrink-0" size={16} />
                 {locale === 'ar' ? 'انضم' : common.create}

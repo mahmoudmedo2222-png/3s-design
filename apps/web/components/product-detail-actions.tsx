@@ -85,11 +85,11 @@ export function ProductDetailActions({ product, fitContext }: { product: Product
   return (
     <Panel className="p-3">
       {fitContext?.brief ? (
-        <Panel className="mb-3 border-saffron/25 bg-saffron/10 p-3 shadow-none">
+        <Panel className="mb-3 border-saffron/35 bg-[#fff8e8] p-3 shadow-none dark:bg-[#211a10]">
           <div className="flex items-start gap-2">
-            <Sparkles className="mt-0.5 shrink-0 text-saffron" size={16} />
+            <Sparkles className="mt-0.5 shrink-0 text-[#8a5a00] dark:text-[#ffe09a]" size={16} />
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-saffron">Personal fit before cart</p>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6f4700] dark:text-[#ffe09a]">Personal fit before cart</p>
               <p className="mt-1 line-clamp-2 text-xs font-bold leading-5 text-ink">&quot;{fitContext.brief}&quot;</p>
               {fitContext.signals.length ? (
                 <p className="mt-2 text-xs leading-5 text-muted">
@@ -181,7 +181,7 @@ export function ProductDetailActions({ product, fitContext }: { product: Product
           </Button>
         )}
         {authNotice ? (
-          <Notice tone="info" className="border-saffron/35 bg-saffron/10 p-3 text-xs text-saffron">
+          <Notice tone="info" className="border-saffron/35 bg-[#fff8e8] p-3 text-xs text-[#101513] dark:bg-[#211a10] dark:text-[#ffe09a]">
             Sign in first so the license, payment, invoice, and download limits belong to your account.{' '}
             <Link href={`/login?next=${encodeURIComponent(detailHref)}` as Route} className="underline">
               Sign in

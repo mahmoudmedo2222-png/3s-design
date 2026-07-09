@@ -42,8 +42,8 @@ export default async function HomePage() {
       <CompareTray />
 
       <section className="hero-stage relative overflow-hidden px-4 pb-8 pt-24 sm:px-6 lg:px-8">
-        <Image src="/intro/cinematic-03.png" alt="" fill priority sizes="100vw" className="object-cover opacity-[0.42]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_64%_18%,rgba(247,209,126,0.14),transparent_30%),linear-gradient(180deg,rgba(6,11,10,0.26),rgba(6,11,10,0.68)_56%,#060b0a_100%)]" />
+        <Image src="/intro/cinematic-03.png" alt="" fill priority sizes="100vw" className="object-cover opacity-[0.34]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_64%_18%,rgba(247,209,126,0.12),transparent_30%),linear-gradient(180deg,rgba(6,11,10,0.48),rgba(6,11,10,0.78)_56%,#060b0a_100%)]" />
 
         <div className="relative z-10 mx-auto grid max-w-7xl gap-4 lg:grid-cols-[minmax(0,1fr)_310px] xl:grid-cols-[minmax(0,1fr)_330px]">
           <div className="min-w-0">
@@ -63,7 +63,7 @@ export default async function HomePage() {
           </div>
 
           <aside className="hero-side hidden space-y-3 lg:block lg:pt-8">
-            <Panel tone="glass" className="showcase-side-panel p-3 shadow-[0_18px_70px_rgba(0,0,0,0.28)]">
+            <Panel tone="glass" className="showcase-side-panel bg-[#101513]/82 p-3 shadow-[0_18px_70px_rgba(0,0,0,0.28)]">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
@@ -71,7 +71,7 @@ export default async function HomePage() {
                   </span>
                   <div>
                     <h2 className="text-base font-black">{copy.bestSellers}</h2>
-                    <p className="text-xs text-white/[0.55]">{copy.bestSellersText}</p>
+                    <p className="text-xs text-white/[0.72]">{copy.bestSellersText}</p>
                   </div>
                 </div>
               </div>
@@ -83,7 +83,7 @@ export default async function HomePage() {
               </div>
             </Panel>
 
-            <Panel tone="glass" className="showcase-side-panel p-3">
+            <Panel tone="glass" className="showcase-side-panel bg-[#101513]/82 p-3">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">{copy.newRule}</p>
               <p className="mt-2 text-sm leading-6 text-white/[0.74]">{copy.newRuleText}</p>
             </Panel>
@@ -120,7 +120,7 @@ export default async function HomePage() {
         <div className="mb-4">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">{copy.momentsKicker}</p>
           <h2 className="mt-2 text-2xl font-black text-white">{copy.momentsTitle}</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/[0.62]">{copy.momentsText}</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/[0.75]">{copy.momentsText}</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {intentPaths.map((path, index) => (
@@ -164,8 +164,8 @@ function HeroShowcase({ product, locale = 'en' }: { product: ProductSummary; loc
   const copy = homeCopy[locale];
 
   return (
-    <Panel tone="glass" className="hero-showcase relative overflow-hidden bg-black/[0.24] shadow-[0_28px_90px_rgba(0,0,0,0.34)]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_22%,rgba(247,209,126,0.16),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.01))]" />
+    <Panel tone="glass" className="hero-showcase relative overflow-hidden bg-[#101513]/86 shadow-[0_28px_90px_rgba(0,0,0,0.34)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_22%,rgba(247,209,126,0.14),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.01))]" />
 
       <div className="hero-showcase__grid relative grid min-h-[380px] gap-4 p-4 lg:grid-cols-[0.9fr_1.1fr] xl:min-h-[420px]">
         <div className="hero-showcase__copy flex flex-col justify-start gap-4">
@@ -197,13 +197,13 @@ function HeroShowcase({ product, locale = 'en' }: { product: ProductSummary; loc
               ))}
             </div>
 
-            <Panel tone="glass" className="hero-price-card grid gap-3 bg-white/[0.07] p-3 shadow-none sm:grid-cols-[1fr_auto] sm:items-end">
+            <Panel tone="glass" className="hero-price-card grid gap-3 bg-black/30 p-3 shadow-none sm:grid-cols-[1fr_auto] sm:items-end">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-white/[0.45]">{copy.startsAt}</p>
-                <p className="mt-1 text-2xl font-black text-[#f7d17e]">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-white/[0.72]">{copy.startsAt}</p>
+                <p className="mt-1 text-2xl font-black text-[#ffe09a]">
                   {product.currency} {product.basePrice}
                 </p>
-                <p className="mt-1 text-xs font-semibold text-white/[0.62]">{copy.license}</p>
+                <p className="mt-1 text-xs font-semibold text-white/[0.76]">{copy.license}</p>
               </div>
               <ActionLink href={href} icon={ArrowUpRight} intent="secondary" className="h-10 bg-[#fff8e8] font-black hover:bg-[#f7d17e]">
                 {copy.viewDesign}
@@ -236,14 +236,14 @@ function BestSellerRow({ product, index }: { product: ProductSummary; index: num
   return (
     <Link
       href={href}
-      className="group grid grid-cols-[46px_1fr_auto] items-center gap-2 rounded border border-white/10 bg-white/[0.06] p-2 transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.35] hover:bg-white/[0.1]"
+      className="group grid grid-cols-[46px_1fr_auto] items-center gap-2 rounded border border-white/10 bg-black/35 p-2 transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.35] hover:bg-black/45"
     >
       <div className="h-12 overflow-hidden rounded bg-black/20">
         <DesignPreview product={product} variant="mini" />
       </div>
       <div className="min-w-0">
         <p className="line-clamp-1 text-sm font-black text-white">{product.title}</p>
-        <p className="text-xs text-white/[0.52]">
+        <p className="text-xs text-white/[0.72]">
           {product.currency} {product.basePrice}
         </p>
       </div>
@@ -275,13 +275,13 @@ function MoodCollection({
     <Panel
       tone="glass"
       id={id}
-      className="group scroll-mt-24 overflow-hidden p-3 shadow-[0_18px_64px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.35] hover:bg-white/[0.09]"
+      className="group scroll-mt-24 overflow-hidden bg-[#101513]/82 p-3 shadow-[0_18px_64px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.35] hover:bg-[#16201c]/90"
     >
       <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e] transition group-hover:scale-105">
         <Icon size={18} />
       </span>
       <h3 className="mt-3 text-base font-black text-white">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-white/[0.64]">{text}</p>
+      <p className="mt-2 text-sm leading-6 text-white/[0.76]">{text}</p>
       {prompt ? <IntentLink href="#ai-finder" label={copy.findMatches} prompt={prompt} active /> : null}
     </Panel>
   );

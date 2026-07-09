@@ -40,18 +40,18 @@ export function SiteFooter({ products, locale }: { products: ProductSummary[]; l
         <section className="min-w-0">
           <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[#f7d17e]">{copy.kicker}</p>
           <h2 className="mt-2 max-w-2xl text-2xl font-black leading-tight text-white sm:text-3xl">{copy.title}</h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-white/[0.58]">{copy.text}</p>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-white/[0.72]">{copy.text}</p>
 
           <form
             onSubmit={submitPrompt}
-            className="mt-4 grid max-w-2xl gap-2 rounded border border-white/[0.1] bg-white/[0.055] p-1 shadow-[0_14px_52px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:grid-cols-[1fr_auto]"
+            className="mt-4 grid max-w-2xl gap-2 rounded border border-white/[0.14] bg-white/[0.08] p-1 shadow-[0_14px_52px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:grid-cols-[1fr_auto]"
           >
             <label className="flex min-h-10 items-center gap-2 rounded bg-black/[0.22] px-3">
               <Search className="shrink-0 text-[#f7d17e]" size={16} />
               <input
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
-                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/[0.36]"
+                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/[0.58]"
                 placeholder={copy.placeholder}
               />
             </label>
