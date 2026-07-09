@@ -32,6 +32,9 @@ try {
     if (!result?.lhr) {
       throw new Error(`Lighthouse did not return a report for ${target.name}`);
     }
+    if (result.lhr.runtimeError) {
+      throw new Error(`Lighthouse failed for ${target.name}: ${result.lhr.runtimeError.message}`);
+    }
 
     const categories = result.lhr.categories;
     const scores = {

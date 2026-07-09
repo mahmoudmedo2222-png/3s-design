@@ -5,7 +5,6 @@ import path from 'node:path';
 const port = process.env.SITE_AUDIT_PORT ?? '3100';
 const baseUrl = process.env.SITE_AUDIT_BASE_URL ?? `http://127.0.0.1:${port}`;
 const webDir = path.resolve('apps/web');
-const corepackCommand = process.platform === 'win32' ? (process.env.ComSpec ?? 'cmd.exe') : 'corepack';
 
 cleanupStaleProjectBuilds();
 runTypecheck({
@@ -27,7 +26,7 @@ runNextBuild({
 });
 await waitForProductionBuild();
 
-const server = spawn(corepackCommand, corepackArgs(['pnpm', 'exec', 'next', 'start', '-p', port]), {
+const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', port], {
   cwd: webDir,
   env: { ...process.env, PORT: port },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -64,14 +63,6 @@ function runNextBuild(options = {}) {
   if (result.status !== 0) {
     console.warn(`next build exited with ${result.status ?? 1}; verifying production build files before failing.`);
   }
-}
-
-function corepackArgs(args) {
-  if (process.platform !== 'win32') {
-    return args;
-  }
-
-  return ['/d', '/s', '/c', ['corepack', ...args].join(' ')];
 }
 
 function cleanupStaleProjectBuilds() {
