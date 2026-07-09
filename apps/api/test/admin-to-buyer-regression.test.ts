@@ -337,7 +337,7 @@ void test('admin-to-buyer regression: publish product from admin and complete cu
     `/admin/products/${product.body.id}/assets`,
     {
       assetType: 'watermarked_preview',
-      storageKey: `test/previews/${slug}.png`,
+      storageKey: `products/${slug}/watermarked-previews/${slug}.png`,
       fileName: `${slug}-preview.png`,
       mimeType: 'image/png',
       fileSize: 4096,
@@ -356,7 +356,7 @@ void test('admin-to-buyer regression: publish product from admin and complete cu
     `/admin/products/${product.body.id}/assets`,
     {
       assetType: 'delivery_zip',
-      storageKey: `test/deliveries/${slug}.zip`,
+      storageKey: `products/${slug}/deliveries/${slug}.zip`,
       fileName: `${slug}.zip`,
       mimeType: 'application/zip',
       fileSize: 8192,
@@ -489,7 +489,7 @@ void test('admin-to-buyer regression: publish product from admin and complete cu
   assert.ok(download.response.ok, `Expected download URL to succeed, got ${download.response.status}`);
   assert.equal(download.body.assetId, asset.id);
   assert.equal(download.body.method, 'GET');
-  assert.ok(download.body.downloadUrl.includes(`test/deliveries/${slug}.zip`));
+  assert.ok(download.body.downloadUrl.includes(`products/${slug}/deliveries/${slug}.zip`));
 
   const refundRequest = await sendJson<RefundRequestResponse>(
     '/refunds',

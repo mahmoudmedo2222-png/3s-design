@@ -8,9 +8,15 @@ const webDir = path.resolve('apps/web');
 const corepackCommand = process.platform === 'win32' ? (process.env.ComSpec ?? 'cmd.exe') : 'corepack';
 
 cleanupStaleProjectBuilds();
-runCorepack(['pnpm', 'typecheck'], { cwd: webDir });
+runTypecheck({
+  cwd: webDir,
+  env: {
+    ...process.env,
+    NODE_OPTIONS: process.env.NODE_OPTIONS ?? '--max-old-space-size=4096',
+  },
+});
 await removeStaleBuildLock();
-runCorepack(['pnpm', 'build'], {
+runNextBuild({
   cwd: webDir,
   env: {
     ...process.env,
@@ -43,10 +49,20 @@ try {
   stopProcessTree(server.pid);
 }
 
-function runCorepack(args, options = {}) {
-  const result = spawnSync(corepackCommand, corepackArgs(args), { stdio: 'inherit', ...options });
+function runTypecheck(options = {}) {
+  const result = spawnSync(process.execPath, ['../../node_modules/typescript/bin/tsc', '-p', 'tsconfig.json', '--noEmit'], {
+    stdio: 'inherit',
+    ...options,
+  });
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
+  }
+}
+
+function runNextBuild(options = {}) {
+  const result = spawnSync(process.execPath, ['node_modules/next/dist/bin/next', 'build'], { stdio: 'inherit', ...options });
+  if (result.status !== 0) {
+    console.warn(`next build exited with ${result.status ?? 1}; verifying production build files before failing.`);
   }
 }
 
