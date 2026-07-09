@@ -207,8 +207,7 @@ const starterProducts: LaunchProductSeed[] = [
         'The products are worth buying, but the sale announcement risks looking generic, loud, or too close to discount-store graphics.',
       afterState:
         'The campaign feels selective and organized, so customers understand the offer, trust the brand, and act before the window closes.',
-      buyerPromise:
-        'Turn a sale into a private shopping moment that protects the brand while still pushing customers to act.',
+      buyerPromise: 'Turn a sale into a private shopping moment that protects the brand while still pushing customers to act.',
       scenes: [
         'Private announcement post introduces the drop without visual noise.',
         'Story reveal highlights one hero product with a quiet CTA.',
@@ -435,7 +434,10 @@ async function main() {
         ];
 
         for (const attribute of storyAttributes) {
-          await db.insert(productAttributes).values({ productId: product.id, ...attribute }).onConflictDoNothing();
+          await db
+            .insert(productAttributes)
+            .values({ productId: product.id, ...attribute })
+            .onConflictDoNothing();
         }
       }
     }
