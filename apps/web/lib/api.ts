@@ -569,6 +569,22 @@ export type CheckoutAttributionInput = {
   lastSeenAt?: string | null;
 };
 
+export type BuyerProfileSnapshot = {
+  signature?: string;
+  colors?: string[];
+  styles?: string[];
+  moods?: string[];
+  useCases?: string[];
+  confidence?: 'fresh' | 'warming' | 'strong';
+  stage?: 'new' | 'exploring' | 'deciding';
+  nextAction?: string;
+  reasons?: string[];
+  terms?: string[];
+  prompt?: string;
+  eventCount?: number;
+  syncedAt?: string;
+};
+
 export function createCheckoutOrder(input: { idempotencyKey: string; attribution?: CheckoutAttributionInput | null }) {
   return sendCustomerRequest<OrderResponse>('/checkout', {
     method: 'POST',
@@ -608,6 +624,17 @@ export function fetchPaymentProviderReadiness() {
 
 export function fetchOrders() {
   return sendCustomerRequest<{ items: OrderResponse[] }>('/orders');
+}
+
+export function fetchCustomerProfile() {
+  return sendCustomerRequest<{ buyerProfile: BuyerProfileSnapshot }>('/customer/profile');
+}
+
+export function updateBuyerProfile(profile: BuyerProfileSnapshot) {
+  return sendCustomerRequest<{ buyerProfile: BuyerProfileSnapshot }>('/customer/profile/buyer-profile', {
+    method: 'PATCH',
+    body: { profile },
+  });
 }
 
 export function fetchPayments() {

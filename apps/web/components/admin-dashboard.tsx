@@ -52,6 +52,7 @@ import {
   markAdminPaymentFailed,
   markAdminPaymentPaid,
   publishProduct,
+  reconcileStaleAdminPayments,
   rejectAdminRefund,
   PublishingChecksResponse,
   setProductCategories,
@@ -152,6 +153,7 @@ export function AdminDashboard() {
   const [licensePrices, setLicensePrices] = useState<Record<string, string>>({});
   const [paymentRefs, setPaymentRefs] = useState<Record<string, string>>({});
   const [paymentAdminPasswords, setPaymentAdminPasswords] = useState<Record<string, string>>({});
+  const [paymentReconcilePassword, setPaymentReconcilePassword] = useState('');
   const [refundAdminPasswords, setRefundAdminPasswords] = useState<Record<string, string>>({});
   const [refundNotes, setRefundNotes] = useState<Record<string, string>>({});
   const [refundProviderRefs, setRefundProviderRefs] = useState<Record<string, string>>({});
@@ -691,6 +693,32 @@ export function AdminDashboard() {
       await refreshAdminData(session.token);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Payment failure update failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleReconcileStalePayments() {
+    if (!session) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const result = await reconcileStaleAdminPayments(session.token, {
+        adminPassword: paymentReconcilePassword,
+      });
+      setPaymentReconcilePassword('');
+      setMessage(
+        result.expired
+          ? `${result.expired} stale payment session${result.expired === 1 ? '' : 's'} expired.`
+          : 'No stale pending payments found.',
+      );
+      await refreshAdminData(session.token);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Payment reconciliation failed');
     } finally {
       setLoading(false);
     }
@@ -1265,10 +1293,13 @@ export function AdminDashboard() {
             payments={adminPayments}
             adminPasswords={paymentAdminPasswords}
             paymentRefs={paymentRefs}
+            reconcilePassword={paymentReconcilePassword}
             onChangeAdminPassword={(paymentId, value) => setPaymentAdminPasswords((current) => ({ ...current, [paymentId]: value }))}
             onChangePaymentRef={(paymentId, value) => setPaymentRefs((current) => ({ ...current, [paymentId]: value }))}
+            onChangeReconcilePassword={setPaymentReconcilePassword}
             onMarkFailed={(paymentId) => void handleMarkPaymentFailed(paymentId)}
             onMarkPaid={(paymentId) => void handleMarkPaymentPaid(paymentId)}
+            onReconcileStale={() => void handleReconcileStalePayments()}
           />
 
           <RefundDesk
@@ -1872,19 +1903,25 @@ function PaymentDesk({
   loading,
   adminPasswords,
   paymentRefs,
+  reconcilePassword,
   onChangeAdminPassword,
   onChangePaymentRef,
+  onChangeReconcilePassword,
   onMarkPaid,
   onMarkFailed,
+  onReconcileStale,
 }: {
   payments: AdminPaymentRow[];
   loading: boolean;
   adminPasswords: Record<string, string>;
   paymentRefs: Record<string, string>;
+  reconcilePassword: string;
   onChangeAdminPassword: (paymentId: string, value: string) => void;
   onChangePaymentRef: (paymentId: string, value: string) => void;
+  onChangeReconcilePassword: (value: string) => void;
   onMarkPaid: (paymentId: string) => void;
   onMarkFailed: (paymentId: string) => void;
+  onReconcileStale: () => void;
 }) {
   const pending = payments.filter((row) => row.payment.status === 'pending');
   const visible = pending.length ? pending : payments.slice(0, 5);
@@ -1907,6 +1944,33 @@ function PaymentDesk({
         <span className="rounded bg-saffron/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a5c16]">
           {pending.length} pending
         </span>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-saffron/30 bg-saffron/10 p-3">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_260px_auto] lg:items-end">
+          <div>
+            <p className="text-sm font-black text-ink">Reconcile stale sessions</p>
+            <p className="mt-1 text-xs leading-5 text-muted">
+              Expire old pending payment sessions without touching paid, refunded, or already failed payments.
+            </p>
+          </div>
+          <input
+            type="password"
+            value={reconcilePassword}
+            onChange={(event) => onChangeReconcilePassword(event.target.value)}
+            placeholder="Admin password required"
+            className="h-10 rounded border border-line bg-white px-3 text-sm text-ink"
+          />
+          <button
+            type="button"
+            disabled={loading || reconcilePassword.length < 8}
+            onClick={onReconcileStale}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded border border-[#8a5c16]/30 bg-white px-4 text-sm font-semibold text-[#8a5c16] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw size={16} />
+            Reconcile
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3">

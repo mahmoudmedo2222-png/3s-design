@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { orders, payments, paymentWebhookEvents, users } from '@3s-design/db/schema';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, lt, or } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
 import { DatabaseService } from '../database/database.service';
 import { DownloadsService } from '../downloads/downloads.service';
@@ -169,6 +169,59 @@ export class PaymentsService {
     return { items: rows.map((row) => ({ ...row, payment: this.serializePaymentSession(row.payment) })) };
   }
 
+  async reconcileStalePendingPayments(actorUserId: string, now = new Date()) {
+    const db = this.database.requireDb();
+    const rules = this.getPendingExpiryRules(now);
+    const stalePredicates = rules
+      .filter((rule) => rule.enabled)
+      .map((rule) => and(eq(payments.provider, rule.provider), lt(payments.createdAt, rule.cutoff)));
+
+    if (!stalePredicates.length) {
+      return {
+        expired: 0,
+        items: [],
+      };
+    }
+
+    const rows = await db
+      .select()
+      .from(payments)
+      .where(and(eq(payments.status, 'pending'), or(...stalePredicates)))
+      .orderBy(desc(payments.createdAt))
+      .limit(100);
+
+    const expired = [];
+    for (const payment of rows) {
+      const [updated] = await db
+        .update(payments)
+        .set({
+          status: 'expired',
+          updatedAt: now,
+        })
+        .where(and(eq(payments.id, payment.id), eq(payments.status, 'pending')))
+        .returning();
+
+      if (!updated) {
+        continue;
+      }
+
+      expired.push(this.serializePaymentSession(updated));
+      await this.audit.record({
+        actorUserId,
+        action: 'admin.payments.reconcile_expired',
+        entityType: 'payment',
+        entityId: payment.id,
+        before: this.toAuditObject(payment),
+        after: this.toAuditObject(updated),
+      });
+    }
+
+    return {
+      expired: expired.length,
+      items: expired,
+    };
+  }
+
   async markPaymentPaid(paymentId: string, providerPaymentId?: string, actorUserId?: string) {
     const db = this.database.requireDb();
     const [payment] = await db.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
@@ -181,11 +234,7 @@ export class PaymentsService {
       return this.finishPaidOrder(payment.orderId);
     }
 
-    if (payment.status !== 'pending') {
-      if (payment.status === 'failed') {
-        return payment;
-      }
-
+    if (payment.status !== 'pending' && payment.status !== 'failed' && payment.status !== 'expired') {
       throw new BadRequestException('Payment is not pending');
     }
 
@@ -265,6 +314,10 @@ export class PaymentsService {
 
   async failProviderPayment(provider: PaymentProvider, providerPaymentId: string) {
     const payment = await this.findPaymentByProvider(provider, providerPaymentId);
+    if (payment.status !== 'pending') {
+      return payment;
+    }
+
     return this.failPayment(payment.id);
   }
 
@@ -463,6 +516,30 @@ export class PaymentsService {
 
   private createProviderPaymentId(provider: PaymentProvider) {
     return `${provider}_${randomUUID()}`;
+  }
+
+  private getPendingExpiryRules(now: Date) {
+    return (['manual', 'paypal', 'paymob', 'fawry'] as const).map((provider) => {
+      const minutes = this.getPendingExpiryMinutes(provider);
+      return {
+        provider,
+        enabled: minutes > 0,
+        cutoff: new Date(now.getTime() - minutes * 60 * 1000),
+      };
+    });
+  }
+
+  private getPendingExpiryMinutes(provider: PaymentProvider) {
+    const providerValue = this.config.get<string>(`PAYMENT_PENDING_EXPIRY_MINUTES_${provider.toUpperCase()}`);
+    const sharedValue = this.config.get<string>('PAYMENT_PENDING_EXPIRY_MINUTES');
+    const fallback = provider === 'manual' ? 48 * 60 : 120;
+    const parsed = Number(providerValue ?? sharedValue ?? fallback);
+
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return fallback;
+    }
+
+    return parsed;
   }
 
   private assessFraudRisk(input: {

@@ -1,9 +1,10 @@
 'use client';
 
-import type { ProductSummary } from './api';
+import type { BuyerProfileSnapshot, ProductSummary } from './api';
 import { readAttribution } from './attribution';
 
 const tasteMemoryKey = '3s-design-taste-memory';
+const accountBuyerProfileKey = '3s-design-account-buyer-profile';
 export const tasteMemoryChangedEvent = '3s-design-taste-memory-changed';
 
 type TasteAction = 'saved' | 'cart' | 'search' | 'viewed' | 'studio';
@@ -124,6 +125,15 @@ export function readTasteEvents() {
   return readJsonStorage<TasteEvent[]>(tasteMemoryKey) ?? [];
 }
 
+export function readAccountBuyerProfile() {
+  return readJsonStorage<BuyerProfileSnapshot>(accountBuyerProfileKey);
+}
+
+export function rememberAccountBuyerProfile(profile: BuyerProfileSnapshot) {
+  writeJsonStorage(accountBuyerProfileKey, profile);
+  window.dispatchEvent(new Event(tasteMemoryChangedEvent));
+}
+
 export function buildTasteProfile(): TasteProfile {
   const events = readTasteEvents();
   const colors = topSignals(events.flatMap((event) => event.colors));
@@ -150,6 +160,7 @@ export function buildTasteProfile(): TasteProfile {
 
 export function buildCustomerDecisionProfile(): CustomerDecisionProfile {
   const taste = buildTasteProfile();
+  const accountProfile = readAccountBuyerProfile();
   const attribution = readAttribution();
   const attributionTerms = [
     attribution?.intent,
@@ -163,19 +174,35 @@ export function buildCustomerDecisionProfile(): CustomerDecisionProfile {
     .map((value) => value.trim().toLowerCase())
     .filter((value) => value.length > 2);
 
-  const terms = topSignals([...taste.colors, ...taste.styles, ...taste.moods, ...taste.useCases, ...attributionTerms]).slice(0, 10);
-  const confidence = taste.eventCount >= 5 ? 'strong' : taste.eventCount >= 2 || attribution?.brief ? 'warming' : 'fresh';
-  const stage = taste.eventCount >= 4 ? 'deciding' : taste.eventCount >= 1 || attribution?.brief ? 'exploring' : 'new';
+  const colors = topSignals([...taste.colors, ...(accountProfile?.colors ?? [])]);
+  const styles = topSignals([...taste.styles, ...(accountProfile?.styles ?? [])]);
+  const moods = topSignals([...taste.moods, ...(accountProfile?.moods ?? [])]);
+  const useCases = topSignals([...taste.useCases, ...(accountProfile?.useCases ?? [])]);
+  const terms = topSignals([...colors, ...styles, ...moods, ...useCases, ...(accountProfile?.terms ?? []), ...attributionTerms]).slice(
+    0,
+    10,
+  );
+  const eventCount = Math.max(taste.eventCount, accountProfile?.eventCount ?? 0);
+  const confidence =
+    eventCount >= 5 ? 'strong' : eventCount >= 2 || attribution?.brief || accountProfile?.confidence === 'warming' ? 'warming' : 'fresh';
+  const stage =
+    eventCount >= 4 ? 'deciding' : eventCount >= 1 || attribution?.brief || accountProfile?.stage === 'exploring' ? 'exploring' : 'new';
   const primaryIntent = attribution?.intent ?? attribution?.brief;
   const reasons = [
     primaryIntent ? `Intent: ${primaryIntent}` : null,
-    taste.styles[0] ? `Style: ${taste.styles[0]}` : null,
-    taste.moods[0] ? `Mood: ${taste.moods[0]}` : null,
-    taste.useCases[0] ? `Use: ${taste.useCases[0]}` : null,
+    styles[0] ? `Style: ${styles[0]}` : null,
+    moods[0] ? `Mood: ${moods[0]}` : null,
+    useCases[0] ? `Use: ${useCases[0]}` : null,
   ].filter((value): value is string => Boolean(value));
 
   return {
     ...taste,
+    signature: taste.eventCount ? taste.signature : (accountProfile?.signature ?? taste.signature),
+    colors,
+    styles,
+    moods,
+    useCases,
+    eventCount,
     confidence,
     stage,
     nextAction:
@@ -184,9 +211,26 @@ export function buildCustomerDecisionProfile(): CustomerDecisionProfile {
         : stage === 'exploring'
           ? 'Use the memory brief to narrow the catalog.'
           : 'Start with a buyer moment or save two designs.',
-    reasons,
+    reasons: reasons.length ? reasons : (accountProfile?.reasons ?? []),
     terms,
-    prompt: primaryIntent ?? taste.prompt,
+    prompt: primaryIntent ?? accountProfile?.prompt ?? taste.prompt,
+  };
+}
+
+export function buildBuyerProfileSnapshot(profile = buildCustomerDecisionProfile()): BuyerProfileSnapshot {
+  return {
+    signature: profile.signature,
+    colors: profile.colors.slice(0, 10),
+    styles: profile.styles.slice(0, 10),
+    moods: profile.moods.slice(0, 10),
+    useCases: profile.useCases.slice(0, 10),
+    confidence: profile.confidence,
+    stage: profile.stage,
+    nextAction: profile.nextAction,
+    reasons: profile.reasons.slice(0, 8),
+    terms: profile.terms.slice(0, 16),
+    prompt: profile.prompt,
+    eventCount: profile.eventCount,
   };
 }
 

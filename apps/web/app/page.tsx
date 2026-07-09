@@ -3,6 +3,7 @@ import type { Route } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { AiDiscoveryPanel } from '../components/ai-discovery-panel';
+import { BuyerProfileRecovery } from '../components/buyer-profile-recovery';
 import { ClientStudioPreview } from '../components/client-studio-preview';
 import { CompareTray } from '../components/compare-tray';
 import { CustomerTrustStrip } from '../components/customer-experience';
@@ -91,6 +92,10 @@ export default async function HomePage() {
       </section>
 
       <ClientStudioPreview locale={locale} />
+
+      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <BuyerProfileRecovery />
+      </section>
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
         <CustomerTrustStrip tone="dark" />

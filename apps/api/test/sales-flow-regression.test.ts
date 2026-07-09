@@ -353,6 +353,29 @@ void test('sales flow regression: auth -> cart -> checkout -> payment -> entitle
     assert.equal(await countEntitlementsForOrder(orderId), 1);
   });
 
+  await t.test('late failed webhook after paid is accepted without revoking delivery', async () => {
+    const lateFailed = await postJson<WebhookResponse>(`/webhooks/payments/manual`, {
+      eventId: `manual-late-failed-${randomUUID()}`,
+      eventType: 'payment.failed',
+      providerPaymentId: paymentSession.providerPaymentId,
+      status: 'failed',
+      payload: { source: 'late-provider-noise' },
+    });
+
+    assert.ok(lateFailed.response.ok, `Expected late failed webhook to be accepted, got ${lateFailed.response.status}`);
+    assert.equal(lateFailed.body.accepted, true);
+    assert.equal(lateFailed.body.processed, true);
+
+    const orderResponse = await request(`/orders/${orderId}`, {
+      headers: authHeaders(buyer.accessToken),
+    });
+    assert.ok(orderResponse.ok, `Expected order lookup after late failure to succeed, got ${orderResponse.status}`);
+
+    const order = await json<OrderResponse>(orderResponse);
+    assert.equal(order.status, 'paid');
+    assert.equal(await countEntitlementsForOrder(orderId), 1);
+  });
+
   await t.test('buyer receives entitlement and other user does not', async () => {
     const entitlementsResponse = await request('/downloads', {
       headers: authHeaders(buyer.accessToken),

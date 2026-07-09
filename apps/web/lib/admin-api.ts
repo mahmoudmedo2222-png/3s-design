@@ -365,6 +365,14 @@ export function markAdminPaymentFailed(token: string, paymentId: string) {
   });
 }
 
+export function reconcileStaleAdminPayments(token: string, input: { adminPassword: string }) {
+  return adminRequest<{ expired: number; items: AdminPaymentRow['payment'][] }>('/admin/payments/reconcile-stale', {
+    token,
+    method: 'POST',
+    body: input,
+  });
+}
+
 export function createAdminProduct(
   token: string,
   input: {

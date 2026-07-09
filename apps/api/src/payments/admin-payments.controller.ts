@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { MarkPaymentPaidDto } from './dto/mark-payment-paid.dto';
+import { ReconcilePaymentsDto } from './dto/reconcile-payments.dto';
 import { PaymentsService } from './payments.service';
 
 @Controller('admin/payments')
@@ -20,6 +21,12 @@ export class AdminPaymentsController {
   @Get()
   list() {
     return this.payments.listAdminPayments();
+  }
+
+  @Post('reconcile-stale')
+  async reconcileStale(@CurrentUser() user: AuthUser, @Body() input: ReconcilePaymentsDto) {
+    await this.auth.assertPasswordForStepUp(user.id, input.adminPassword, 'admin.payments.reconcile_stale');
+    return this.payments.reconcileStalePendingPayments(user.id);
   }
 
   @Post(':paymentId/mark-paid')

@@ -11,6 +11,7 @@ import { updateAttribution } from '../lib/attribution';
 import { trackFunnelEvent } from '../lib/funnel-analytics';
 import { saveSearch } from '../lib/saved-searches';
 import { rememberSearchTaste } from '../lib/taste-memory';
+import { BuyerProfileRecovery } from './buyer-profile-recovery';
 import { CustomerEmptyState, CustomerJourneyRail } from './customer-experience';
 import { ProductCard } from './product-card';
 import { ActionLink, Button, Notice, Panel } from './ui';
@@ -347,12 +348,15 @@ export function SearchExperience() {
                   </div>
                 </div>
               ) : (
-                <CustomerEmptyState
-                  tone="dark"
-                  icon={Sparkles}
-                  title="Start with intent, not a file name."
-                  text='Example: "restaurant launch, black and gold, Instagram, luxury, appetite, trust".'
-                />
+                <div className="space-y-3">
+                  <BuyerProfileRecovery compact />
+                  <CustomerEmptyState
+                    tone="dark"
+                    icon={Sparkles}
+                    title="Start with intent, not a file name."
+                    text='Example: "restaurant launch, black and gold, Instagram, luxury, appetite, trust".'
+                  />
+                </div>
               )}
             </Panel>
           </div>

@@ -2,18 +2,61 @@
 
 import { BrainCircuit, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchCustomerProfile, updateBuyerProfile } from '../lib/api';
 import { queueAiSearch } from '../lib/ai-search';
-import { buildTasteProfile, tasteMemoryChangedEvent, type TasteProfile } from '../lib/taste-memory';
+import { useAuthSession } from '../lib/auth-session';
+import {
+  buildBuyerProfileSnapshot,
+  buildCustomerDecisionProfile,
+  rememberAccountBuyerProfile,
+  tasteMemoryChangedEvent,
+  type CustomerDecisionProfile,
+} from '../lib/taste-memory';
 
 const emptyTaste = buildEmptyTaste();
 
 export function TasteMemoryPanel() {
   const router = useRouter();
-  const [taste, setTaste] = useState<TasteProfile>(emptyTaste);
+  const { isSignedIn } = useAuthSession();
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSyncedSnapshot = useRef<string>('');
+  const [taste, setTaste] = useState<CustomerDecisionProfile>(emptyTaste);
+  const [syncState, setSyncState] = useState<'local' | 'syncing' | 'synced' | 'failed'>('local');
+
+  const scheduleSync = useCallback((profile: CustomerDecisionProfile) => {
+    const snapshot = buildBuyerProfileSnapshot(profile);
+    const serialized = JSON.stringify(snapshot);
+    if (serialized === lastSyncedSnapshot.current) {
+      return;
+    }
+
+    if (syncTimer.current) {
+      clearTimeout(syncTimer.current);
+    }
+
+    syncTimer.current = setTimeout(() => {
+      setSyncState('syncing');
+      updateBuyerProfile(snapshot)
+        .then((response) => {
+          lastSyncedSnapshot.current = serialized;
+          rememberAccountBuyerProfile(response.buyerProfile);
+          setSyncState('synced');
+        })
+        .catch(() => setSyncState('failed'));
+    }, 700);
+  }, []);
 
   useEffect(() => {
-    const refresh = () => setTaste(buildTasteProfile());
+    const refresh = () => {
+      const profile = buildCustomerDecisionProfile();
+      setTaste(profile);
+
+      if (isSignedIn) {
+        scheduleSync(profile);
+      }
+    };
+
     refresh();
     window.addEventListener('storage', refresh);
     window.addEventListener(tasteMemoryChangedEvent, refresh);
@@ -21,8 +64,34 @@ export function TasteMemoryPanel() {
     return () => {
       window.removeEventListener('storage', refresh);
       window.removeEventListener(tasteMemoryChangedEvent, refresh);
+      if (syncTimer.current) {
+        clearTimeout(syncTimer.current);
+      }
     };
-  }, []);
+  }, [isSignedIn, scheduleSync]);
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      setSyncState('local');
+      return;
+    }
+
+    setSyncState('syncing');
+    fetchCustomerProfile()
+      .then((response) => {
+        rememberAccountBuyerProfile(response.buyerProfile);
+        const profile = buildCustomerDecisionProfile();
+        setTaste(profile);
+        const snapshot = buildBuyerProfileSnapshot(profile);
+        lastSyncedSnapshot.current = JSON.stringify(snapshot);
+        return updateBuyerProfile(snapshot);
+      })
+      .then((response) => {
+        rememberAccountBuyerProfile(response.buyerProfile);
+        setSyncState('synced');
+      })
+      .catch(() => setSyncState('failed'));
+  }, [isSignedIn]);
 
   function openTasteSearch() {
     queueAiSearch(taste.prompt);
@@ -47,6 +116,7 @@ export function TasteMemoryPanel() {
         <MemoryRow label="Signature" value={taste.signature} />
         <MemoryRow label="Palette" value={taste.colors.slice(0, 3).join(', ') || 'Waiting for color signals'} />
         <MemoryRow label="Mood" value={taste.moods.slice(0, 2).join(' + ') || taste.styles.slice(0, 2).join(' + ') || 'Not shaped yet'} />
+        <MemoryRow label="Account sync" value={syncLabel(syncState)} />
       </div>
 
       <button
@@ -70,7 +140,14 @@ function MemoryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function buildEmptyTaste(): TasteProfile {
+function syncLabel(state: 'local' | 'syncing' | 'synced' | 'failed') {
+  if (state === 'synced') return 'Saved to account';
+  if (state === 'syncing') return 'Syncing account profile';
+  if (state === 'failed') return 'Local only, retrying later';
+  return 'Local device memory';
+}
+
+function buildEmptyTaste(): CustomerDecisionProfile {
   return {
     signature: 'quiet luxury direction',
     colors: [],
@@ -79,5 +156,10 @@ function buildEmptyTaste(): TasteProfile {
     useCases: [],
     prompt: 'Build a premium shortlist around quiet luxury, trust, and a polished customer feeling.',
     eventCount: 0,
+    confidence: 'fresh',
+    stage: 'new',
+    nextAction: 'Start with a buyer moment or save two designs.',
+    reasons: [],
+    terms: [],
   };
 }

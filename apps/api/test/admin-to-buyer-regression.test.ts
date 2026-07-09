@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
+import { entitlements, payments } from '@3s-design/db/schema';
 import dotenv from 'dotenv';
+import { count, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { fileURLToPath } from 'node:url';
+import pg from 'pg';
 
 dotenv.config({ path: fileURLToPath(new URL('../../../.env', import.meta.url)) });
 
@@ -138,6 +142,20 @@ type DownloadUrlResponse = {
   method: 'GET';
 };
 
+type ReconcilePaymentsResponse = {
+  expired: number;
+  items: Array<{
+    id: string;
+    status: string;
+  }>;
+};
+
+type WebhookResponse = {
+  accepted: boolean;
+  duplicate: boolean;
+  processed: boolean;
+};
+
 async function request(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
 
@@ -200,6 +218,35 @@ async function registerBuyer(label: string) {
   assert.ok(response.ok, `Expected buyer registration to succeed, got ${response.status}`);
 
   return body.accessToken;
+}
+
+async function backdatePayment(paymentId: string, createdAt: Date) {
+  const databaseUrl = process.env.DATABASE_URL;
+  assert.ok(databaseUrl, 'DATABASE_URL is required for admin-to-buyer regression test setup.');
+
+  const pool = new pg.Pool({ connectionString: databaseUrl });
+  const db = drizzle(pool);
+
+  try {
+    await db.update(payments).set({ createdAt, updatedAt: createdAt }).where(eq(payments.id, paymentId));
+  } finally {
+    await pool.end();
+  }
+}
+
+async function countEntitlementsForOrder(orderId: string) {
+  const databaseUrl = process.env.DATABASE_URL;
+  assert.ok(databaseUrl, 'DATABASE_URL is required for admin-to-buyer regression test setup.');
+
+  const pool = new pg.Pool({ connectionString: databaseUrl });
+  const db = drizzle(pool);
+
+  try {
+    const [row] = await db.select({ total: count() }).from(entitlements).where(eq(entitlements.orderId, orderId));
+    return Number(row?.total ?? 0);
+  } finally {
+    await pool.end();
+  }
 }
 
 void test('admin-to-buyer regression: publish product from admin and complete customer purchase/download', async () => {
@@ -493,4 +540,76 @@ void test('admin-to-buyer regression: publish product from admin and complete cu
 
   const downloadAfterRefund = await sendJson(`/downloads/${entitlement.id}/assets/${asset.id}/url`, {}, buyerToken);
   assert.equal(downloadAfterRefund.response.status, 403, 'Expected refunded entitlement download URLs to be blocked.');
+
+  const secondCartAdd = await sendJson(
+    '/cart/items',
+    {
+      productId: publicProduct.id,
+      licenseId: publicProduct.defaultLicense.id,
+      quantity: 1,
+    },
+    buyerToken,
+  );
+  assert.ok(secondCartAdd.response.ok, `Expected second cart add to succeed, got ${secondCartAdd.response.status}`);
+
+  const staleCheckout = await sendJson<OrderResponse>(
+    '/checkout',
+    {
+      idempotencyKey: `stale-admin-flow-${randomUUID()}`,
+      billing: { country: 'EG', city: 'Cairo', preferredCurrency: 'USD' },
+    },
+    buyerToken,
+  );
+  assert.ok(staleCheckout.response.ok, `Expected stale checkout to succeed, got ${staleCheckout.response.status}`);
+
+  const stalePayment = await sendJson<PaymentSessionResponse>(
+    '/payments/sessions',
+    {
+      orderId: staleCheckout.body.id,
+      provider: 'manual',
+      idempotencyKey: `stale-payment-${randomUUID()}`,
+      successUrl: 'http://localhost:3000/account',
+      cancelUrl: 'http://localhost:3000/checkout',
+    },
+    buyerToken,
+  );
+  assert.ok(stalePayment.response.ok, `Expected stale payment session to succeed, got ${stalePayment.response.status}`);
+
+  await backdatePayment(stalePayment.body.id, new Date(Date.now() - 72 * 60 * 60 * 1000));
+
+  const reconcileWithoutStepUp = await sendJson('/admin/payments/reconcile-stale', {}, adminToken);
+  assert.equal(reconcileWithoutStepUp.response.status, 400, 'Expected payment reconciliation to require step-up password.');
+
+  const reconcileWithWrongPassword = await sendJson('/admin/payments/reconcile-stale', { adminPassword: 'WrongPassword123' }, adminToken);
+  assert.equal(reconcileWithWrongPassword.response.status, 401, 'Expected wrong payment reconciliation password to be rejected.');
+
+  const reconcile = await sendJson<ReconcilePaymentsResponse>('/admin/payments/reconcile-stale', { adminPassword }, adminToken);
+  assert.ok(reconcile.response.ok, `Expected stale payment reconciliation to succeed, got ${reconcile.response.status}`);
+  assert.ok(reconcile.body.expired >= 1, 'Expected stale payment reconciliation to expire at least one payment.');
+  assert.ok(
+    reconcile.body.items.some((item) => item.id === stalePayment.body.id && item.status === 'expired'),
+    'Expected stale payment session to be marked expired.',
+  );
+
+  const latePaidWebhook = await sendJson<WebhookResponse>('/webhooks/payments/manual', {
+    eventId: `manual-paid-after-expiry-${randomUUID()}`,
+    eventType: 'payment.paid',
+    providerPaymentId: stalePayment.body.providerPaymentId,
+    status: 'paid',
+    payload: { source: 'admin-flow-late-confirmation' },
+  });
+  assert.ok(latePaidWebhook.response.ok, `Expected late paid webhook after expiry to succeed, got ${latePaidWebhook.response.status}`);
+  assert.equal(latePaidWebhook.body.accepted, true);
+  assert.equal(latePaidWebhook.body.processed, true);
+
+  const staleOrderAfterLatePaidResponse = await request(`/orders/${staleCheckout.body.id}`, {
+    headers: authHeaders(buyerToken),
+  });
+  assert.ok(
+    staleOrderAfterLatePaidResponse.ok,
+    `Expected stale order lookup after late payment to succeed, got ${staleOrderAfterLatePaidResponse.status}`,
+  );
+  const staleOrderAfterLatePaid = await json<OrderResponse>(staleOrderAfterLatePaidResponse);
+  assert.equal(staleOrderAfterLatePaid.status, 'paid', 'Expected late paid webhook to revive expired payment and pay the order.');
+  assert.equal(await countEntitlementsForOrder(staleCheckout.body.id), 1, 'Expected late paid webhook to grant delivery entitlement.');
 });

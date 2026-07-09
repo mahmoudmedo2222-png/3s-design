@@ -1,4 +1,5 @@
-import { boolean, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { boolean, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 const timestamps = () => ({
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -32,5 +33,23 @@ export const userProfiles = pgTable('user_profiles', {
   preferredCurrency: text('preferred_currency').notNull().default('USD'),
   preferredLanguage: text('preferred_language').notNull().default('en'),
   avatarUrl: text('avatar_url'),
+  buyerProfile: jsonb('buyer_profile')
+    .$type<{
+      signature?: string;
+      colors?: string[];
+      styles?: string[];
+      moods?: string[];
+      useCases?: string[];
+      confidence?: 'fresh' | 'warming' | 'strong';
+      stage?: 'new' | 'exploring' | 'deciding';
+      nextAction?: string;
+      reasons?: string[];
+      terms?: string[];
+      prompt?: string;
+      eventCount?: number;
+      syncedAt?: string;
+    }>()
+    .notNull()
+    .default(sql`'{}'::jsonb`),
   ...timestamps(),
 });
