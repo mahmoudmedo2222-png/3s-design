@@ -1,6 +1,7 @@
 'use client';
 
 import type { ProductSummary } from './api';
+import { readAttribution } from './attribution';
 
 const tasteMemoryKey = '3s-design-taste-memory';
 export const tasteMemoryChangedEvent = '3s-design-taste-memory-changed';
@@ -28,6 +29,14 @@ export type TasteProfile = {
   useCases: string[];
   prompt: string;
   eventCount: number;
+};
+
+export type CustomerDecisionProfile = TasteProfile & {
+  confidence: 'fresh' | 'warming' | 'strong';
+  stage: 'new' | 'exploring' | 'deciding';
+  nextAction: string;
+  reasons: string[];
+  terms: string[];
 };
 
 export type StudioDirection = {
@@ -69,10 +78,10 @@ export function rememberSearchTaste(prompt: string) {
     action: 'search',
     title: text,
     prompt: text,
-    colors: [],
-    styles: [],
-    moods: [],
-    useCases: [],
+    colors: inferSignals(text, colorSignals),
+    styles: inferSignals(text, styleSignals),
+    moods: inferSignals(text, moodSignals),
+    useCases: inferSignals(text, useCaseSignals),
     createdAt: new Date().toISOString(),
   });
 }
@@ -136,6 +145,48 @@ export function buildTasteProfile(): TasteProfile {
       `Build a premium shortlist around ${signature}, with ${colors.slice(0, 3).join(', ') || 'refined'} colors and a ${
         moods[0] ?? styles[0] ?? 'high-trust'
       } customer feeling.`,
+  };
+}
+
+export function buildCustomerDecisionProfile(): CustomerDecisionProfile {
+  const taste = buildTasteProfile();
+  const attribution = readAttribution();
+  const attributionTerms = [
+    attribution?.intent,
+    attribution?.brief,
+    attribution?.campaign,
+    attribution?.medium,
+    attribution?.source && attribution.source !== 'direct' ? attribution.source : null,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .flatMap((value) => value.split(/[,\s/+-]+/))
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => value.length > 2);
+
+  const terms = topSignals([...taste.colors, ...taste.styles, ...taste.moods, ...taste.useCases, ...attributionTerms]).slice(0, 10);
+  const confidence = taste.eventCount >= 5 ? 'strong' : taste.eventCount >= 2 || attribution?.brief ? 'warming' : 'fresh';
+  const stage = taste.eventCount >= 4 ? 'deciding' : taste.eventCount >= 1 || attribution?.brief ? 'exploring' : 'new';
+  const primaryIntent = attribution?.intent ?? attribution?.brief;
+  const reasons = [
+    primaryIntent ? `Intent: ${primaryIntent}` : null,
+    taste.styles[0] ? `Style: ${taste.styles[0]}` : null,
+    taste.moods[0] ? `Mood: ${taste.moods[0]}` : null,
+    taste.useCases[0] ? `Use: ${taste.useCases[0]}` : null,
+  ].filter((value): value is string => Boolean(value));
+
+  return {
+    ...taste,
+    confidence,
+    stage,
+    nextAction:
+      stage === 'deciding'
+        ? 'Open the strongest match and confirm license/delivery.'
+        : stage === 'exploring'
+          ? 'Use the memory brief to narrow the catalog.'
+          : 'Start with a buyer moment or save two designs.',
+    reasons,
+    terms,
+    prompt: primaryIntent ?? taste.prompt,
   };
 }
 
@@ -212,4 +263,27 @@ function topSignals(values: string[]) {
   return Array.from(counts.entries())
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
     .map(([value]) => value);
+}
+
+const colorSignals = ['black', 'gold', 'white', 'cream', 'red', 'green', 'blue', 'pink', 'silver', 'brown', 'orange', 'purple'];
+
+const styleSignals = ['premium', 'luxury', 'minimal', 'bold', 'modern', 'classic', 'cinematic', 'clean', 'editorial', 'elegant'];
+const moodSignals = ['calm', 'urgent', 'trust', 'warm', 'romantic', 'exclusive', 'playful', 'professional', 'appetite', 'celebration'];
+const useCaseSignals = [
+  'restaurant',
+  'cafe',
+  'menu',
+  'real estate',
+  'property',
+  'wedding',
+  'invitation',
+  'sale',
+  'instagram',
+  'launch',
+  'course',
+];
+
+function inferSignals(text: string, signals: string[]) {
+  const normalized = text.toLowerCase();
+  return signals.filter((signal) => normalized.includes(signal));
 }

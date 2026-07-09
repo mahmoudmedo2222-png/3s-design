@@ -1,8 +1,9 @@
 'use client';
 
 import { Filter, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ProductSummary } from '../lib/api';
+import { buildCustomerDecisionProfile, tasteMemoryChangedEvent, type CustomerDecisionProfile } from '../lib/taste-memory';
 import { CustomerEmptyState } from './customer-experience';
 import { ProductCard } from './product-card';
 import { Button, Input, Panel } from './ui';
@@ -55,10 +56,38 @@ function nicheCount(products: ProductSummary[], terms: readonly string[]) {
   return products.filter((product) => terms.some((term) => productText(product).includes(term))).length;
 }
 
+const emptyDecisionProfile: CustomerDecisionProfile = {
+  signature: 'quiet luxury direction',
+  colors: [],
+  styles: [],
+  moods: [],
+  useCases: [],
+  prompt: 'Build a premium shortlist around quiet luxury, trust, and a polished customer feeling.',
+  eventCount: 0,
+  confidence: 'fresh',
+  stage: 'new',
+  nextAction: 'Start with a buyer moment or save two designs.',
+  reasons: [],
+  terms: [],
+};
+
 export function StorefrontDiscovery({ products }: { products: ProductSummary[] }) {
   const [activeNiche, setActiveNiche] = useState<(typeof buyerNiches)[number]['id']>('all');
   const [query, setQuery] = useState('');
   const [sortMode, setSortMode] = useState<(typeof sortModes)[number]['id']>('recommended');
+  const [decisionProfile, setDecisionProfile] = useState<CustomerDecisionProfile>(emptyDecisionProfile);
+
+  useEffect(() => {
+    const refresh = () => setDecisionProfile(buildCustomerDecisionProfile());
+    refresh();
+    window.addEventListener('storage', refresh);
+    window.addEventListener(tasteMemoryChangedEvent, refresh);
+
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener(tasteMemoryChangedEvent, refresh);
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     const niche = buyerNiches.find((item) => item.id === activeNiche) ?? buyerNiches[0];
@@ -81,19 +110,61 @@ export function StorefrontDiscovery({ products }: { products: ProductSummary[] }
         return Number(Boolean(right.isFeatured)) - Number(Boolean(left.isFeatured));
       }
 
+      const rightMemoryScore = productMemoryScore(right, decisionProfile.terms);
+      const leftMemoryScore = productMemoryScore(left, decisionProfile.terms);
       const rightSignals =
         (right.designDna?.moods?.length ?? 0) + (right.designDna?.styles?.length ?? 0) + (right.designDna?.platforms?.length ?? 0);
       const leftSignals =
         (left.designDna?.moods?.length ?? 0) + (left.designDna?.styles?.length ?? 0) + (left.designDna?.platforms?.length ?? 0);
 
-      return Number(Boolean(right.isFeatured)) - Number(Boolean(left.isFeatured)) || rightSignals - leftSignals;
+      return (
+        rightMemoryScore - leftMemoryScore ||
+        Number(Boolean(right.isFeatured)) - Number(Boolean(left.isFeatured)) ||
+        rightSignals - leftSignals
+      );
     });
-  }, [activeNiche, products, query, sortMode]);
+  }, [activeNiche, decisionProfile.terms, products, query, sortMode]);
 
   const activeNicheLabel = buyerNiches.find((item) => item.id === activeNiche)?.label ?? 'All';
+  const profileReasons = decisionProfile.reasons.length ? decisionProfile.reasons : [`Stage: ${decisionProfile.stage}`];
 
   return (
     <div className="space-y-4">
+      <Panel tone="glass" className="grid gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-gold/15 text-gold">
+              <Sparkles size={16} />
+            </span>
+            <p className="text-sm font-black text-white">Your buying memory</p>
+            <span className="rounded border border-white/[0.1] bg-white/[0.06] px-2 py-1 text-[0.65rem] font-black uppercase tracking-[0.12em] text-white/50">
+              {decisionProfile.confidence}
+            </span>
+          </div>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/62">
+            {decisionProfile.signature}. {decisionProfile.nextAction}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {profileReasons.slice(0, 4).map((reason) => (
+              <span key={reason} className="rounded border border-white/[0.1] bg-black/20 px-2 py-1 text-[0.68rem] font-bold text-white/58">
+                {reason}
+              </span>
+            ))}
+          </div>
+        </div>
+        <Button
+          type="button"
+          onClick={() => {
+            setQuery(decisionProfile.prompt);
+            setSortMode('recommended');
+          }}
+          intent="gold"
+          className="h-10 shrink-0 font-black"
+        >
+          Use memory brief
+        </Button>
+      </Panel>
+
       <Panel tone="glass" className="p-3">
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
           <div>
@@ -212,6 +283,15 @@ export function StorefrontDiscovery({ products }: { products: ProductSummary[] }
       )}
     </div>
   );
+}
+
+function productMemoryScore(product: ProductSummary, terms: string[]) {
+  if (!terms.length) {
+    return 0;
+  }
+
+  const text = productText(product);
+  return terms.reduce((score, term) => score + (text.includes(term.toLowerCase()) ? 1 : 0), 0);
 }
 
 function DiscoveryRule({ title, text }: { title: string; text: string }) {
