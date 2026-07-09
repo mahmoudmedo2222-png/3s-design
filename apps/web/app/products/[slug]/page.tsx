@@ -2,12 +2,18 @@ import {
   BadgeCheck,
   Compass,
   Crown,
+  Download,
   Eye,
+  FileArchive,
   FileCheck2,
   Fingerprint,
   Gem,
+  HelpCircle,
   LockKeyhole,
+  PackageCheck,
   Palette,
+  ReceiptText,
+  Ruler,
   ShieldCheck,
   Sparkles,
   Wand2,
@@ -18,7 +24,16 @@ import { notFound } from 'next/navigation';
 import { BrandMirror } from '../../../components/brand-mirror';
 import { CartButton } from '../../../components/cart-button';
 import { CompareTray } from '../../../components/compare-tray';
+import {
+  BuyerDecisionCard,
+  ConfidenceBadge,
+  CustomerJourneyRail,
+  CustomerTrustStrip,
+  SectionHeading,
+} from '../../../components/customer-experience';
+import { DesignPreview } from '../../../components/design-preview';
 import { ProductDetailActions } from '../../../components/product-detail-actions';
+import { ProductViewTracker } from '../../../components/product-view-tracker';
 import { ProductCard } from '../../../components/product-card';
 import { ThemeToggle } from '../../../components/theme-toggle';
 import { fetchProductBySlug, fetchProducts, type ProductDetail } from '../../../lib/api';
@@ -27,6 +42,7 @@ export const dynamic = 'force-dynamic';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ brief?: string; signals?: string }>;
 };
 
 function listItems(values: string[] | undefined, fallback: string[]) {
@@ -71,8 +87,35 @@ function formatList(values: string[]) {
   return values.map((value) => value.trim()).filter(Boolean);
 }
 
-export default async function ProductDetailPage({ params }: PageProps) {
+function parseSearchFit(searchParams?: { brief?: string; signals?: string }) {
+  const brief = searchParams?.brief?.trim();
+  const signals = (searchParams?.signals ?? '')
+    .split('|')
+    .map((signal) => signal.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+
+  return {
+    brief: brief && brief.length <= 280 ? brief : '',
+    signals,
+  };
+}
+
+function attributeValues(product: ProductDetail, key: string) {
+  return product.attributes
+    .filter((attribute) => attribute.key === key)
+    .sort((left, right) => left.sortOrder - right.sortOrder)
+    .map((attribute) => attribute.value.trim())
+    .filter(Boolean);
+}
+
+function attributeValue(product: ProductDetail, key: string) {
+  return attributeValues(product, key)[0];
+}
+
+export default async function ProductDetailPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const searchFit = parseSearchFit(await searchParams);
   const [product, products] = await Promise.all([fetchProductBySlug(slug), fetchProducts()]);
 
   if (!product) {
@@ -90,6 +133,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-paper dark:bg-[#0b0f0e]">
+      <ProductViewTracker product={product} />
       <header className="border-b border-line bg-paper/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" className="brand-lockup min-w-0" aria-label="Back to 3S Design home">
@@ -119,20 +163,27 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
       <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
         <section className="space-y-5">
+          <CustomerJourneyRail current="inspect" />
+
           <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <div className="relative min-h-[320px] overflow-hidden rounded-lg border border-line bg-[#eef2ee] shadow-sm dark:bg-[#17211d]">
-              <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(#dce4dc_1px,transparent_1px),linear-gradient(90deg,#dce4dc_1px,transparent_1px)] [background-size:26px_26px] dark:[background-image:linear-gradient(#27372f_1px,transparent_1px),linear-gradient(90deg,#27372f_1px,transparent_1px)]" />
-              <div className="absolute inset-6 rounded-lg border border-white/50 bg-white/35 shadow-panel backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.03]" />
-              <div className="relative flex h-full min-h-[320px] flex-col items-center justify-center px-6 text-center">
-                <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded bg-pine text-white shadow-sm">
-                  <Eye size={19} />
-                </span>
-                <p className="max-w-md text-base font-black text-ink">{product.previewAltText ?? product.title}</p>
-                <p className="mt-2 max-w-sm text-sm leading-6 text-muted">
-                  Protected watermarked preview. The final files unlock only after purchase.
-                </p>
-                <div className="absolute inset-x-8 top-1/2 -rotate-12 rounded border border-white/40 bg-white/25 py-2 text-center text-lg font-black uppercase tracking-[0.18em] text-pine/30 backdrop-blur-[1px] dark:text-[#7bd8bd]/25">
-                  3S Design Preview
+            <div className="relative min-h-[340px] overflow-hidden rounded-lg border border-line bg-[#eef2ee] shadow-sm dark:border-white/[0.12] dark:bg-[#17211d]">
+              <DesignPreview product={product} variant="hero" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_38%,rgba(6,11,10,0.72))]" />
+              <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+                <ConfidenceBadge>Protected preview</ConfidenceBadge>
+                <ConfidenceBadge>{passportCode(product)}</ConfidenceBadge>
+              </div>
+              <div className="absolute inset-x-4 bottom-4 rounded-lg border border-white/[0.14] bg-black/[0.38] p-4 text-white shadow-[0_22px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+                    <Eye size={19} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black">{product.previewAltText ?? product.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-white/66">
+                      Preview the commercial mood before checkout. Final editable files unlock only after payment approval.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -146,28 +197,38 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {[...moods, ...styles].slice(0, 6).map((item) => (
-                  <span key={item} className="rounded border border-pine/25 bg-pine/10 px-3 py-1 text-xs font-bold text-pine">
+                {[...moods, ...styles].slice(0, 6).map((item, index) => (
+                  <span key={`${item}-${index}`} className="rounded border border-pine/25 bg-pine/10 px-3 py-1 text-xs font-bold text-pine">
                     {item}
                   </span>
                 ))}
               </div>
+
+              <PurchaseSnapshot product={product} formats={formats} software={software} />
             </div>
           </div>
 
+          <CustomerTrustStrip />
+
+          <StoryLedProductSection product={product} />
+
+          <CustomerDecisionStack product={product} formats={formats} software={software} />
+
           <section className="grid gap-3 md:grid-cols-3">
-            <ValueCard
+            <BuyerDecisionCard
               icon={Sparkles}
               title="Why it sells"
               text="It helps the customer feel the offer is polished, intentional, and worth paying attention to."
             />
-            <ValueCard icon={Wand2} title="AI match reason" text={aiReason(product)} />
-            <ValueCard
+            <BuyerDecisionCard icon={Wand2} title="AI match reason" text={aiReason(product)} />
+            <BuyerDecisionCard
               icon={ShieldCheck}
               title="Safe to buy"
               text="Preview is protected, files are checked, and support covers broken downloads within 24 hours."
             />
           </section>
+
+          {searchFit.brief ? <SearchBriefFit product={product} brief={searchFit.brief} signals={searchFit.signals} /> : null}
 
           <DesignPassport
             product={product}
@@ -179,19 +240,22 @@ export default async function ProductDetailPage({ params }: PageProps) {
             formats={formats}
           />
 
+          <BuyerFitChecklist product={product} industries={industries} useCases={useCases} />
+
           <BrandMirror product={product} />
 
           <LuxuryProof product={product} />
 
           <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
-            <div className="mb-4 flex items-center gap-2">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-saffron/15 text-saffron">
+            <div className="mb-4 flex items-start gap-3">
+              <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded bg-saffron/15 text-saffron">
                 <Palette size={18} />
               </span>
-              <div>
-                <h2 className="text-base font-black text-ink">Brand emotion map</h2>
-                <p className="text-sm text-muted">Use this design when these signals match your business.</p>
-              </div>
+              <SectionHeading
+                kicker="Brand emotion map"
+                title="Buy it when these signals match the customer moment."
+                text="A clear emotional map helps the client choose by outcome, not only by visual taste."
+              />
             </div>
             <div className="grid gap-3 md:grid-cols-3">
               <SignalList title="Feeling" values={moods} />
@@ -206,7 +270,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <InfoList title="Formats" values={formats.length ? formats : ['Editable source files', 'Ready-to-export previews']} />
               <InfoList title="Software" values={software.length ? software : ['Design editor compatible', 'Export-ready workflow']} />
             </div>
+            <DeliveryAssetList product={product} />
           </section>
+
+          <ProductDataReadiness product={product} formats={formats} software={software} />
 
           {related.length ? (
             <section>
@@ -260,6 +327,382 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </aside>
       </div>
     </main>
+  );
+}
+
+function StoryLedProductSection({ product }: { product: ProductDetail }) {
+  const customerMoment = attributeValue(product, 'story.customer_moment');
+  const beforeState = attributeValue(product, 'story.before_state');
+  const afterState = attributeValue(product, 'story.after_state');
+  const promise = attributeValue(product, 'story.buyer_promise');
+  const scenes = attributeValues(product, 'story.scene');
+  const proof = attributeValues(product, 'story.visual_proof');
+
+  if (!customerMoment && !beforeState && !afterState && !promise && !scenes.length && !proof.length) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+      <div className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
+        <div>
+          <SectionHeading
+            kicker="Story-led package"
+            title="This design sells a customer moment, not only a style."
+            text={promise ?? product.description}
+          />
+          <div className="mt-4 grid gap-3">
+            {customerMoment ? <StoryProofCard title="Customer moment" text={customerMoment} /> : null}
+            {beforeState || afterState ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {beforeState ? <StoryProofCard title="Before" text={beforeState} /> : null}
+                {afterState ? <StoryProofCard title="After" text={afterState} /> : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          {scenes.length ? (
+            <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+              <div className="flex items-center gap-2">
+                <Compass className="text-pine" size={17} />
+                <p className="text-sm font-black text-ink">Campaign journey</p>
+              </div>
+              <ol className="mt-3 grid gap-2">
+                {scenes.slice(0, 6).map((scene, index) => (
+                  <li key={`${scene}-${index}`} className="grid grid-cols-[34px_minmax(0,1fr)] gap-2 text-sm leading-6">
+                    <span className="flex h-7 w-7 items-center justify-center rounded bg-pine/10 text-xs font-black text-pine">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span className="font-bold text-ink">{scene}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+
+          {proof.length ? (
+            <div className="rounded border border-saffron/30 bg-saffron/10 p-3">
+              <div className="flex items-center gap-2">
+                <FileCheck2 className="text-saffron" size={17} />
+                <p className="text-sm font-black text-ink">Visual proof needed</p>
+              </div>
+              <ul className="mt-3 grid gap-2">
+                {proof.slice(0, 5).map((item, index) => (
+                  <li key={`${item}-${index}`} className="flex gap-2 text-xs font-bold leading-5 text-muted">
+                    <BadgeCheck className="mt-0.5 shrink-0 text-pine" size={14} />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StoryProofCard({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-muted">{title}</p>
+      <p className="mt-2 text-sm font-bold leading-6 text-ink">{text}</p>
+    </div>
+  );
+}
+
+function PurchaseSnapshot({ product, formats, software }: { product: ProductDetail; formats: string[]; software: string[] }) {
+  const license = product.defaultLicense ?? product.licenseOptions?.[0];
+  const price = license?.price ?? product.basePrice;
+  const currency = license?.currency ?? product.currency;
+  const deliverables = formats.length ? formats.slice(0, 2).join(', ') : software.length ? software.slice(0, 2).join(', ') : 'Ready files';
+
+  return (
+    <div className="mt-5 grid gap-3 rounded-lg border border-line bg-white p-3 shadow-sm dark:bg-[#121816] md:grid-cols-3">
+      <SnapshotDatum label="Price" value={`${currency} ${price}`} />
+      <SnapshotDatum label="License" value={license?.name ?? 'Commercial license'} />
+      <SnapshotDatum label="Files" value={deliverables} />
+    </div>
+  );
+}
+
+function SearchBriefFit({ product, brief, signals }: { product: ProductDetail; brief: string; signals: string[] }) {
+  const dnaSignals = [
+    ...(product.designDna?.industries ?? []),
+    ...(product.designDna?.moods ?? []),
+    ...(product.designDna?.styles ?? []),
+    ...(product.designDna?.colors ?? []),
+    ...(product.designDna?.platforms ?? []),
+  ].slice(0, 8);
+  const visibleSignals = signals.length ? signals : dnaSignals;
+
+  return (
+    <section className="overflow-hidden rounded-lg border border-saffron/35 bg-[#fff7e6] p-4 shadow-sm dark:bg-[#17130c]">
+      <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-saffron">Why this fits your brief</p>
+          <h2 className="mt-2 text-xl font-black text-ink">This page remembers what the buyer was looking for.</h2>
+          <p className="mt-3 rounded border border-saffron/30 bg-white/60 p-3 text-sm font-bold leading-6 text-ink dark:bg-black/20">
+            &quot;{brief}&quot;
+          </p>
+        </div>
+        <div className="grid gap-3">
+          <div className="rounded border border-saffron/30 bg-white/55 p-3 dark:bg-black/20">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-muted">Matched buying signals</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {visibleSignals.length ? (
+                visibleSignals.map((signal, index) => (
+                  <span
+                    key={`${signal}-${index}`}
+                    className="rounded border border-saffron/30 bg-saffron/15 px-2.5 py-1 text-xs font-black text-ink"
+                  >
+                    {signal}
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm font-bold text-muted">Open the AI search first to attach buyer intent to this product.</span>
+              )}
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <FitStep title="Intent" text="The customer searched by outcome, not only category." />
+            <FitStep title="Evidence" text="Signals are carried into the product page before checkout." />
+            <FitStep title="Action" text="Add the license only when the fit is clear." />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FitStep({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded border border-saffron/25 bg-white/45 p-3 dark:bg-black/20">
+      <BadgeCheck className="text-saffron" size={16} />
+      <p className="mt-2 text-sm font-black text-ink">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-muted">{text}</p>
+    </div>
+  );
+}
+
+function CustomerDecisionStack({ product, formats, software }: { product: ProductDetail; formats: string[]; software: string[] }) {
+  const license = product.defaultLicense ?? product.licenseOptions?.[0];
+  const publicAssets = product.assets.filter((asset) => asset.isPublicPreview);
+  const deliveryAssets = product.assets.filter((asset) => !asset.isPublicPreview);
+  const bestUses = listItems(product.designDna?.platforms, ['campaign launch', 'social media', 'brand presentation']);
+  const bestIndustries = listItems(product.designDna?.industries, ['premium brand']);
+  const decisionCards = [
+    {
+      icon: PackageCheck,
+      title: 'Will this fit my project?',
+      answer: `Best for ${bestIndustries.slice(0, 2).join(', ')} projects that need ${bestUses.slice(0, 2).join(', ')} assets.`,
+    },
+    {
+      icon: FileArchive,
+      title: 'What arrives after payment?',
+      answer:
+        deliveryAssets.length > 0
+          ? `${deliveryAssets.length} protected delivery file${deliveryAssets.length === 1 ? '' : 's'} unlock in the account vault.`
+          : formats.length > 0
+            ? `Delivery includes ${formats.slice(0, 3).join(', ')} files.`
+            : 'The account vault unlocks the final delivery package after payment review.',
+    },
+    {
+      icon: ReceiptText,
+      title: 'What can I do with it?',
+      answer: license?.allowsCommercialUse
+        ? `${license.name} covers commercial publishing and keeps the purchase attached to your account.`
+        : 'Review the selected license before checkout because commercial use may need confirmation.',
+    },
+    {
+      icon: Download,
+      title: 'What happens next?',
+      answer: 'Add the license to cart, create checkout, complete payment review, then download from the delivery vault.',
+    },
+  ];
+
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <SectionHeading
+          kicker="Decision stack"
+          title="Everything a buyer needs before adding this design."
+          text="This section reduces hesitation by answering fit, files, license, and delivery questions in one scan."
+        />
+        <span className="rounded bg-pine/10 px-3 py-1 text-sm font-black text-pine">
+          {publicAssets.length + deliveryAssets.length || product.variants.length} proof points
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {decisionCards.map((card) => (
+          <div key={card.title} className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+            <card.icon className="text-pine dark:text-[#f7d17e]" size={18} />
+            <p className="mt-3 text-sm font-black text-ink">{card.title}</p>
+            <p className="mt-2 text-xs leading-5 text-muted">{card.answer}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_1fr]">
+        <DecisionMiniPanel
+          icon={Ruler}
+          title="Format confidence"
+          items={formats.length ? formats.slice(0, 4) : software.length ? software.slice(0, 4) : ['Export-ready package']}
+        />
+        <DecisionMiniPanel
+          icon={ShieldCheck}
+          title="Risk reducers"
+          items={['Protected preview', 'Account-owned license', 'Payment review before delivery', 'Support for broken downloads']}
+        />
+        <DecisionMiniPanel
+          icon={HelpCircle}
+          title="Ask before checkout if"
+          items={['You need exclusivity', 'You need custom copywriting', 'You need a private brand version', 'Your use case is resale']}
+        />
+      </div>
+    </section>
+  );
+}
+
+function DecisionMiniPanel({ icon: Icon, title, items }: { icon: LucideIcon; title: string; items: string[] }) {
+  return (
+    <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+      <div className="flex items-center gap-2">
+        <Icon className="text-saffron" size={17} />
+        <p className="text-sm font-black text-ink">{title}</p>
+      </div>
+      <ul className="mt-3 grid gap-2">
+        {items.map((item, index) => (
+          <li key={`${item}-${index}`} className="flex items-center gap-2 text-xs font-bold leading-5 text-muted">
+            <BadgeCheck className="shrink-0 text-pine" size={14} />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function DeliveryAssetList({ product }: { product: ProductDetail }) {
+  const deliveryAssets = product.assets.filter((asset) => !asset.isPublicPreview).sort((left, right) => left.sortOrder - right.sortOrder);
+
+  if (!deliveryAssets.length) {
+    return (
+      <div className="mt-3 rounded border border-saffron/30 bg-saffron/10 p-3 text-xs font-bold leading-5 text-saffron">
+        Delivery package metadata is not public yet. Checkout will stay protected, but this product needs stronger asset details before a
+        premium launch.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+      <div className="flex items-center gap-2">
+        <FileArchive className="text-pine" size={17} />
+        <p className="text-sm font-black text-ink">Delivery package</p>
+      </div>
+      <div className="mt-3 grid gap-2">
+        {deliveryAssets.slice(0, 5).map((asset) => (
+          <div
+            key={asset.id}
+            className="flex flex-wrap items-center justify-between gap-2 rounded border border-line bg-white p-2 dark:bg-[#121816]"
+          >
+            <span className="min-w-0 truncate text-xs font-black text-ink">{asset.fileName}</span>
+            <span className="shrink-0 rounded bg-pine/10 px-2 py-1 text-[0.68rem] font-black text-pine">{asset.mimeType}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SnapshotDatum({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 border-l-2 border-pine/30 pl-3">
+      <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-muted">{label}</p>
+      <p className="mt-1 truncate text-sm font-black text-ink">{value}</p>
+    </div>
+  );
+}
+
+function ProductDataReadiness({ product, formats, software }: { product: ProductDetail; formats: string[]; software: string[] }) {
+  const checks = [
+    {
+      label: 'Preview',
+      ready: Boolean(product.previewAltText || product.previewStorageKey || product.assets.some((asset) => asset.isPublicPreview)),
+    },
+    { label: 'License', ready: Boolean(product.defaultLicense ?? product.licenseOptions?.length) },
+    { label: 'Deliverables', ready: Boolean(formats.length || software.length || product.variants.length) },
+    { label: 'Design DNA', ready: Boolean(product.designDna && Object.values(product.designDna).some((values) => values.length)) },
+  ];
+  const readyCount = checks.filter((check) => check.ready).length;
+
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-pine">Data readiness</p>
+          <h2 className="mt-2 text-base font-black text-ink">Product data that affects buyer confidence.</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+            A premium page needs more than layout. It needs preview, license, deliverables, and design signals filled in.
+          </p>
+        </div>
+        <span className="rounded bg-pine/10 px-3 py-1 text-sm font-black text-pine">
+          {readyCount}/{checks.length} ready
+        </span>
+      </div>
+      <div className="mt-4 grid gap-2 md:grid-cols-4">
+        {checks.map((check) => (
+          <div key={check.label} className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+            <BadgeCheck className={check.ready ? 'text-pine' : 'text-muted'} size={16} />
+            <p className="mt-2 text-sm font-black text-ink">{check.label}</p>
+            <p className="mt-1 text-xs leading-5 text-muted">{check.ready ? 'Ready for display' : 'Needs stronger data'}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BuyerFitChecklist({ product, industries, useCases }: { product: ProductDetail; industries: string[]; useCases: string[] }) {
+  const license = product.defaultLicense ?? product.licenseOptions?.[0];
+  const checks = [
+    {
+      title: 'Use case fit',
+      text: `Best when the client needs ${useCases.slice(0, 3).join(', ')} without building a custom direction from zero.`,
+    },
+    {
+      title: 'Brand fit',
+      text: `Strongest for ${industries.slice(0, 2).join(', ')} projects that need a polished first impression.`,
+    },
+    {
+      title: 'License fit',
+      text: license?.allowsCommercialUse
+        ? `${license.name} supports commercial publishing and brand edits.`
+        : 'Check the selected license before checkout because commercial use may depend on the option.',
+    },
+  ];
+
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+      <SectionHeading
+        kicker="Before you buy"
+        title="A quick fit check for the customer decision."
+        text="This keeps the product page honest: the client should know why this design fits before adding it to the cart."
+      />
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {checks.map((check) => (
+          <div key={check.title} className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+            <BadgeCheck className="text-pine" size={17} />
+            <p className="mt-3 text-sm font-black text-ink">{check.title}</p>
+            <p className="mt-2 text-xs leading-5 text-muted">{check.text}</p>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -333,8 +776,11 @@ function SignalColumn({ title, values }: { title: string; values: string[] }) {
     <div>
       <p className="text-xs font-black uppercase tracking-[0.16em] text-white/42">{title}</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        {values.map((value) => (
-          <span key={value} className="rounded border border-white/[0.12] bg-white/[0.07] px-2.5 py-1 text-xs font-bold text-white/78">
+        {values.map((value, index) => (
+          <span
+            key={`${value}-${index}`}
+            className="rounded border border-white/[0.12] bg-white/[0.07] px-2.5 py-1 text-xs font-bold text-white/78"
+          >
             {value}
           </span>
         ))}
@@ -385,25 +831,13 @@ function LuxuryProof({ product }: { product: ProductDetail }) {
   );
 }
 
-function ValueCard({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
-  return (
-    <div className="rounded-lg border border-line bg-white p-3 shadow-sm dark:bg-[#121816]">
-      <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-pine/10 text-pine">
-        <Icon size={16} />
-      </span>
-      <h2 className="mt-2 text-sm font-black text-ink">{title}</h2>
-      <p className="mt-1 text-xs leading-5 text-muted">{text}</p>
-    </div>
-  );
-}
-
 function SignalList({ title, values }: { title: string; values: string[] }) {
   return (
     <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">{title}</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        {values.map((value) => (
-          <span key={value} className="rounded bg-white px-2 py-1 text-xs font-bold text-ink dark:bg-[#121816]">
+        {values.map((value, index) => (
+          <span key={`${value}-${index}`} className="rounded bg-white px-2 py-1 text-xs font-bold text-ink dark:bg-[#121816]">
             {value}
           </span>
         ))}
@@ -417,8 +851,8 @@ function InfoList({ title, values }: { title: string; values: string[] }) {
     <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">{title}</p>
       <ul className="mt-3 grid gap-2 text-sm text-ink">
-        {values.map((value) => (
-          <li key={value} className="flex items-center gap-2">
+        {values.map((value, index) => (
+          <li key={`${value}-${index}`} className="flex items-center gap-2">
             <BadgeCheck className="shrink-0 text-pine" size={15} />
             {value}
           </li>

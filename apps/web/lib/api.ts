@@ -178,6 +178,17 @@ export type AuthResponse = {
   refreshToken?: string;
   refreshTokenExpiresAt?: string;
   emailVerificationRequired?: boolean;
+  devEmailVerificationToken?: string;
+};
+
+export type PasswordResetRequestResponse = {
+  sent: true;
+  devPasswordResetToken?: string;
+};
+
+export type EmailVerificationRequestResponse = {
+  sent: true;
+  devEmailVerificationToken?: string;
 };
 
 export type CartResponse = {
@@ -248,6 +259,13 @@ export type PaymentSession = {
   mode: 'manual_review' | 'provider_checkout';
 };
 
+export type PaymentProviderReadiness = {
+  provider: 'manual' | 'paypal' | 'paymob' | 'fawry';
+  configured: boolean;
+  mode: 'manual_review' | 'provider_checkout';
+  missing: string[];
+};
+
 export type UserPayment = {
   payment: PaymentSession;
   order: {
@@ -279,6 +297,27 @@ export type DownloadEntitlement = {
   expiresAt: string | null;
   maxDownloads: number;
   downloadsUsed: number;
+  downloadsRemaining: number;
+  hourlyDownloadsRemaining: number;
+  assets: Array<{
+    id: string;
+    assetType: string;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    variantId: string | null;
+    sortOrder: number;
+  }>;
+};
+
+export type DownloadUrlResponse = {
+  assetId: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  downloadUrl: string;
+  expiresIn: number;
+  method: 'GET';
   downloadsRemaining: number;
   hourlyDownloadsRemaining: number;
 };
@@ -387,6 +426,61 @@ export function registerCustomer(input: { fullName: string; email: string; passw
   return sendAuthRequest('register', input);
 }
 
+export async function requestPasswordReset(input: { email: string }) {
+  const response = await fetch(`${apiBaseUrl}/auth/password/reset/request`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
+    const message = Array.isArray(payload?.message) ? payload.message.join(', ') : payload?.message || 'Password reset request failed';
+    throw new Error(message);
+  }
+
+  return (await response.json()) as PasswordResetRequestResponse;
+}
+
+export async function resetPassword(input: { token: string; password: string }) {
+  const response = await fetch(`${apiBaseUrl}/auth/password/reset`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
+    const message = Array.isArray(payload?.message) ? payload.message.join(', ') : payload?.message || 'Password reset failed';
+    throw new Error(message);
+  }
+
+  return (await response.json()) as { reset: true };
+}
+
+export function requestEmailVerification() {
+  return sendCustomerRequest<EmailVerificationRequestResponse>('/auth/email/verification/request', {
+    method: 'POST',
+    body: {},
+  });
+}
+
+export async function verifyEmail(input: { token: string }) {
+  const response = await fetch(`${apiBaseUrl}/auth/email/verify`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
+    const message = Array.isArray(payload?.message) ? payload.message.join(', ') : payload?.message || 'Email verification failed';
+    throw new Error(message);
+  }
+
+  return (await response.json()) as { verified: true };
+}
+
 function getStoredAccessToken() {
   if (typeof window === 'undefined') {
     return null;
@@ -442,7 +536,19 @@ export function removeCartItem(itemId: string) {
   });
 }
 
-export function createCheckoutOrder(input: { idempotencyKey: string }) {
+export type CheckoutAttributionInput = {
+  source?: string | null;
+  campaign?: string | null;
+  medium?: string | null;
+  intent?: string | null;
+  brief?: string | null;
+  referrer?: string | null;
+  landingPath?: string | null;
+  firstSeenAt?: string | null;
+  lastSeenAt?: string | null;
+};
+
+export function createCheckoutOrder(input: { idempotencyKey: string; attribution?: CheckoutAttributionInput | null }) {
   return sendCustomerRequest<OrderResponse>('/checkout', {
     method: 'POST',
     body: {
@@ -451,6 +557,7 @@ export function createCheckoutOrder(input: { idempotencyKey: string }) {
         country: 'EG',
         preferredCurrency: 'USD',
       },
+      attribution: input.attribution ?? undefined,
     },
   });
 }
@@ -474,6 +581,10 @@ export function createPaymentSession(input: {
   });
 }
 
+export function fetchPaymentProviderReadiness() {
+  return sendCustomerRequest<{ items: PaymentProviderReadiness[] }>('/payments/providers');
+}
+
 export function fetchOrders() {
   return sendCustomerRequest<{ items: OrderResponse[] }>('/orders');
 }
@@ -484,4 +595,11 @@ export function fetchPayments() {
 
 export function fetchDownloads() {
   return sendCustomerRequest<{ items: DownloadEntitlement[] }>('/downloads');
+}
+
+export function createDownloadUrl(entitlementId: string, assetId: string) {
+  return sendCustomerRequest<DownloadUrlResponse>(`/downloads/${entitlementId}/assets/${assetId}/url`, {
+    method: 'POST',
+    body: {},
+  });
 }

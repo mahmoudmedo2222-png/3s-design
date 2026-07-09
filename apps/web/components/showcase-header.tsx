@@ -1,6 +1,7 @@
-'use client';
+﻿'use client';
 
 import { LogIn, Search, UserPlus, UserRound } from 'lucide-react';
+import type { Route } from 'next';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
@@ -8,8 +9,8 @@ import { queueAiSearch } from '../lib/ai-search';
 import { useAuthSession } from '../lib/auth-session';
 import { type AppLocale, commonCopy, homeCopy } from '../lib/locale';
 import { CartButton } from './cart-button';
-import { LanguageToggle } from './language-toggle';
 import { ThemeToggle } from './theme-toggle';
+import { Button } from './ui';
 
 export function ShowcaseHeader({ locale }: { locale: AppLocale }) {
   const router = useRouter();
@@ -27,11 +28,11 @@ export function ShowcaseHeader({ locale }: { locale: AppLocale }) {
 
     queueAiSearch(text);
     setQuery('');
-    router.push('/?intro=0#ai-finder');
+    router.push(`/search?q=${encodeURIComponent(text)}` as Route);
   }
 
   return (
-    <header className="showcase-header fixed left-0 right-0 top-0 z-40 px-4 pt-3 sm:px-6 lg:px-8">
+    <header className="showcase-header fixed inset-x-0 top-0 z-40 px-4 pt-3 sm:px-6 lg:px-8">
       <div className="showcase-header__bar mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 rounded-lg border border-white/[0.12] bg-black/[0.24] px-3 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
         <Link href="/" className="flex min-w-0 items-center gap-3" aria-label={common.home}>
           <span className="brand-mark" aria-hidden="true">
@@ -56,12 +57,13 @@ export function ShowcaseHeader({ locale }: { locale: AppLocale }) {
             className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#101513] outline-none placeholder:text-[#101513]/[0.58]"
             placeholder={locale === 'ar' ? 'ابحث بالإحساس أو المجال أو الستايل...' : 'Search by feeling, industry, style...'}
           />
-          <button
+          <Button
             type="submit"
-            className="rounded-full bg-[#101513] px-3 py-1 text-xs font-black text-[#fff8e8] transition hover:bg-[#22594b]"
+            size="sm"
+            className="h-7 rounded-full border-transparent bg-[#101513] px-3 py-1 text-xs font-black text-[#fff8e8] hover:bg-[#22594b]"
           >
             {locale === 'ar' ? 'ابحث' : 'Find'}
-          </button>
+          </Button>
         </form>
 
         <div className="flex items-center gap-2">
@@ -84,15 +86,14 @@ export function ShowcaseHeader({ locale }: { locale: AppLocale }) {
               </Link>
               <Link
                 href="/register"
-                className="hidden h-10 items-center justify-center gap-2 rounded-full bg-[#fff8e8] px-3 text-sm font-black text-[#101513] transition hover:bg-[#f7d17e] lg:inline-flex"
+                className="hidden h-10 min-w-24 items-center justify-center gap-2 rounded-full bg-[#fff8e8] px-4 text-sm font-black text-[#101513] transition hover:bg-[#f7d17e] lg:inline-flex"
               >
-                <UserPlus size={16} />
-                {common.create}
+                <UserPlus className="shrink-0" size={16} />
+                {locale === 'ar' ? 'انضم' : common.create}
               </Link>
             </>
           )}
 
-          <LanguageToggle locale={locale} />
           <ThemeToggle />
           <CartButton />
           <Link

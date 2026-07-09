@@ -5,7 +5,7 @@ import type { ProductSummary } from './api';
 const tasteMemoryKey = '3s-design-taste-memory';
 export const tasteMemoryChangedEvent = '3s-design-taste-memory-changed';
 
-type TasteAction = 'saved' | 'cart' | 'search' | 'viewed';
+type TasteAction = 'saved' | 'cart' | 'search' | 'viewed' | 'studio';
 
 type TasteEvent = {
   id: string;
@@ -29,6 +29,20 @@ export type TasteProfile = {
   prompt: string;
   eventCount: number;
 };
+
+export type StudioDirection = {
+  brandName: string;
+  mood: string;
+  palette: string;
+  output: string;
+  prompt: string;
+  savedAt: string;
+};
+
+const studioDirectionKey = '3s-design-studio-direction';
+const studioDirectionUrlKey = 'studio';
+const studioDirectionCookieMaxAge = 60 * 60 * 24 * 180;
+export const studioDirectionChangedEvent = '3s-design-studio-direction-changed';
 
 export function rememberProductTaste(product: ProductSummary, action: Exclude<TasteAction, 'search'>) {
   writeTasteEvent({
@@ -63,13 +77,42 @@ export function rememberSearchTaste(prompt: string) {
   });
 }
 
+export function saveStudioDirection(direction: Omit<StudioDirection, 'savedAt'>) {
+  const saved: StudioDirection = {
+    ...direction,
+    savedAt: new Date().toISOString(),
+  };
+
+  writeJsonStorage(studioDirectionKey, saved);
+  writeJsonCookie(studioDirectionKey, saved);
+  writeJsonUrlState(studioDirectionUrlKey, saved);
+  writeTasteEvent({
+    id: `studio-${Date.now()}`,
+    action: 'studio',
+    title: direction.brandName || 'Studio direction',
+    prompt: direction.prompt,
+    colors: [direction.palette],
+    styles: [direction.output],
+    moods: [direction.mood],
+    useCases: ['studio-preview'],
+    createdAt: saved.savedAt,
+  });
+  window.dispatchEvent(new Event(studioDirectionChangedEvent));
+
+  return saved;
+}
+
+export function readStudioDirection(): StudioDirection | null {
+  return (
+    readJsonUrlState<StudioDirection>(studioDirectionUrlKey) ??
+    readJsonStorage<StudioDirection>(studioDirectionKey) ??
+    readJsonCookie<StudioDirection>(studioDirectionKey) ??
+    null
+  );
+}
+
 export function readTasteEvents() {
-  try {
-    const raw = window.localStorage.getItem(tasteMemoryKey);
-    return raw ? (JSON.parse(raw) as TasteEvent[]) : [];
-  } catch {
-    return [];
-  }
+  return readJsonStorage<TasteEvent[]>(tasteMemoryKey) ?? [];
 }
 
 export function buildTasteProfile(): TasteProfile {
@@ -98,8 +141,66 @@ export function buildTasteProfile(): TasteProfile {
 
 function writeTasteEvent(event: TasteEvent) {
   const next = [event, ...readTasteEvents().filter((item) => item.id !== event.id || item.action !== event.action)].slice(0, 80);
-  window.localStorage.setItem(tasteMemoryKey, JSON.stringify(next));
+  writeJsonStorage(tasteMemoryKey, next);
   window.dispatchEvent(new Event(tasteMemoryChangedEvent));
+}
+
+function readJsonStorage<TValue>(key: string): TValue | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as TValue) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeJsonStorage(key: string, value: unknown) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Some embedded or private browser contexts disable localStorage; cookies keep studio recovery intact.
+  }
+}
+
+function readJsonCookie<TValue>(key: string): TValue | null {
+  try {
+    const prefix = `${key}=`;
+    const item = document.cookie
+      .split('; ')
+      .find((cookie) => cookie.startsWith(prefix))
+      ?.slice(prefix.length);
+
+    return item ? (JSON.parse(decodeURIComponent(item)) as TValue) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeJsonCookie(key: string, value: unknown) {
+  try {
+    document.cookie = `${key}=${encodeURIComponent(JSON.stringify(value))}; max-age=${studioDirectionCookieMaxAge}; path=/; samesite=lax`;
+  } catch {
+    // The UI can still continue even when every client-side persistence layer is unavailable.
+  }
+}
+
+function readJsonUrlState<TValue>(key: string): TValue | null {
+  try {
+    const raw = new URL(window.location.href).searchParams.get(key);
+    return raw ? (JSON.parse(raw) as TValue) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeJsonUrlState(key: string, value: unknown) {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set(key, JSON.stringify(value));
+    window.history.replaceState(window.history.state, '', url);
+  } catch {
+    // URL state is a shareable fallback only; failing here should not block the studio flow.
+  }
 }
 
 function topSignals(values: string[]) {

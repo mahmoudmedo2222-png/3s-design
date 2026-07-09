@@ -1,5 +1,8 @@
 import { AccountDashboard } from '../../components/account-dashboard';
+import { getRequestLocale } from '../../lib/server-locale';
 
-export default function AccountPage() {
-  return <AccountDashboard />;
+export default async function AccountPage() {
+  const locale = await getRequestLocale();
+
+  return <AccountDashboard locale={locale} />;
 }

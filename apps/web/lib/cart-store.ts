@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import type { CartResponse, OrderResponse, PaymentSession, ProductSummary } from './api';
 import { addCartItem, createCheckoutOrder, createPaymentSession, fetchCart, removeCartItem } from './api';
 import { accessTokenKey } from './auth-session';
+import { captureAttributionFromLocation, readAttribution } from './attribution';
 import { rememberProductTaste } from './taste-memory';
 
 export type CartItem = {
@@ -42,7 +43,7 @@ type CartState = {
   notice: string | null;
   lastCheckout: CheckoutResult | null;
   hydrate: () => Promise<void>;
-  add: (product: ProductSummary) => Promise<void>;
+  add: (product: ProductSummary, options?: { licenseId?: string }) => Promise<void>;
   remove: (itemId: string) => Promise<void>;
   clear: () => Promise<void>;
   clearLocal: () => void;
@@ -84,12 +85,12 @@ export const useCartStore = create<CartState>()((set, get) => ({
     }
   },
 
-  add: async (product) => {
+  add: async (product, options) => {
     if (!canUseCart()) {
       throw new Error('Sign in first to protect purchases and downloads.');
     }
 
-    const licenseId = product.defaultLicense?.id ?? product.licenseOptions?.[0]?.id;
+    const licenseId = options?.licenseId ?? product.defaultLicense?.id ?? product.licenseOptions?.[0]?.id;
     if (!licenseId) {
       throw new Error('This design needs a license price before it can be purchased.');
     }
@@ -153,7 +154,10 @@ export const useCartStore = create<CartState>()((set, get) => ({
     const idempotencyKey = createIdempotencyKey();
     set({ isCheckingOut: true, error: null, notice: null, lastCheckout: null });
     try {
-      const order = await createCheckoutOrder({ idempotencyKey });
+      const order = await createCheckoutOrder({
+        idempotencyKey,
+        attribution: captureAttributionFromLocation() ?? readAttribution(),
+      });
       const payment = await createPaymentSession({
         orderId: order.id,
         provider: 'manual',

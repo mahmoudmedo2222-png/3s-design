@@ -1,14 +1,16 @@
 'use client';
 
-import { Crown, LockKeyhole, ShoppingBag } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Crown, LockKeyhole, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useState } from 'react';
 import type { ProductDetail } from '../lib/api';
 import { useAuthSession } from '../lib/auth-session';
 import { useCartStore } from '../lib/cart-store';
+import { trackFunnelEvent } from '../lib/funnel-analytics';
 import { CompareButton } from './compare-button';
 import { MoodboardButton } from './moodboard-button';
+import { ActionLink, Button, Notice, Panel } from './ui';
 
 export function ProductDetailActions({ product }: { product: ProductDetail }) {
   const add = useCartStore((state) => state.add);
@@ -18,11 +20,28 @@ export function ProductDetailActions({ product }: { product: ProductDetail }) {
   const [cartError, setCartError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const detailHref = `/products/${product.slug}` as Route;
+  const privateTailoringHref = `/register?next=${encodeURIComponent(detailHref)}` as Route;
   const primaryLicense = product.defaultLicense ?? product.licenseOptions?.[0] ?? null;
-  const displayPrice = primaryLicense?.price ?? product.basePrice;
-  const displayCurrency = primaryLicense?.currency ?? product.currency;
+  const licenseOptions = product.licenseOptions?.length ? product.licenseOptions : primaryLicense ? [primaryLicense] : [];
+  const [selectedLicenseId, setSelectedLicenseId] = useState(primaryLicense?.id ?? licenseOptions[0]?.id ?? '');
+  const selectedLicense = licenseOptions.find((license) => license.id === selectedLicenseId) ?? primaryLicense;
+  const displayPrice = selectedLicense?.price ?? product.basePrice;
+  const displayCurrency = selectedLicense?.currency ?? product.currency;
+  const canPurchase = Boolean(selectedLicense);
+  const licenseRules = [
+    selectedLicense?.allowsCommercialUse ? 'Commercial use allowed' : 'Commercial use needs confirmation',
+    selectedLicense?.allowsModification ? 'Brand edits allowed' : 'Edits need confirmation',
+    selectedLicense?.allowsResale ? 'Resale permitted by license' : 'No resale of the base files',
+  ];
 
   async function addToCart() {
+    trackFunnelEvent('product_add_to_cart_attempted', {
+      productId: product.id,
+      slug: product.slug,
+      licenseId: selectedLicense?.id ?? null,
+      signedIn: isSignedIn,
+    });
+
     if (!isSignedIn) {
       setAuthNotice(true);
       setCartNotice(false);
@@ -33,10 +52,23 @@ export function ProductDetailActions({ product }: { product: ProductDetail }) {
     setAuthNotice(false);
     setCartNotice(false);
     setCartError(null);
+
+    if (!canPurchase) {
+      setCartError('This design needs a license price before it can be purchased.');
+      return;
+    }
+
     setIsAdding(true);
 
     try {
-      await add(product);
+      await add(product, { licenseId: selectedLicense?.id });
+      trackFunnelEvent('product_add_to_cart_succeeded', {
+        productId: product.id,
+        slug: product.slug,
+        licenseId: selectedLicense?.id ?? null,
+        price: displayPrice,
+        currency: displayCurrency,
+      });
       setCartNotice(true);
     } catch (error) {
       setCartError(error instanceof Error ? error.message : 'Could not add this design.');
@@ -46,14 +78,14 @@ export function ProductDetailActions({ product }: { product: ProductDetail }) {
   }
 
   return (
-    <div className="rounded-lg border border-line bg-white p-3 shadow-sm dark:bg-[#121816]">
+    <Panel className="p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Starting from</p>
           <p className="mt-1 text-2xl font-black text-pine">
             {displayCurrency} {displayPrice}
           </p>
-          {primaryLicense ? <p className="mt-1 text-xs font-bold text-muted">{primaryLicense.name}</p> : null}
+          {selectedLicense ? <p className="mt-1 text-xs font-bold text-muted">{selectedLicense.name}</p> : null}
         </div>
         <div className="flex items-center gap-2">
           <CompareButton product={product} />
@@ -61,45 +93,121 @@ export function ProductDetailActions({ product }: { product: ProductDetail }) {
         </div>
       </div>
 
+      {licenseOptions.length > 1 ? (
+        <div className="mt-4 grid gap-2" aria-label="License options">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-muted">Choose license</p>
+          {licenseOptions.map((license) => {
+            const active = license.id === selectedLicense?.id;
+
+            return (
+              <Button
+                key={license.id}
+                type="button"
+                onClick={() => {
+                  setSelectedLicenseId(license.id);
+                  trackFunnelEvent('product_license_selected', {
+                    productId: product.id,
+                    slug: product.slug,
+                    licenseId: license.id,
+                    licenseName: license.name,
+                    price: license.price,
+                    currency: license.currency,
+                  });
+                }}
+                intent={active ? 'primary' : 'secondary'}
+                className={`grid h-auto justify-stretch gap-1 p-3 text-left ${
+                  active ? 'border-pine bg-pine/10 text-ink' : 'border-line bg-paper text-ink hover:border-pine/45 dark:bg-[#0f1513]'
+                }`}
+              >
+                <span className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-black">{license.name}</span>
+                  <span className="shrink-0 text-sm font-black text-pine">
+                    {license.currency} {license.price}
+                  </span>
+                </span>
+                <span className="text-xs leading-5 text-muted">
+                  {license.allowsCommercialUse ? 'Commercial' : 'Personal/review'} /{' '}
+                  {license.allowsModification ? 'Editable' : 'Limited edits'} / {license.allowsResale ? 'Resale allowed' : 'No resale'}
+                </span>
+              </Button>
+            );
+          })}
+        </div>
+      ) : null}
+
       <div className="mt-4 grid gap-2">
-        <button
-          type="button"
-          onClick={() => void addToCart()}
-          disabled={isAdding}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded bg-pine px-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#1b4a3f] active:translate-y-0 dark:bg-[#1f6b59] dark:hover:bg-[#247c68]"
-        >
-          {isSignedIn ? <ShoppingBag size={18} /> : <LockKeyhole size={18} />}
-          {isAdding ? 'Adding...' : isSignedIn ? `Add ${primaryLicense?.name ?? 'license'}` : 'Sign in to add license'}
-        </button>
+        {!isSignedIn ? (
+          <ActionLink
+            href={`/login?next=${encodeURIComponent(detailHref)}` as Route}
+            onClick={() => {
+              trackFunnelEvent('product_add_to_cart_attempted', {
+                productId: product.id,
+                slug: product.slug,
+                licenseId: selectedLicense?.id ?? null,
+                signedIn: false,
+              });
+            }}
+            icon={LockKeyhole}
+            className="h-10"
+          >
+            Sign in to add license
+          </ActionLink>
+        ) : (
+          <Button type="button" onClick={() => void addToCart()} disabled={isAdding || !canPurchase} icon={ShoppingBag}>
+            {isAdding ? 'Adding...' : canPurchase ? `Add ${selectedLicense?.name ?? 'license'}` : 'License setup needed'}
+          </Button>
+        )}
         {authNotice ? (
-          <div className="rounded border border-saffron/35 bg-saffron/10 p-3 text-xs font-bold leading-5 text-saffron">
+          <Notice tone="info" className="border-saffron/35 bg-saffron/10 p-3 text-xs text-saffron">
             Sign in first so the license, payment, invoice, and download limits belong to your account.{' '}
             <Link href={`/login?next=${encodeURIComponent(detailHref)}` as Route} className="underline">
               Sign in
             </Link>
-          </div>
+          </Notice>
         ) : null}
         {cartNotice ? (
-          <div className="rounded border border-pine/25 bg-pine/10 p-3 text-xs font-bold leading-5 text-pine dark:text-[#7bd8bd]">
-            Added to cart. Open the cart in the header to review the license.
-          </div>
+          <Notice tone="success" className="p-3 text-xs">
+            Added to cart. Review the license and create a private order when ready.
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <ActionLink href="/account" intent="secondary" className="h-9 px-3 text-sm">
+                Review in account
+              </ActionLink>
+              <ActionLink href="/checkout" icon={ArrowRight} className="h-9 px-3 text-sm">
+                Go to checkout
+              </ActionLink>
+            </div>
+          </Notice>
         ) : null}
         {cartError ? (
-          <div className="rounded border border-berry/30 bg-berry/10 p-3 text-xs font-bold leading-5 text-berry">{cartError}</div>
+          <Notice tone="error" className="p-3 text-xs">
+            {cartError}
+          </Notice>
         ) : null}
-        <Link
-          href="/register"
-          className="inline-flex h-10 items-center justify-center gap-2 rounded border border-saffron/40 bg-saffron/10 px-4 text-sm font-bold text-ink transition hover:-translate-y-0.5 hover:border-saffron hover:bg-saffron/20 active:translate-y-0"
+        <ActionLink
+          href={privateTailoringHref}
+          icon={Crown}
+          intent="gold"
+          className="h-10 border-saffron/40 bg-saffron/10 text-ink hover:border-saffron hover:bg-saffron/20"
         >
-          <Crown size={18} className="text-saffron" />
           Request private tailoring
-        </Link>
+        </ActionLink>
       </div>
 
-      <div className="mt-4 rounded border border-line bg-paper p-3 text-xs leading-5 text-muted dark:bg-[#0f1513]">
-        Standard license is commercial, editable, and non-exclusive. The same base design can be sold again; private tailoring creates a
-        custom version for your brand.
-      </div>
-    </div>
+      <Panel className="mt-4 p-3 text-xs leading-5 text-muted shadow-none">
+        Path: add license to private cart, create checkout, complete payment review, then unlock the download vault. The default purchase is
+        non-exclusive unless a private tailoring agreement is created.
+      </Panel>
+
+      <Panel className="mt-3 grid gap-2 p-3 shadow-none">
+        {[...licenseRules, 'Account owns the license', 'Payment review opens delivery', 'Download limits protect file value'].map(
+          (item, index) => (
+            <div key={`${item}-${index}`} className="flex items-center gap-2 text-xs font-bold text-ink">
+              <BadgeCheck className="shrink-0 text-pine" size={14} />
+              {item}
+            </div>
+          ),
+        )}
+      </Panel>
+    </Panel>
   );
 }

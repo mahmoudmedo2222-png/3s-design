@@ -3,13 +3,16 @@ import type { Route } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { AiDiscoveryPanel } from '../components/ai-discovery-panel';
+import { ClientStudioPreview } from '../components/client-studio-preview';
 import { CompareTray } from '../components/compare-tray';
+import { CustomerTrustStrip } from '../components/customer-experience';
 import { DesignPreview } from '../components/design-preview';
 import { IntentLink } from '../components/intent-link';
-import { ProductCard } from '../components/product-card';
 import { ShowcaseHeader } from '../components/showcase-header';
 import { SiteFooter } from '../components/site-footer';
 import { SiteIntro } from '../components/site-intro';
+import { StorefrontDiscovery } from '../components/storefront-discovery';
+import { ActionLink, Badge, Panel } from '../components/ui';
 import { fetchBestSellers, fetchProducts, type ProductSummary } from '../lib/api';
 import { type AppLocale, homeCopy } from '../lib/locale';
 import { getRequestLocale } from '../lib/server-locale';
@@ -17,6 +20,7 @@ import { getRequestLocale } from '../lib/server-locale';
 export const dynamic = 'force-dynamic';
 
 const momentIcons = [Flame, Sparkles, Crown, HeartHandshake, Wand2, Sparkles] as const;
+const cafeHeroKeywords = ['cafe', 'restaurant', 'burger', 'food', 'menu', 'coffee'];
 
 export default async function HomePage() {
   const locale = await getRequestLocale();
@@ -24,7 +28,11 @@ export default async function HomePage() {
   const intentPaths = copy.intentPaths;
   const [products, bestSellers] = await Promise.all([fetchProducts(), fetchBestSellers()]);
   const featured = bestSellers.items.length ? bestSellers.items : products.items.slice(0, 6);
-  const heroProduct = featured[0] ?? products.items[0];
+  const heroProduct =
+    featured.find((product) => cafeHeroKeywords.some((keyword) => product.title.toLowerCase().includes(keyword))) ??
+    products.items.find((product) => cafeHeroKeywords.some((keyword) => product.title.toLowerCase().includes(keyword))) ??
+    featured[0] ??
+    products.items[0];
 
   return (
     <main className="showcase-page min-h-screen overflow-hidden text-white">
@@ -54,7 +62,7 @@ export default async function HomePage() {
           </div>
 
           <aside className="hero-side hidden space-y-3 lg:block lg:pt-8">
-            <div className="showcase-side-panel rounded-lg border border-white/[0.12] bg-white/[0.08] p-3 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+            <Panel tone="glass" className="showcase-side-panel p-3 shadow-[0_18px_70px_rgba(0,0,0,0.28)]">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
@@ -72,14 +80,20 @@ export default async function HomePage() {
                 ))}
                 {!featured.length ? <p className="text-sm text-white/65">{copy.noProducts}</p> : null}
               </div>
-            </div>
+            </Panel>
 
-            <div className="showcase-side-panel rounded-lg border border-white/[0.12] bg-black/25 p-3 backdrop-blur-xl">
+            <Panel tone="glass" className="showcase-side-panel p-3">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">{copy.newRule}</p>
               <p className="mt-2 text-sm leading-6 text-white/[0.74]">{copy.newRuleText}</p>
-            </div>
+            </Panel>
           </aside>
         </div>
+      </section>
+
+      <ClientStudioPreview locale={locale} />
+
+      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <CustomerTrustStrip tone="dark" />
       </section>
 
       <section id="ai-finder" className="ai-concierge relative mx-auto max-w-7xl scroll-mt-24 px-4 py-6 sm:px-6 lg:px-8">
@@ -88,16 +102,13 @@ export default async function HomePage() {
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">{copy.aiKicker}</p>
             <h2 className="mt-2 max-w-3xl text-xl font-black text-white sm:text-2xl">{copy.aiTitle}</h2>
           </div>
-          <Link
-            href="/login"
-            className="inline-flex h-10 items-center justify-center rounded border border-white/[0.12] bg-white/[0.08] px-4 text-sm font-bold text-white transition hover:border-[#f7d17e] hover:text-[#f7d17e]"
-          >
+          <ActionLink href="/login" intent="ghost" className="h-10">
             {copy.saveSearch}
-          </Link>
+          </ActionLink>
         </div>
-        <div className="ai-concierge__panel rounded-lg border border-white/[0.12] bg-white/[0.06] p-2 shadow-[0_18px_70px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+        <Panel tone="glass" className="ai-concierge__panel p-2 shadow-[0_18px_70px_rgba(0,0,0,0.18)]">
           <AiDiscoveryPanel />
-        </div>
+        </Panel>
       </section>
 
       <section id="shop-by-emotion" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-6 sm:px-6 lg:px-8">
@@ -130,15 +141,11 @@ export default async function HomePage() {
         </div>
 
         {products.items.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {products.items.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <StorefrontDiscovery products={products.items} />
         ) : (
-          <div className="rounded-lg border border-dashed border-white/[0.14] bg-white/[0.04] p-10 text-center text-sm text-white/[0.60]">
+          <Panel tone="glass" className="border-dashed border-white/[0.14] p-10 text-center text-sm text-white/[0.60]">
             {copy.emptyCatalog}
-          </div>
+          </Panel>
         )}
       </section>
 
@@ -152,7 +159,7 @@ function HeroShowcase({ product, locale = 'en' }: { product: ProductSummary; loc
   const copy = homeCopy[locale];
 
   return (
-    <div className="hero-showcase relative overflow-hidden rounded-lg border border-white/[0.12] bg-black/[0.24] shadow-[0_28px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl">
+    <Panel tone="glass" className="hero-showcase relative overflow-hidden bg-black/[0.24] shadow-[0_28px_90px_rgba(0,0,0,0.34)]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_22%,rgba(247,209,126,0.16),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.01))]" />
 
       <div className="hero-showcase__grid relative grid min-h-[380px] gap-4 p-4 lg:grid-cols-[0.9fr_1.1fr] xl:min-h-[420px]">
@@ -175,17 +182,17 @@ function HeroShowcase({ product, locale = 'en' }: { product: ProductSummary; loc
                 product.designDna?.moods?.[0] ?? copy.premium,
                 product.designDna?.styles?.[0] ?? copy.curated,
                 product.designDna?.platforms?.[0] ?? copy.readyToUse,
-              ].map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-white/[0.12] bg-white/[0.08] px-3 py-1.5 text-xs font-bold text-white/[0.76]"
+              ].map((item, index) => (
+                <Badge
+                  key={`${item}-${index}`}
+                  className="rounded-full border-white/[0.12] bg-white/[0.08] px-3 py-1.5 text-xs normal-case tracking-normal text-white/[0.76]"
                 >
                   {item}
-                </span>
+                </Badge>
               ))}
             </div>
 
-            <div className="hero-price-card grid gap-3 rounded-lg border border-white/[0.12] bg-white/[0.07] p-3 backdrop-blur-md sm:grid-cols-[1fr_auto] sm:items-end">
+            <Panel tone="glass" className="hero-price-card grid gap-3 bg-white/[0.07] p-3 shadow-none sm:grid-cols-[1fr_auto] sm:items-end">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-white/[0.45]">{copy.startsAt}</p>
                 <p className="mt-1 text-2xl font-black text-[#f7d17e]">
@@ -193,30 +200,28 @@ function HeroShowcase({ product, locale = 'en' }: { product: ProductSummary; loc
                 </p>
                 <p className="mt-1 text-xs font-semibold text-white/[0.62]">{copy.license}</p>
               </div>
-              <Link
-                href={href}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded bg-[#fff8e8] px-4 text-sm font-black text-[#101513] transition hover:-translate-y-0.5 hover:bg-[#f7d17e]"
-              >
+              <ActionLink href={href} icon={ArrowUpRight} intent="secondary" className="h-10 bg-[#fff8e8] font-black hover:bg-[#f7d17e]">
                 {copy.viewDesign}
-                <ArrowUpRight size={16} />
-              </Link>
-            </div>
+              </ActionLink>
+            </Panel>
           </div>
         </div>
 
         <Link
           href={href}
-          className="hero-preview-card group relative min-h-[320px] overflow-hidden rounded-lg border border-white/[0.12] bg-black/[0.22]"
+          className="hero-preview-card product-card group relative min-h-[320px] overflow-visible rounded-lg border border-white/[0.12] bg-black/[0.22]"
           aria-label={`View ${product.title}`}
         >
-          <DesignPreview product={product} variant="hero" />
+          <div className="product-card__preview h-full min-h-[320px] overflow-visible">
+            <DesignPreview product={product} variant="hero" />
+          </div>
           <div className="pointer-events-none absolute inset-x-5 bottom-5 flex items-center justify-between rounded-lg border border-white/[0.12] bg-black/[0.28] px-4 py-3 text-sm font-bold text-white/[0.78] opacity-0 backdrop-blur-md transition group-hover:opacity-100">
             <span>{copy.openStudio}</span>
             <ArrowUpRight size={16} />
           </div>
         </Link>
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -237,9 +242,9 @@ function BestSellerRow({ product, index }: { product: ProductSummary; index: num
           {product.currency} {product.basePrice}
         </p>
       </div>
-      <span className="flex h-7 w-7 items-center justify-center rounded bg-[#f7d17e]/14 text-xs font-black text-[#f7d17e]">
+      <Badge tone="gold" className="flex h-7 w-7 items-center justify-center p-0">
         {index + 1}
-      </span>
+      </Badge>
     </Link>
   );
 }
@@ -262,9 +267,10 @@ function MoodCollection({
   const copy = homeCopy[locale];
 
   return (
-    <div
+    <Panel
+      tone="glass"
       id={id}
-      className="group scroll-mt-24 overflow-hidden rounded-lg border border-white/[0.12] bg-white/[0.06] p-3 shadow-[0_18px_64px_rgba(0,0,0,0.16)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.35] hover:bg-white/[0.09]"
+      className="group scroll-mt-24 overflow-hidden p-3 shadow-[0_18px_64px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.35] hover:bg-white/[0.09]"
     >
       <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e] transition group-hover:scale-105">
         <Icon size={18} />
@@ -272,6 +278,6 @@ function MoodCollection({
       <h3 className="mt-3 text-base font-black text-white">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-white/[0.64]">{text}</p>
       {prompt ? <IntentLink href="#ai-finder" label={copy.findMatches} prompt={prompt} active /> : null}
-    </div>
+    </Panel>
   );
 }

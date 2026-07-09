@@ -1,10 +1,11 @@
 'use client';
 
-import { LockKeyhole, ShoppingCart, Trash2, UserPlus } from 'lucide-react';
-import Link from 'next/link';
+import { BadgeCheck, LockKeyhole, ShoppingCart, Trash2, UserPlus } from 'lucide-react';
+import type { Route } from 'next';
 import { useEffect, useState } from 'react';
 import { useAuthSession } from '../lib/auth-session';
 import { useCartStore } from '../lib/cart-store';
+import { ActionLink, Button, Notice, Panel } from './ui';
 
 export function CartButton() {
   const [open, setOpen] = useState(false);
@@ -15,9 +16,7 @@ export function CartButton() {
   const remove = useCartStore((state) => state.remove);
   const clear = useCartStore((state) => state.clear);
   const clearLocal = useCartStore((state) => state.clearLocal);
-  const checkout = useCartStore((state) => state.checkout);
   const isLoading = useCartStore((state) => state.isLoading);
-  const isCheckingOut = useCartStore((state) => state.isCheckingOut);
   const error = useCartStore((state) => state.error);
   const notice = useCartStore((state) => state.notice);
   const lastCheckout = useCartStore((state) => state.lastCheckout);
@@ -32,29 +31,22 @@ export function CartButton() {
     }
   }, [clearLocal, hydrate, isSignedIn]);
 
-  async function startCheckout() {
-    try {
-      await checkout();
-    } catch {
-      // The cart store already exposes the customer-friendly error.
-    }
-  }
-
   return (
     <div className="relative">
-      <button
+      <Button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-10 items-center gap-2 rounded border border-line bg-white px-3 text-sm font-semibold text-ink shadow-sm transition hover:-translate-y-0.5 hover:scale-105 hover:border-pine hover:text-pine active:translate-y-0 active:scale-95"
+        intent="secondary"
+        className="shadow-sm hover:scale-105 active:scale-95"
         aria-label={isSignedIn ? 'Open cart' : 'Sign in to use cart'}
         title={isSignedIn ? 'Cart' : 'Sign in to use cart'}
       >
         {isSignedIn ? <ShoppingCart size={17} /> : <LockKeyhole size={17} />}
         <span>{count}</span>
-      </button>
+      </Button>
 
       {open ? (
-        <div className="absolute right-0 top-12 z-20 w-[min(380px,calc(100vw-32px))] rounded-lg border border-line bg-white p-4 shadow-panel">
+        <Panel className="absolute right-0 top-12 z-20 w-[min(380px,calc(100vw-32px))] p-4 shadow-panel">
           {!isSignedIn ? (
             <div>
               <div className="mb-3 flex items-center gap-2">
@@ -70,20 +62,12 @@ export function CartButton() {
                 We keep carts behind accounts so purchases, invoices, download limits, and fraud checks stay tied to the real customer.
               </p>
               <div className="mt-4 grid gap-2">
-                <Link
-                  href="/login"
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded bg-pine px-4 text-sm font-bold text-white transition hover:bg-[#1b4a3f]"
-                >
-                  <LockKeyhole size={16} />
+                <ActionLink href="/login" icon={LockKeyhole} className="h-10">
                   Sign in
-                </Link>
-                <Link
-                  href="/register"
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded border border-line bg-paper px-4 text-sm font-bold text-ink transition hover:border-pine hover:text-pine"
-                >
-                  <UserPlus size={16} />
+                </ActionLink>
+                <ActionLink href="/register" icon={UserPlus} intent="secondary" className="h-10">
                   Create account
-                </Link>
+                </ActionLink>
               </div>
             </div>
           ) : (
@@ -94,9 +78,9 @@ export function CartButton() {
                   <p className="text-xs text-muted">Server-saved for this account</p>
                 </div>
                 {visibleItems.length ? (
-                  <button type="button" onClick={() => void clear()} className="text-xs font-semibold text-berry">
+                  <Button type="button" onClick={() => void clear()} intent="danger" size="sm">
                     Clear
-                  </button>
+                  </Button>
                 ) : null}
               </div>
 
@@ -110,15 +94,16 @@ export function CartButton() {
                           {item.licenseName} / {item.quantity} x {item.currency} {item.unitPrice}
                         </p>
                       </div>
-                      <button
+                      <Button
                         type="button"
                         onClick={() => void remove(item.id)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded border border-line bg-paper text-muted transition hover:scale-105 hover:border-berry hover:text-berry active:scale-95"
+                        icon={Trash2}
+                        intent="danger"
+                        size="icon"
+                        className="h-8 w-8 bg-paper text-muted hover:scale-105 active:scale-95"
                         aria-label={`Remove ${item.title}`}
                         title="Remove"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      />
                     </div>
                   ))}
                   <div className="flex items-center justify-between text-sm font-semibold">
@@ -127,34 +112,52 @@ export function CartButton() {
                       {totals.currency} {totals.total}
                     </span>
                   </div>
+                  <CheckoutAssurance />
                   <CartMessage error={error} notice={notice} orderNumber={lastCheckout?.order.orderNumber} />
-                  <button
-                    type="button"
-                    disabled={isLoading || isCheckingOut}
-                    onClick={() => void startCheckout()}
-                    className="h-10 w-full rounded bg-pine text-sm font-semibold text-white transition hover:bg-[#1b4a3f] disabled:cursor-not-allowed disabled:opacity-60"
-                    title="Create a private checkout request"
-                  >
-                    {isCheckingOut ? 'Creating checkout...' : 'Private checkout'}
-                  </button>
+                  <ActionLink href={'/checkout' as Route} className="h-10 w-full" title="Open private checkout">
+                    Open checkout
+                  </ActionLink>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-muted">{isLoading ? 'Loading your private cart...' : 'Your cart is empty.'}</p>
                   <CartMessage error={error} notice={notice} orderNumber={lastCheckout?.order.orderNumber} />
+                  <CheckoutAssurance />
                 </div>
               )}
             </>
           )}
-        </div>
+        </Panel>
       ) : null}
     </div>
   );
 }
 
+function CheckoutAssurance() {
+  const items = ['Account-locked order', 'Manual payment review', 'Download vault after approval'];
+
+  return (
+    <Panel className="p-3 shadow-none">
+      <p className="mb-2 text-xs font-black uppercase tracking-[0.12em] text-muted">What happens next</p>
+      <div className="grid gap-2">
+        {items.map((item, index) => (
+          <div key={`${item}-${index}`} className="flex items-center gap-2 text-xs font-bold text-ink">
+            <BadgeCheck className="shrink-0 text-pine" size={14} />
+            {item}
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
 function CartMessage({ error, notice, orderNumber }: { error: string | null; notice: string | null; orderNumber?: string }) {
   if (error) {
-    return <div className="rounded border border-berry/25 bg-berry/10 p-3 text-xs font-bold leading-5 text-berry">{error}</div>;
+    return (
+      <Notice tone="error" className="p-3 text-xs">
+        {error}
+      </Notice>
+    );
   }
 
   if (!notice) {
@@ -162,9 +165,9 @@ function CartMessage({ error, notice, orderNumber }: { error: string | null; not
   }
 
   return (
-    <div className="rounded border border-pine/25 bg-pine/10 p-3 text-xs font-bold leading-5 text-pine">
+    <Notice tone="success" className="p-3 text-xs">
       {notice}
       {orderNumber ? <span className="mt-1 block text-muted">Order {orderNumber} is in manual review.</span> : null}
-    </div>
+    </Notice>
   );
 }

@@ -4,6 +4,7 @@ import { Scale } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ProductSummary } from '../lib/api';
 import { compareChangedEvent, isCompareSelected, toggleCompareProduct } from '../lib/compare-store';
+import { Button, Notice } from './ui';
 
 export function CompareButton({ product }: { product: ProductSummary }) {
   const [selected, setSelected] = useState(false);
@@ -33,21 +34,22 @@ export function CompareButton({ product }: { product: ProductSummary }) {
 
   return (
     <span className="relative inline-flex">
-      <button
+      <Button
         type="button"
         onClick={toggle}
-        className={`inline-flex h-9 w-9 items-center justify-center rounded border transition hover:-translate-y-0.5 hover:scale-105 active:translate-y-0 active:scale-95 ${
+        icon={Scale}
+        intent={selected ? 'primary' : 'secondary'}
+        size="icon"
+        className={`hover:scale-105 active:scale-95 ${
           selected ? 'border-pine bg-pine text-white' : 'border-line bg-white text-ink hover:border-pine hover:text-pine'
         }`}
         aria-label={selected ? `Remove ${product.title} from compare` : `Compare ${product.title}`}
         title={selected ? 'Selected for compare' : 'Compare'}
-      >
-        <Scale size={17} />
-      </button>
+      />
       {notice ? (
-        <span className="absolute bottom-10 right-0 z-20 w-44 rounded border border-saffron/30 bg-[#fff8e8] p-2 text-xs font-bold leading-5 text-ink shadow-panel">
+        <Notice className="absolute bottom-10 right-0 z-20 w-44 border-saffron/30 bg-[#fff8e8] p-2 text-xs text-ink shadow-panel">
           Compare is limited to 3 designs.
-        </span>
+        </Notice>
       ) : null}
     </span>
   );

@@ -8,7 +8,7 @@ import { FormEvent, useState } from 'react';
 import { loginCustomer, registerCustomer, type AuthResponse } from '../lib/api';
 import { accessTokenKey, authChangedEvent, refreshTokenExpiresAtKey, refreshTokenKey, userKey } from '../lib/auth-session';
 import { type AppLocale, authCopy } from '../lib/locale';
-import { LanguageToggle } from './language-toggle';
+import { Button, Input, Notice, Panel } from './ui';
 
 type AuthMode = 'login' | 'register';
 
@@ -39,6 +39,15 @@ function readSafeNextPath() {
   }
 
   return next;
+}
+
+function authSwitchPath(path: '/login' | '/register') {
+  if (typeof window === 'undefined') {
+    return path as Route;
+  }
+
+  const next = readSafeNextPath();
+  return (next === '/account' ? path : `${path}?next=${encodeURIComponent(next)}`) as Route;
 }
 
 export function AuthForm({ mode, locale }: { mode: AuthMode; locale: AppLocale }) {
@@ -73,7 +82,7 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: AppLocale }
   return (
     <main className="min-h-screen bg-paper px-4 py-5 dark:bg-[#0b0f0e]">
       <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-5xl items-center">
-        <section className="grid w-full overflow-hidden rounded-lg border border-line bg-white shadow-panel dark:bg-[#121816] lg:grid-cols-[0.9fr_1.1fr]">
+        <Panel className="grid w-full overflow-hidden shadow-panel lg:grid-cols-[0.9fr_1.1fr]">
           <div className="relative hidden min-h-[460px] overflow-hidden bg-ink p-6 text-white lg:block">
             <div className="absolute inset-0 opacity-70">
               <div className="intro-grid" />
@@ -120,7 +129,6 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: AppLocale }
                 <ArrowRight className="icon-back" size={16} />
                 {copy.back}
               </Link>
-              <LanguageToggle locale={locale} />
             </div>
 
             <div className="mb-5">
@@ -137,12 +145,12 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: AppLocale }
                   {copy.fullName}
                   <span className="relative">
                     <UserRound className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
-                    <input
+                    <Input
                       required
                       minLength={2}
                       value={fullName}
                       onChange={(event) => setFullName(event.target.value)}
-                      className="h-11 w-full rounded border border-line bg-paper px-4 ps-11 text-sm text-ink outline-none transition focus:border-pine focus:bg-white dark:bg-[#0f1513]"
+                      className="ps-11"
                       placeholder={copy.fullNamePlaceholder}
                     />
                   </span>
@@ -152,8 +160,8 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: AppLocale }
               <label className="grid gap-2 text-sm font-semibold text-ink">
                 {copy.email}
                 <span className="relative">
-                  <Mail className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
-                  <input
+                  <Mail className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
+                  <Input
                     required
                     type="email"
                     dir="ltr"
@@ -164,7 +172,7 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: AppLocale }
                     title={locale === 'ar' ? copy.emailTitle : englishEmailTitle}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    className="h-11 w-full rounded border border-line bg-paper pl-11 pr-4 text-sm text-ink outline-none transition focus:border-pine focus:bg-white dark:bg-[#0f1513]"
+                    className="ps-11"
                     placeholder="you@example.com"
                   />
                 </span>
@@ -174,42 +182,43 @@ export function AuthForm({ mode, locale }: { mode: AuthMode; locale: AppLocale }
                 {copy.password}
                 <span className="relative">
                   <LockKeyhole className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-muted" size={18} />
-                  <input
+                  <Input
                     required
                     type="password"
                     minLength={isRegister ? 12 : 8}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="h-11 w-full rounded border border-line bg-paper px-4 ps-11 text-sm text-ink outline-none transition focus:border-pine focus:bg-white dark:bg-[#0f1513]"
+                    className="ps-11"
                     placeholder={isRegister ? copy.registerPasswordPlaceholder : copy.loginPasswordPlaceholder}
                   />
                 </span>
               </label>
 
-              {error ? (
-                <div className="rounded border border-berry/30 bg-berry/10 px-4 py-3 text-sm font-semibold text-berry dark:text-[#f08bb0]">
-                  {error}
-                </div>
+              {error ? <Notice tone="error">{error}</Notice> : null}
+
+              {!isRegister ? (
+                <Link
+                  href={'/forgot-password' as Route}
+                  className="justify-self-start text-sm font-bold text-pine transition hover:underline"
+                >
+                  Forgot password?
+                </Link>
               ) : null}
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded bg-pine px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-[#1b4a3f] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#1f6b59] dark:hover:bg-[#247c68]"
-              >
+              <Button type="submit" disabled={isSubmitting} className="mt-2 h-11">
                 {isSubmitting ? copy.wait : isRegister ? copy.createAccount : copy.signIn}
                 <ArrowRight size={17} />
-              </button>
+              </Button>
             </form>
 
-            <div className="mt-5 rounded border border-line bg-paper p-3 text-sm text-muted dark:bg-[#0f1513]">
+            <Notice className="mt-5 bg-paper text-muted dark:bg-[#0f1513]">
               {isRegister ? copy.haveAccount : copy.newCustomer}{' '}
-              <Link href={isRegister ? '/login' : '/register'} className="font-bold text-pine hover:underline">
+              <Link href={authSwitchPath(isRegister ? '/login' : '/register')} className="font-bold text-pine hover:underline">
                 {isRegister ? copy.signIn : copy.createAccount}
               </Link>
-            </div>
+            </Notice>
           </div>
-        </section>
+        </Panel>
       </div>
     </main>
   );

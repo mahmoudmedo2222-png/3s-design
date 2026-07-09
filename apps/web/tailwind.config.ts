@@ -6,16 +6,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: '#171717',
-        muted: '#6f6a61',
-        paper: '#f5f7f5',
-        line: '#d8ded6',
-        pine: '#22594b',
-        berry: '#8f3152',
-        saffron: '#c68a2d',
+        ink: 'var(--3s-ink)',
+        muted: 'var(--3s-muted)',
+        paper: 'var(--3s-paper)',
+        line: 'var(--3s-line)',
+        pine: 'var(--3s-pine)',
+        berry: 'var(--3s-berry)',
+        saffron: 'var(--3s-saffron)',
+        gold: 'var(--3s-gold)',
+        cream: 'var(--3s-cream)',
       },
       boxShadow: {
-        panel: '0 18px 50px rgba(23, 23, 23, 0.09)',
+        panel: 'var(--3s-shadow-soft)',
+        premium: 'var(--3s-shadow-premium)',
       },
     },
   },

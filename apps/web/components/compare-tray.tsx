@@ -1,10 +1,10 @@
 'use client';
 
 import { ArrowUpRight, Scale, Trash2, X } from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { ProductSummary } from '../lib/api';
 import { clearCompareProducts, compareChangedEvent, removeCompareProduct, readCompareProducts } from '../lib/compare-store';
+import { ActionLink, Badge, Button, Panel } from './ui';
 
 export function CompareTray() {
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -31,33 +31,45 @@ export function CompareTray() {
   }
 
   return (
-    <section className="fixed bottom-4 right-4 z-50 w-[min(920px,calc(100vw-32px))] overflow-hidden rounded-lg border border-line bg-white text-ink shadow-[0_24px_90px_rgba(0,0,0,0.28)]">
+    <Panel
+      className={`fixed bottom-4 right-4 z-50 overflow-hidden rounded-lg border border-line bg-white text-ink shadow-[0_24px_90px_rgba(0,0,0,0.28)] transition-[width] ${
+        open ? 'w-[min(920px,calc(100vw-32px))]' : 'w-[min(360px,calc(100vw-32px))]'
+      }`}
+    >
       <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-2">
-        <button type="button" onClick={() => setOpen((value) => !value)} className="inline-flex items-center gap-2 text-sm font-black">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="inline-flex items-center gap-2 text-sm font-black"
+          aria-label={open ? 'Collapse product comparison' : 'Open product comparison'}
+          title={open ? 'Collapse comparison' : 'Open comparison'}
+        >
           <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-pine/10 text-pine">
             <Scale size={16} />
           </span>
           Compare {products.length}/3
         </button>
         <div className="flex items-center gap-1">
-          <button
+          <Button
             type="button"
             onClick={clearCompareProducts}
-            className="inline-flex h-8 w-8 items-center justify-center rounded border border-line bg-paper text-muted transition hover:border-berry hover:text-berry"
+            icon={Trash2}
+            intent="danger"
+            size="icon"
+            className="h-8 w-8 bg-paper text-muted"
             aria-label="Clear compare"
             title="Clear compare"
-          >
-            <Trash2 size={15} />
-          </button>
-          <button
+          />
+          <Button
             type="button"
             onClick={() => setOpen(false)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded border border-line bg-paper text-muted transition hover:border-pine hover:text-pine"
+            icon={X}
+            intent="secondary"
+            size="icon"
+            className="h-8 w-8 bg-paper text-muted"
             aria-label="Collapse compare"
             title="Collapse"
-          >
-            <X size={15} />
-          </button>
+          />
         </div>
       </div>
 
@@ -68,7 +80,7 @@ export function CompareTray() {
           ))}
         </div>
       ) : null}
-    </section>
+    </Panel>
   );
 }
 
@@ -83,7 +95,7 @@ function CompareCard({ product }: { product: ProductSummary }) {
   ].filter(Boolean);
 
   return (
-    <article className="rounded border border-line bg-paper p-3">
+    <Panel className="p-3 shadow-none">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="line-clamp-2 text-sm font-black text-ink">{product.title}</h3>
@@ -91,23 +103,24 @@ function CompareCard({ product }: { product: ProductSummary }) {
             {license?.currency ?? product.currency} {license?.price ?? product.basePrice}
           </p>
         </div>
-        <button
+        <Button
           type="button"
           onClick={() => removeCompareProduct(product.id)}
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-line bg-white text-muted transition hover:border-berry hover:text-berry"
+          icon={X}
+          intent="danger"
+          size="icon"
+          className="h-8 w-8 shrink-0 bg-white text-muted"
           aria-label={`Remove ${product.title} from compare`}
           title="Remove"
-        >
-          <X size={15} />
-        </button>
+        />
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {signals.length ? (
-          signals.map((signal) => (
-            <span key={signal} className="rounded border border-line bg-white px-2 py-1 text-[0.68rem] font-bold text-muted">
+          signals.map((signal, index) => (
+            <Badge key={`${signal}-${index}`} className="bg-white normal-case tracking-normal">
               {signal}
-            </span>
+            </Badge>
           ))
         ) : (
           <span className="text-xs font-semibold text-muted">No design DNA yet</span>
@@ -120,13 +133,9 @@ function CompareCard({ product }: { product: ProductSummary }) {
           : 'Review license details before checkout.'}
       </p>
 
-      <Link
-        href={`/products/${product.slug}`}
-        className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded bg-pine px-3 text-xs font-black text-white transition hover:bg-[#1b4a3f]"
-      >
+      <ActionLink href={`/products/${product.slug}`} icon={ArrowUpRight} className="mt-3 h-9 w-full px-3 text-xs font-black">
         Open product
-        <ArrowUpRight size={14} />
-      </Link>
-    </article>
+      </ActionLink>
+    </Panel>
   );
 }

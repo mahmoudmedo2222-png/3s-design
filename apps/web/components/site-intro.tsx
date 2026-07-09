@@ -28,8 +28,8 @@ const slides = [
 ];
 
 export function SiteIntro() {
-  const [visible, setVisible] = useState(true);
-  const [mounted, setMounted] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const introMode = new URLSearchParams(window.location.search).get('intro');

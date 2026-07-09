@@ -7,6 +7,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: '3S Design',
   description: 'Premium creative marketplace for digital design assets.',
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

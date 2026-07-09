@@ -5,5 +5,5 @@ export async function getRequestLocale(): Promise<AppLocale> {
   const cookieStore = await cookies();
   const locale = cookieStore.get(localeCookieName)?.value;
 
-  return isAppLocale(locale) ? locale : 'ar';
+  return isAppLocale(locale) ? locale : 'en';
 }

@@ -16,11 +16,13 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
+import type { Route } from 'next';
 import { FormEvent, useEffect, useState } from 'react';
 import { ProductCard } from './product-card';
 import { fetchAiDiscoveryStatus, sendAiDiscoveryMessage, type AiDiscoveryStatus, type ProductSummary } from '../lib/api';
 import { aiSearchEvent, consumeQueuedAiSearch } from '../lib/ai-search';
 import { accessTokenKey, authChangedEvent } from '../lib/auth-session';
+import { ActionLink, Badge, Button, Input, Notice, Panel } from './ui';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
@@ -221,7 +223,7 @@ export function AiDiscoveryPanel() {
 
   return (
     <section className="ai-finder-grid grid gap-3 lg:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[340px_minmax(0,1fr)]">
-      <div className="ai-finder-card rounded-lg border border-line bg-white p-3 shadow-sm">
+      <Panel className="ai-finder-card p-3">
         <div className="mb-3 flex items-center gap-2">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-ink text-white">
             <Sparkles size={16} />
@@ -248,27 +250,27 @@ export function AiDiscoveryPanel() {
         </div>
 
         <form onSubmit={submit} className="flex gap-2">
-          <input
+          <Input
             name="message"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             placeholder="Luxury black and gold restaurant launch..."
-            className="h-10 min-w-0 flex-1 rounded border border-line bg-white px-3 text-sm text-ink"
+            className="h-10 min-w-0 flex-1 bg-white px-3"
             disabled={!isSignedIn && guestSearchUsed}
           />
-          <button
+          <Button
             type="submit"
-            className="inline-flex h-10 w-10 items-center justify-center rounded bg-ink text-white transition hover:-translate-y-0.5 hover:scale-105 hover:bg-pine active:translate-y-0 active:scale-95 disabled:opacity-60"
+            icon={loading ? Loader2 : Send}
+            size="icon"
+            className={loading ? '[&_svg]:animate-spin' : 'hover:scale-105 active:scale-95'}
             disabled={loading}
             title="Send"
             aria-label="Send AI discovery message"
-          >
-            {loading ? <Loader2 className="animate-spin" size={17} /> : <Send size={17} />}
-          </button>
+          />
         </form>
 
         {!isSignedIn && guestSearchUsed ? (
-          <div className="mt-3 rounded-lg border border-saffron/30 bg-saffron/10 p-3">
+          <Notice tone="info" className="mt-3 border-saffron/30 bg-saffron/10 p-3">
             <div className="flex items-start gap-2">
               <LockKeyhole className="mt-0.5 shrink-0 text-saffron" size={16} />
               <div>
@@ -279,41 +281,36 @@ export function AiDiscoveryPanel() {
               </div>
             </div>
             <div className="mt-3 flex gap-2">
-              <Link
-                href="/login"
-                className="inline-flex h-9 flex-1 items-center justify-center rounded border border-line bg-white px-3 text-xs font-bold text-ink transition hover:border-pine hover:text-pine"
-              >
+              <ActionLink href="/login" intent="secondary" className="h-9 flex-1 px-3 text-xs">
                 Sign in
-              </Link>
-              <Link
-                href="/register"
-                className="inline-flex h-9 flex-1 items-center justify-center rounded bg-pine px-3 text-xs font-bold text-white transition hover:bg-[#1b4a3f]"
-              >
+              </ActionLink>
+              <ActionLink href="/register" className="h-9 flex-1 px-3 text-xs">
                 Create account
-              </Link>
+              </ActionLink>
             </div>
-          </div>
+          </Notice>
         ) : null}
 
         {questions.length ? (
           <div className="mt-3 grid gap-2">
             {questions.slice(0, 2).map((question) => (
-              <button
+              <Button
                 key={question}
                 type="button"
                 onClick={() => void submit(undefined, question)}
                 disabled={!isSignedIn && guestSearchUsed}
-                className="ai-question-chip group flex items-center gap-2 rounded border border-line bg-paper px-3 py-2 text-left text-xs font-semibold text-ink transition hover:-translate-y-0.5 hover:border-pine hover:bg-pine/10 hover:text-pine active:translate-y-0 dark:hover:bg-pine/20 dark:hover:text-[#7bd8bd]"
+                intent="secondary"
+                className="ai-question-chip group h-auto justify-start bg-paper px-3 py-2 text-left text-xs text-ink dark:hover:bg-pine/20 dark:hover:text-[#7bd8bd]"
               >
                 <Sparkles className="shrink-0 text-saffron transition group-hover:scale-110" size={14} />
                 <span>{question}</span>
-              </button>
+              </Button>
             ))}
           </div>
         ) : null}
-      </div>
+      </Panel>
 
-      <div className="ai-results-card min-h-[300px] rounded-lg border border-line bg-white p-3 shadow-sm">
+      <Panel className="ai-results-card min-h-[300px] p-3">
         {lastPrompt ? (
           <>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -330,26 +327,28 @@ export function AiDiscoveryPanel() {
               </div>
               {isSignedIn ? (
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => void submit(undefined, lastPrompt, Math.max(page - 1, 1))}
                     disabled={loading || page <= 1}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded border border-line bg-white text-ink transition hover:-translate-x-0.5 hover:border-pine hover:text-pine active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                    icon={ChevronLeft}
+                    intent="secondary"
+                    size="icon"
+                    className="hover:-translate-x-0.5 active:scale-95"
                     title="Previous page"
                     aria-label="Previous page"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button
+                  />
+                  <Button
                     type="button"
                     onClick={() => void submit(undefined, lastPrompt, page + 1)}
                     disabled={loading || !hasMore}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded border border-line bg-white text-ink transition hover:translate-x-0.5 hover:border-pine hover:text-pine active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                    icon={ChevronRight}
+                    intent="secondary"
+                    size="icon"
+                    className="hover:translate-x-0.5 active:scale-95"
                     title="Next page"
                     aria-label="Next page"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
+                  />
                 </div>
               ) : null}
             </div>
@@ -357,24 +356,32 @@ export function AiDiscoveryPanel() {
             {results.length ? (
               <div className="space-y-4">
                 {brief ? <DiscoveryBriefPanel brief={brief} source={intentSource} status={discoveryStatus} /> : null}
-                {results.some((product) => product.match) ? <SmartMatchList products={results.slice(0, 3)} /> : null}
+                {results.some((product) => product.match) ? (
+                  <SmartMatchList products={results.slice(0, 3)} lastPrompt={lastPrompt} brief={brief} />
+                ) : null}
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {results.map((product) => (
-                    <ProductCard key={product.id} product={product} compact />
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      compact
+                      sourcePrompt={lastPrompt}
+                      sourceSignals={[...(product.match?.matchedSignals ?? []), ...briefSignals(brief)]}
+                    />
                   ))}
                 </div>
                 {!isSignedIn ? <GuestUnlockPanel /> : null}
               </div>
             ) : (
-              <div className="flex h-[280px] items-center justify-center rounded border border-dashed border-line bg-paper px-6 text-center text-sm text-muted">
+              <Panel className="flex h-[280px] items-center justify-center border-dashed bg-paper px-6 text-center text-sm text-muted shadow-none">
                 No strong matches yet. Add the business type, colors, platform, and mood.
-              </div>
+              </Panel>
             )}
           </>
         ) : (
           <SmartDiscoveryStart onPick={(prompt) => void submit(undefined, prompt)} />
         )}
-      </div>
+      </Panel>
     </section>
   );
 }
@@ -410,7 +417,7 @@ function EngineStatus({ status, source }: { status: AiDiscoveryStatus | null; so
   const openAiActive = activeMode === 'openai';
 
   return (
-    <div className="mb-3 rounded-lg border border-line bg-paper p-3">
+    <Panel className="mb-3 bg-paper p-3 shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="inline-flex items-center gap-2 text-xs font-black text-ink">
           <span
@@ -420,14 +427,16 @@ function EngineStatus({ status, source }: { status: AiDiscoveryStatus | null; so
           />
           {openAiActive ? 'OpenAI intent engine' : 'Smart local matching'}
         </span>
-        <span className="rounded bg-white px-2 py-1 text-[0.68rem] font-bold uppercase text-muted">{status?.model ?? 'Rules'}</span>
+        <Badge className="bg-white">{status?.model ?? 'Rules'}</Badge>
       </div>
       <p className="mt-2 hidden text-xs leading-5 text-muted sm:block">
         {openAiActive
           ? 'Structured AI reads emotion, use case, colors, and platform before matching.'
-          : 'Arabic-aware local matching is active until the OpenAI key is connected.'}
+          : status?.openAiConfigured
+            ? 'Local matching is active until a live AI call succeeds.'
+            : 'Local matching is active until the AI key is connected.'}
       </p>
-    </div>
+    </Panel>
   );
 }
 
@@ -474,15 +483,16 @@ function SmartDiscoveryStart({ onPick }: { onPick: (prompt: string) => void }) {
         </div>
       </div>
 
-      <div className="rounded-lg border border-line bg-paper p-3">
+      <Panel className="bg-paper p-3 shadow-none">
         <p className="mb-2 text-xs font-semibold uppercase text-muted">Quick starts</p>
         <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
           {prompts.map(({ icon: Icon, label, prompt, hint }) => (
-            <button
+            <Button
               key={prompt}
               type="button"
               onClick={() => onPick(prompt)}
-              className="ai-quick-start group rounded border border-line bg-white p-2.5 text-left transition hover:-translate-y-0.5 hover:border-pine hover:bg-pine/10 active:translate-y-0 dark:hover:border-[#7bd8bd] dark:hover:bg-pine/20"
+              intent="secondary"
+              className="ai-quick-start group h-auto justify-start bg-white p-2.5 text-left dark:hover:border-[#7bd8bd] dark:hover:bg-pine/20"
             >
               <span className="mb-2 flex items-center gap-2 text-xs font-semibold text-ink group-hover:text-pine dark:group-hover:text-[#7bd8bd]">
                 <span className="inline-flex h-7 w-7 items-center justify-center rounded bg-saffron/15 text-saffron transition group-hover:scale-110">
@@ -491,10 +501,10 @@ function SmartDiscoveryStart({ onPick }: { onPick: (prompt: string) => void }) {
                 {label}
               </span>
               <span className="block text-xs leading-5 text-muted group-hover:text-ink dark:group-hover:text-[#eef8f4]">{hint}</span>
-            </button>
+            </Button>
           ))}
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }
@@ -516,28 +526,28 @@ function DiscoveryBriefPanel({
   ].slice(0, 8);
 
   return (
-    <div className="rounded-lg border border-line bg-paper p-3">
+    <Panel className="bg-paper p-3 shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase text-muted">AI brief</p>
           <h3 className="mt-1 text-sm font-semibold text-ink">{brief.summary || 'Design search'}</h3>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="rounded bg-pine/10 px-2 py-1 text-xs font-semibold text-pine">
+          <Badge tone="success" className="normal-case tracking-normal">
             {Math.round(brief.confidence * 100)}% intent confidence
-          </span>
-          <span className="rounded bg-saffron/10 px-2 py-1 text-xs font-semibold text-saffron">
+          </Badge>
+          <Badge tone="gold" className="normal-case tracking-normal">
             {(source ?? status?.mode) === 'openai' ? 'OpenAI structured' : 'Local smart rules'}
-          </span>
+          </Badge>
         </div>
       </div>
 
       {chips.length ? (
         <div className="mt-3 flex flex-wrap gap-2">
-          {chips.map((chip) => (
-            <span
-              key={`${chip.tone}-${chip.label}`}
-              className={`rounded border px-2 py-1 text-xs font-semibold ${
+          {chips.map((chip, index) => (
+            <Badge
+              key={`${chip.tone}-${chip.label}-${index}`}
+              className={`normal-case tracking-normal ${
                 chip.tone === 'saffron'
                   ? 'border-saffron/30 bg-saffron/10 text-saffron'
                   : chip.tone === 'berry'
@@ -546,15 +556,15 @@ function DiscoveryBriefPanel({
               }`}
             >
               {chip.label}
-            </span>
+            </Badge>
           ))}
         </div>
       ) : null}
-    </div>
+    </Panel>
   );
 }
 
-function SmartMatchList({ products }: { products: ProductSummary[] }) {
+function SmartMatchList({ products, lastPrompt, brief }: { products: ProductSummary[]; lastPrompt: string; brief: DiscoveryBrief | null }) {
   return (
     <section className="grid gap-2 xl:grid-cols-3">
       {products.map((product) => {
@@ -563,10 +573,12 @@ function SmartMatchList({ products }: { products: ProductSummary[] }) {
           return null;
         }
 
+        const href = productDetailHref(product.slug, lastPrompt, [...match.matchedSignals, ...briefSignals(brief)]);
+
         return (
           <Link
             key={product.id}
-            href={`/products/${product.slug}`}
+            href={href}
             className="group rounded-lg border border-line bg-paper p-3 transition hover:-translate-y-0.5 hover:border-pine hover:bg-pine/10"
           >
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -576,8 +588,11 @@ function SmartMatchList({ products }: { products: ProductSummary[] }) {
             <h3 className="line-clamp-1 text-sm font-black text-ink group-hover:text-pine">{product.title}</h3>
             <p className="mt-2 line-clamp-3 text-xs leading-5 text-muted">{match.reason}</p>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {match.matchedSignals.slice(0, 4).map((signal) => (
-                <span key={signal} className="rounded border border-line bg-white px-2 py-0.5 text-[0.68rem] font-bold text-muted">
+              {match.matchedSignals.slice(0, 4).map((signal, index) => (
+                <span
+                  key={`${signal}-${index}`}
+                  className="rounded border border-line bg-white px-2 py-0.5 text-[0.68rem] font-bold text-muted"
+                >
                   {signal}
                 </span>
               ))}
@@ -590,9 +605,32 @@ function SmartMatchList({ products }: { products: ProductSummary[] }) {
   );
 }
 
+function briefSignals(brief: DiscoveryBrief | null) {
+  if (!brief) {
+    return [];
+  }
+
+  return [...brief.colors, ...brief.styles, ...brief.useCases, ...brief.platforms].map((signal) => signal.trim()).filter(Boolean);
+}
+
+function productDetailHref(slug: string, sourcePrompt: string, sourceSignals: string[]) {
+  if (!sourcePrompt.trim()) {
+    return `/products/${slug}` as Route;
+  }
+
+  const params = new URLSearchParams();
+  params.set('brief', sourcePrompt.trim());
+  const signals = [...new Set(sourceSignals.map((signal) => signal.trim()).filter(Boolean))].slice(0, 8);
+  if (signals.length) {
+    params.set('signals', signals.join('|'));
+  }
+
+  return `/products/${slug}?${params.toString()}` as Route;
+}
+
 function GuestUnlockPanel() {
   return (
-    <div className="overflow-hidden rounded-lg border border-saffron/35 bg-[#fff7e6] dark:bg-[#1b1710]">
+    <Panel className="overflow-hidden border-saffron/35 bg-[#fff7e6] dark:bg-[#1b1710]">
       <div className="grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
         <div className="flex items-start gap-3">
           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-saffron text-ink">
@@ -606,32 +644,26 @@ function GuestUnlockPanel() {
           </div>
         </div>
         <div className="flex gap-2 sm:flex-col">
-          <Link
-            href="/login"
-            className="inline-flex h-10 flex-1 items-center justify-center rounded border border-line bg-white px-4 text-sm font-bold text-ink transition hover:border-pine hover:text-pine sm:flex-none"
-          >
+          <ActionLink href="/login" intent="secondary" className="h-10 flex-1 bg-white px-4 sm:flex-none">
             Sign in
-          </Link>
-          <Link
-            href="/register"
-            className="inline-flex h-10 flex-1 items-center justify-center rounded bg-pine px-4 text-sm font-bold text-white transition hover:bg-[#1b4a3f] sm:flex-none"
-          >
+          </ActionLink>
+          <ActionLink href="/register" className="h-10 flex-1 px-4 sm:flex-none">
             Create account
-          </Link>
+          </ActionLink>
         </div>
       </div>
-    </div>
+    </Panel>
   );
 }
 
 function Insight({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
   return (
-    <div className="rounded-lg border border-line bg-paper p-2.5">
+    <Panel className="bg-paper p-2.5 shadow-none">
       <span className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded bg-saffron/15 text-saffron">
         <Icon size={16} />
       </span>
       <h3 className="text-sm font-semibold text-ink">{title}</h3>
       <p className="mt-1 text-xs leading-5 text-muted">{text}</p>
-    </div>
+    </Panel>
   );
 }
