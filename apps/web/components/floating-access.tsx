@@ -30,7 +30,7 @@ export function FloatingAccess({ locale }: { locale: AppLocale }) {
           </Link>
         ))}
       </div>
-      <Link href={'/?intro=0#ai-finder' as Route} className="floating-access__trigger" aria-label={copy.quickAccess}>
+      <Link href={'/?intro=0#ai-finder' as Route} className="floating-access__trigger" aria-label={`${copy.guide} ${copy.quickAccess}`}>
         <Compass size={21} />
         <span>{copy.guide}</span>
       </Link>

@@ -8,14 +8,20 @@ const timestamps = () => ({
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const carts = pgTable('carts', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  currency: text('currency').notNull().default('USD'),
-  ...timestamps(),
-});
+export const carts = pgTable(
+  'carts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    currency: text('currency').notNull().default('USD'),
+    ...timestamps(),
+  },
+  (table) => ({
+    userIdx: uniqueIndex('carts_user_id_idx').on(table.userId),
+  }),
+);
 
 export const cartItems = pgTable(
   'cart_items',
@@ -42,6 +48,12 @@ export const cartItems = pgTable(
       table.variantId,
       table.licenseId,
     ),
+    cartProductNoVariantLicenseIdx: uniqueIndex('cart_items_cart_product_no_variant_license_idx')
+      .on(table.cartId, table.productId, table.licenseId)
+      .where(sql`${table.variantId} is null`),
+    cartProductVariantLicenseNotNullIdx: uniqueIndex('cart_items_cart_product_variant_license_not_null_idx')
+      .on(table.cartId, table.productId, table.variantId, table.licenseId)
+      .where(sql`${table.variantId} is not null`),
   }),
 );
 

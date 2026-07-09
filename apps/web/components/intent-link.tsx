@@ -15,8 +15,8 @@ export function IntentLink({ href, label, prompt, active }: { href: Route; label
         trackFunnelEvent('home_intent_selected', { label, prompt });
         queueAiSearch(prompt);
       }}
-      className={`whitespace-nowrap border-b pb-2 transition hover:border-[#f7d17e] hover:text-white ${
-        active ? 'border-[#f7d17e] text-white' : 'border-transparent'
+      className={`whitespace-nowrap border-b pb-2 transition hover:border-gold hover:text-white ${
+        active ? 'border-gold text-white' : 'border-transparent'
       }`}
     >
       {label}

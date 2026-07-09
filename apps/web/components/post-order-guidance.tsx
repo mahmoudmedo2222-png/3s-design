@@ -96,17 +96,17 @@ function toneStyles(tone: Tone) {
   if (tone === 'dark') {
     return {
       shell: 'border-white/[0.1] bg-white/[0.055] text-white',
-      icon: 'bg-[#f7d17e]/15 text-[#f7d17e]',
-      kicker: 'text-[#f7d17e]',
+      icon: 'bg-gold/15 text-gold',
+      kicker: 'text-gold',
       title: 'text-white',
       text: 'text-white/58',
       step: 'border-white/[0.1] bg-black/15',
-      stepIcon: 'mt-1 shrink-0 text-[#f7d17e]',
+      stepIcon: 'mt-1 shrink-0 text-gold',
     };
   }
 
   return {
-    shell: 'border-pine/20 bg-white/70 text-ink dark:bg-[#101816]',
+    shell: 'border-pine/20 bg-surface/70 text-ink',
     icon: 'bg-pine/10 text-pine',
     kicker: 'text-pine',
     title: 'text-ink',

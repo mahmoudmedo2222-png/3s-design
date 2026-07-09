@@ -10,7 +10,7 @@ export default function CheckoutPage() {
     <main className="min-h-screen bg-paper text-ink dark:bg-[#0b0f0e]">
       <header className="border-b border-line bg-paper/95 backdrop-blur dark:bg-[#0b0f0e]/95">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/?intro=0" className="brand-lockup min-w-0" aria-label="Back to 3S Design home">
+          <Link href="/?intro=0" className="brand-lockup min-w-0" aria-label="Private checkout 3S Design back home">
             <span className="brand-mark" aria-hidden="true">
               <span className="brand-mark__stroke brand-mark__stroke--one" />
               <span className="brand-mark__stroke brand-mark__stroke--two" />
@@ -24,7 +24,7 @@ export default function CheckoutPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/?intro=0#latest-designs"
-              className="hidden rounded border border-line bg-white px-3 py-2 text-sm font-bold text-ink transition hover:border-pine hover:text-pine sm:inline-flex"
+              className="hidden min-h-10 items-center rounded border border-line bg-white px-3 py-2 text-sm font-bold text-ink transition hover:border-pine hover:text-pine sm:inline-flex"
             >
               Marketplace
             </Link>

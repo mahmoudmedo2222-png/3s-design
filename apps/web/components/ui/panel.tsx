@@ -16,7 +16,7 @@ export function Panel({
           ? 'border-white/[0.12] bg-white/[0.06] text-white backdrop-blur-xl'
           : tone === 'glass'
             ? 'border-white/[0.12] bg-black/[0.24] text-white backdrop-blur-xl'
-            : 'border-line bg-white text-ink dark:bg-[#121816]',
+            : 'border-line bg-surface text-ink',
         className,
       )}
       {...props}

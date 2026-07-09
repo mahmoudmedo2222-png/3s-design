@@ -91,11 +91,11 @@ export function ProductDetailActions({ product, fitContext }: { product: Product
   return (
     <Panel className="product-detail-actions p-3">
       {fitContext?.brief ? (
-        <Panel className="mb-3 border-saffron/35 bg-[#fff8e8] p-3 shadow-none dark:bg-[#211a10]">
+        <Panel className="mb-3 border-saffron/35 bg-cream p-3 shadow-none dark:bg-saffron/10">
           <div className="flex items-start gap-2">
-            <Sparkles className="mt-0.5 shrink-0 text-[#8a5a00] dark:text-[#ffe09a]" size={16} />
+            <Sparkles className="mt-0.5 shrink-0 text-saffron dark:text-gold-strong" size={16} />
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#6f4700] dark:text-[#ffe09a]">Personal fit before cart</p>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-saffron dark:text-gold-strong">Personal fit before cart</p>
               <p className="mt-1 line-clamp-2 text-xs font-bold leading-5 text-ink">&quot;{fitContext.brief}&quot;</p>
               {fitContext.signals.length ? (
                 <p className="mt-2 text-xs leading-5 text-muted">
@@ -155,7 +155,7 @@ export function ProductDetailActions({ product, fitContext }: { product: Product
                 }}
                 intent={active ? 'primary' : 'secondary'}
                 className={`grid h-auto justify-stretch gap-1 p-3 text-left ${
-                  active ? 'border-pine bg-pine/10 text-ink' : 'border-line bg-paper text-ink hover:border-pine/45 dark:bg-[#0f1513]'
+                  active ? 'border-pine bg-pine/10 text-ink' : 'border-line bg-paper text-ink hover:border-pine/45 dark:bg-paper'
                 }`}
               >
                 <span className="flex items-center justify-between gap-3">
@@ -197,7 +197,7 @@ export function ProductDetailActions({ product, fitContext }: { product: Product
           </Button>
         )}
         {authNotice ? (
-          <Notice tone="info" className="border-saffron/35 bg-[#fff8e8] p-3 text-xs text-[#101513] dark:bg-[#211a10] dark:text-[#ffe09a]">
+          <Notice tone="info" className="border-saffron/35 bg-cream p-3 text-xs text-cream-ink dark:bg-saffron/10 dark:text-gold-strong">
             Sign in first so the license, payment, invoice, and download limits belong to your account.{' '}
             <Link href={`/login?next=${encodeURIComponent(detailHref)}` as Route} className="underline">
               Sign in

@@ -38,7 +38,7 @@ export function CartButton() {
         onClick={() => setOpen((value) => !value)}
         intent="secondary"
         className="shadow-sm hover:scale-105 active:scale-95"
-        aria-label={isSignedIn ? 'Open cart' : 'Sign in to use cart'}
+        aria-label={isSignedIn ? `Open cart ${count}` : `Sign in to use cart ${count}`}
         title={isSignedIn ? 'Cart' : 'Sign in to use cart'}
       >
         {isSignedIn ? <ShoppingCart size={17} /> : <LockKeyhole size={17} />}

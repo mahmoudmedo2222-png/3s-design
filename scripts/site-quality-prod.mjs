@@ -72,25 +72,22 @@ function cleanupStaleProjectBuilds() {
     return;
   }
 
-  const result = spawnSync('wmic.exe', ['process', 'where', "name='node.exe'", 'get', 'ProcessId,CommandLine', '/FORMAT:CSV'], {
-    encoding: 'utf8',
-  });
-  if (result.status !== 0 || !result.stdout) {
-    return;
-  }
-
-  const projectPath = path.resolve('.').toLowerCase();
-  for (const line of result.stdout.split(/\r?\n/)) {
-    const lower = line.toLowerCase();
-    if (!lower.includes(projectPath) || !lower.includes('next') || !lower.includes('build')) {
-      continue;
-    }
-
-    const pid = line.split(',').at(-1)?.trim();
-    if (/^\d+$/.test(pid ?? '')) {
-      spawnSync('taskkill.exe', ['/PID', pid, '/T', '/F'], { stdio: 'ignore' });
-    }
-  }
+  const projectPath = path.resolve('.').replaceAll("'", "''").toLowerCase();
+  const command = `
+    $projectPath = '${projectPath}';
+    Get-CimInstance Win32_Process -Filter "name = 'node.exe'" |
+      Where-Object {
+        $commandLine = ($_.CommandLine ?? '').ToLowerInvariant();
+        $_.ProcessId -ne ${process.pid} -and
+          $commandLine.Contains($projectPath) -and
+          (
+            ($commandLine.Contains('next') -and $commandLine.Contains('build')) -or
+            $commandLine.Contains('.next\\build')
+          )
+      } |
+      ForEach-Object { taskkill.exe /PID $_.ProcessId /T /F | Out-Null }
+  `;
+  spawnSync('powershell.exe', ['-NoProfile', '-Command', command], { stdio: 'ignore' });
 }
 
 async function removeStaleBuildLock() {

@@ -105,16 +105,16 @@ export function ProductCard({
       <Link href={detailHref} className="product-card__preview" aria-label={`View ${product.title}`}>
         <DesignPreview product={product} variant={compact ? 'mini' : 'card'} />
         {product.isFeatured ? (
-          <Badge tone="gold" className="absolute start-2 top-2 border-transparent bg-gold text-[#101513]">
+          <Badge tone="gold" className="absolute start-2 top-2 border-transparent bg-gold text-cream-ink">
             Featured
           </Badge>
         ) : null}
         {product.match ? (
-          <Badge tone="success" className="absolute end-2 top-2 bg-[#0b1714]/75 shadow-sm backdrop-blur-md">
+          <Badge tone="success" className="absolute end-2 top-2 bg-surface-inverse/75 shadow-sm backdrop-blur-md">
             {product.match.score}% fit
           </Badge>
         ) : null}
-        <span className="visual-chip absolute bottom-2 start-2 max-w-[calc(100%-1rem)] border-white/[0.18] bg-black/[0.62] text-[#ffe09a] shadow-sm backdrop-blur-md">
+        <span className="visual-chip absolute bottom-2 start-2 max-w-[calc(100%-1rem)] border-white/[0.18] bg-black/[0.62] text-gold-strong shadow-sm backdrop-blur-md">
           <Sparkles size={13} />
           <span className="truncate">{feeling}</span>
         </span>
@@ -123,8 +123,8 @@ export function ProductCard({
       <div className="product-card__body">
         <div className="space-y-1">
           <Link href={detailHref} className="group/title inline-flex min-w-0 items-start gap-1">
-            <h3 className="product-card__title transition group-hover/title:text-[#ffe09a]">{product.title}</h3>
-            <ArrowUpRight className="mt-0.5 shrink-0 text-white/[0.65] transition group-hover/title:text-[#ffe09a]" size={14} />
+            <h3 className="product-card__title transition group-hover/title:text-gold-strong">{product.title}</h3>
+            <ArrowUpRight className="mt-0.5 shrink-0 text-white/[0.65] transition group-hover/title:text-gold-strong" size={14} />
           </Link>
           {!compact && product.subtitle ? <p className="product-card__subtitle">{product.subtitle}</p> : null}
         </div>
@@ -216,7 +216,7 @@ export function ProductCard({
           </div>
         </div>
         {authNotice ? (
-          <div className="rounded border border-[#f7d17e]/35 bg-[#fff8e8] p-2 text-xs font-bold leading-5 text-[#101513]">
+          <div className="rounded border border-gold/35 bg-cream p-2 text-xs font-bold leading-5 text-cream-ink">
             Sign in first so we can protect purchases, downloads, and fraud checks.{' '}
             <Link href={`/login?next=${encodeURIComponent(detailHref)}` as Route} className="underline">
               Sign in
@@ -224,12 +224,12 @@ export function ProductCard({
           </div>
         ) : null}
         {cartNotice ? (
-          <div className="rounded border border-[#7bd8bd]/30 bg-[#7bd8bd]/10 p-2 text-xs font-bold leading-5 text-[#7bd8bd]">
+          <div className="rounded border border-success/30 bg-success/10 p-2 text-xs font-bold leading-5 text-success">
             Added to your private cart.
           </div>
         ) : null}
         {cartError ? (
-          <div className="rounded border border-[#f08bb0]/30 bg-[#f08bb0]/10 p-2 text-xs font-bold leading-5 text-[#f08bb0]">
+          <div className="rounded border border-berry/30 bg-berry/10 p-2 text-xs font-bold leading-5 text-berry">
             {cartError}
           </div>
         ) : null}

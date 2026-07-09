@@ -136,7 +136,7 @@ export function CustomerJourneyRail({
             className={
               active
                 ? dark
-                  ? 'rounded border border-[#f7d17e]/45 bg-[#f7d17e]/12 p-3'
+                  ? 'rounded border border-[#f7d17e]/55 bg-black/35 p-3'
                   : 'rounded border border-pine/30 bg-pine/10 p-3'
                 : dark
                   ? 'rounded border border-white/[0.08] bg-white/[0.04] p-3'

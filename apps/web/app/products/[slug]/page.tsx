@@ -135,7 +135,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
   const primaryLicense = product.defaultLicense ?? product.licenseOptions?.[0] ?? null;
 
   return (
-    <main className="product-detail-page min-h-screen bg-paper dark:bg-[#0b0f0e]">
+    <main className="product-detail-page min-h-screen bg-paper">
       <ProductViewTracker product={product} />
       <header className="border-b border-line bg-paper/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -178,7 +178,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
               </div>
               <div className="absolute inset-x-4 bottom-4 rounded-lg border border-white/[0.14] bg-black/[0.38] p-4 text-white shadow-[0_22px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl">
                 <div className="flex items-start gap-3">
-                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-gold/15 text-gold">
                     <Eye size={19} />
                   </span>
                   <div className="min-w-0">
@@ -258,7 +258,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
 
           <LuxuryProof product={product} />
 
-          <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+          <section className="rounded-lg border border-line bg-surface p-4 shadow-sm">
             <div className="mb-4 flex items-start gap-3">
               <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded bg-saffron/15 text-saffron">
                 <Palette size={18} />
@@ -276,7 +276,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
             </div>
           </section>
 
-          <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+          <section className="rounded-lg border border-line bg-surface p-4 shadow-sm">
             <h2 className="text-base font-black text-ink">What you get</h2>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <InfoList title="Formats" values={formats.length ? formats : ['Editable source files', 'Ready-to-export previews']} />
@@ -305,7 +305,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
         <aside className="space-y-3 lg:sticky lg:top-5 lg:self-start">
           <ProductDetailActions product={product} fitContext={searchFit.brief ? searchFit : null} />
 
-          <section className="rounded-lg border border-line bg-white p-3 shadow-sm dark:bg-[#121816]">
+          <section className="rounded-lg border border-line bg-surface p-3 shadow-sm">
             <h2 className="text-sm font-black text-ink">License clarity</h2>
             <div className="mt-3 grid gap-3">
               <LicenseCard
@@ -374,7 +374,7 @@ function StoryLedProductSection({ product }: { product: ProductDetail }) {
   }
 
   return (
-    <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+    <section className="rounded-lg border border-line bg-surface p-4 shadow-sm">
       <div className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
         <div>
           <SectionHeading
@@ -395,7 +395,7 @@ function StoryLedProductSection({ product }: { product: ProductDetail }) {
 
         <div className="grid gap-3">
           {scenes.length ? (
-            <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+            <div className="rounded border border-line bg-paper p-3">
               <div className="flex items-center gap-2">
                 <Compass className="text-pine" size={17} />
                 <p className="text-sm font-black text-ink">Campaign journey</p>
@@ -437,7 +437,7 @@ function StoryLedProductSection({ product }: { product: ProductDetail }) {
 
 function StoryProofCard({ title, text }: { title: string; text: string }) {
   return (
-    <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+    <div className="rounded border border-line bg-paper p-3">
       <p className="text-xs font-black uppercase tracking-[0.14em] text-muted">{title}</p>
       <p className="mt-2 text-sm font-bold leading-6 text-ink">{text}</p>
     </div>
@@ -451,7 +451,7 @@ function PurchaseSnapshot({ product, formats, software }: { product: ProductDeta
   const deliverables = formats.length ? formats.slice(0, 2).join(', ') : software.length ? software.slice(0, 2).join(', ') : 'Ready files';
 
   return (
-    <div className="mt-5 grid gap-3 rounded-lg border border-line bg-white p-3 shadow-sm dark:bg-[#121816] md:grid-cols-3">
+    <div className="mt-5 grid gap-3 rounded-lg border border-line bg-surface p-3 shadow-sm md:grid-cols-3">
       <SnapshotDatum label="Price" value={`${currency} ${price}`} />
       <SnapshotDatum label="License" value={license?.name ?? 'Commercial license'} />
       <SnapshotDatum label="Files" value={deliverables} />
@@ -474,7 +474,7 @@ function SearchBriefFit({ product, brief, signals }: { product: ProductDetail; b
     : 'Confirm the license terms before checkout because this fit may need a stronger commercial option.';
 
   return (
-    <section className="overflow-hidden rounded-lg border border-saffron/35 bg-[#fff7e6] p-4 shadow-sm dark:bg-[#17130c]">
+    <section className="overflow-hidden rounded-lg border border-saffron/35 bg-cream p-4 shadow-sm dark:bg-saffron/10">
       <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-saffron">Personal decision layer</p>
@@ -560,7 +560,7 @@ function CustomerDecisionStack({ product, formats, software }: { product: Produc
   ];
 
   return (
-    <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+    <section className="rounded-lg border border-line bg-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <SectionHeading
           kicker="Decision stack"
@@ -574,8 +574,8 @@ function CustomerDecisionStack({ product, formats, software }: { product: Produc
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {decisionCards.map((card) => (
-          <div key={card.title} className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
-            <card.icon className="text-pine dark:text-[#f7d17e]" size={18} />
+          <div key={card.title} className="rounded border border-line bg-paper p-3">
+            <card.icon className="text-pine dark:text-gold" size={18} />
             <p className="mt-3 text-sm font-black text-ink">{card.title}</p>
             <p className="mt-2 text-xs leading-5 text-muted">{card.answer}</p>
           </div>
@@ -605,7 +605,7 @@ function CustomerDecisionStack({ product, formats, software }: { product: Produc
 
 function DecisionMiniPanel({ icon: Icon, title, items }: { icon: LucideIcon; title: string; items: string[] }) {
   return (
-    <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+    <div className="rounded border border-line bg-paper p-3">
       <div className="flex items-center gap-2">
         <Icon className="text-saffron" size={17} />
         <p className="text-sm font-black text-ink">{title}</p>
@@ -627,7 +627,7 @@ function DeliveryAssetList({ product }: { product: ProductDetail }) {
 
   if (!deliveryAssets.length) {
     return (
-      <div className="mt-3 rounded border border-saffron/35 bg-[#fff8e8] p-3 text-xs font-bold leading-5 text-[#101513] dark:bg-[#211a10] dark:text-[#ffe09a]">
+      <div className="mt-3 rounded border border-saffron/35 bg-cream p-3 text-xs font-bold leading-5 text-cream-ink dark:bg-saffron/10 dark:text-gold-strong">
         Delivery package metadata is not public yet. Checkout will stay protected, but this product needs stronger asset details before a
         premium launch.
       </div>
@@ -635,7 +635,7 @@ function DeliveryAssetList({ product }: { product: ProductDetail }) {
   }
 
   return (
-    <div className="mt-4 rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+    <div className="mt-4 rounded border border-line bg-paper p-3">
       <div className="flex items-center gap-2">
         <FileArchive className="text-pine" size={17} />
         <p className="text-sm font-black text-ink">Delivery package</p>
@@ -644,7 +644,7 @@ function DeliveryAssetList({ product }: { product: ProductDetail }) {
         {deliveryAssets.slice(0, 5).map((asset) => (
           <div
             key={asset.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded border border-line bg-white p-2 dark:bg-[#121816]"
+            className="flex flex-wrap items-center justify-between gap-2 rounded border border-line bg-surface p-2"
           >
             <span className="min-w-0 truncate text-xs font-black text-ink">{asset.fileName}</span>
             <span className="shrink-0 rounded bg-pine/10 px-2 py-1 text-[0.68rem] font-black text-pine">{asset.mimeType}</span>
@@ -677,7 +677,7 @@ function ProductDataReadiness({ product, formats, software }: { product: Product
   const readyCount = checks.filter((check) => check.ready).length;
 
   return (
-    <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+    <section className="rounded-lg border border-line bg-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-pine">Data readiness</p>
@@ -692,7 +692,7 @@ function ProductDataReadiness({ product, formats, software }: { product: Product
       </div>
       <div className="mt-4 grid gap-2 md:grid-cols-4">
         {checks.map((check) => (
-          <div key={check.label} className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+          <div key={check.label} className="rounded border border-line bg-paper p-3">
             <BadgeCheck className={check.ready ? 'text-pine' : 'text-muted'} size={16} />
             <p className="mt-2 text-sm font-black text-ink">{check.label}</p>
             <p className="mt-1 text-xs leading-5 text-muted">{check.ready ? 'Ready for display' : 'Needs stronger data'}</p>
@@ -723,7 +723,7 @@ function BuyerFitChecklist({ product, industries, useCases }: { product: Product
   ];
 
   return (
-    <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+    <section className="rounded-lg border border-line bg-surface p-4 shadow-sm">
       <SectionHeading
         kicker="Before you buy"
         title="A quick fit check for the customer decision."
@@ -731,7 +731,7 @@ function BuyerFitChecklist({ product, industries, useCases }: { product: Product
       />
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         {checks.map((check) => (
-          <div key={check.title} className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+          <div key={check.title} className="rounded border border-line bg-paper p-3">
             <BadgeCheck className="text-pine" size={17} />
             <p className="mt-3 text-sm font-black text-ink">{check.title}</p>
             <p className="mt-2 text-xs leading-5 text-muted">{check.text}</p>
@@ -767,11 +767,11 @@ function DesignPassport({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-gold/15 text-gold">
               <Fingerprint size={17} />
             </span>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">Design passport</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">Design passport</p>
               <h2 className="mt-1 text-xl font-black">{passportCode(product)}</h2>
             </div>
           </div>
@@ -800,7 +800,7 @@ function DesignPassport({
 function PassportDatum({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
     <div className="border-t border-white/[0.12] pt-3">
-      <Icon className="text-[#f7d17e]" size={18} />
+      <Icon className="text-gold" size={18} />
       <p className="mt-3 text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/42">{label}</p>
       <p className="mt-1 text-sm font-black leading-5 text-white">{value}</p>
     </div>
@@ -845,7 +845,7 @@ function LuxuryProof({ product }: { product: ProductDetail }) {
   ];
 
   return (
-    <section className="rounded-lg border border-line bg-white p-4 shadow-sm dark:bg-[#121816]">
+    <section className="rounded-lg border border-line bg-surface p-4 shadow-sm">
       <div className="mb-4 flex items-center gap-2">
         <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-pine/10 text-pine">
           <BadgeCheck size={16} />
@@ -857,7 +857,7 @@ function LuxuryProof({ product }: { product: ProductDetail }) {
       </div>
       <div className="grid gap-3 md:grid-cols-3">
         {proofItems.map((item) => (
-          <div key={item.title} className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+          <div key={item.title} className="rounded border border-line bg-paper p-3">
             <p className="text-sm font-black text-ink">{item.title}</p>
             <p className="mt-2 text-xs leading-5 text-muted">{item.text}</p>
           </div>
@@ -869,11 +869,11 @@ function LuxuryProof({ product }: { product: ProductDetail }) {
 
 function SignalList({ title, values }: { title: string; values: string[] }) {
   return (
-    <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+    <div className="rounded border border-line bg-paper p-3">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">{title}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {values.map((value, index) => (
-          <span key={`${value}-${index}`} className="rounded bg-white px-2 py-1 text-xs font-bold text-ink dark:bg-[#121816]">
+          <span key={`${value}-${index}`} className="rounded bg-surface px-2 py-1 text-xs font-bold text-ink">
             {value}
           </span>
         ))}
@@ -884,7 +884,7 @@ function SignalList({ title, values }: { title: string; values: string[] }) {
 
 function InfoList({ title, values }: { title: string; values: string[] }) {
   return (
-    <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+    <div className="rounded border border-line bg-paper p-3">
       <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">{title}</p>
       <ul className="mt-3 grid gap-2 text-sm text-ink">
         {values.map((value, index) => (
@@ -900,7 +900,7 @@ function InfoList({ title, values }: { title: string; values: string[] }) {
 
 function LicenseCard({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
   return (
-    <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+    <div className="rounded border border-line bg-paper p-3">
       <div className="flex items-center gap-2">
         <Icon className="text-saffron" size={17} />
         <p className="text-sm font-black text-ink">{title}</p>

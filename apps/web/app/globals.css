@@ -12,11 +12,14 @@
   --3s-muted: #6f6a61;
   --3s-line: #d8ded6;
   --3s-pine: #22594b;
+  --3s-pine-hover: #1b4a3f;
   --3s-pine-bright: #7bd8bd;
   --3s-berry: #8f3152;
   --3s-saffron: #c68a2d;
   --3s-gold: #f7d17e;
+  --3s-gold-strong: #ffe09a;
   --3s-cream: #fff8e8;
+  --3s-cream-ink: #101513;
   --3s-danger: #ff4b32;
   --3s-success: #1f8a68;
   --3s-warning: #b87818;
@@ -55,9 +58,12 @@
   --3s-surface-inverse: #f5f7f5;
   --3s-muted: #a9b6ad;
   --3s-line: #26332e;
+  --3s-pine-hover: #247c68;
   --3s-success: #7bd8bd;
   --3s-warning: #f7d17e;
   --3s-info: #8ec5ff;
+  --3s-gold-strong: #ffe09a;
+  --3s-cream-ink: #101513;
   --3s-focus: 0 0 0 3px rgba(123, 216, 189, 0.22);
   background: #0b0f0e;
   color: #f3f7f2;

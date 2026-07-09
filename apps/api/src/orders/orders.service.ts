@@ -235,13 +235,19 @@ export class OrdersService {
       return existing;
     }
 
-    const [created] = await db.insert(carts).values({ userId }).returning();
+    const [created] = await db.insert(carts).values({ userId }).onConflictDoNothing().returning();
 
-    if (!created) {
+    if (created) {
+      return created;
+    }
+
+    const [cartAfterRace] = await db.select().from(carts).where(eq(carts.userId, userId)).limit(1);
+
+    if (!cartAfterRace) {
       throw new BadRequestException('Cart creation failed');
     }
 
-    return created;
+    return cartAfterRace;
   }
 
   private async getCartLines(cartId: string): Promise<CartLine[]> {

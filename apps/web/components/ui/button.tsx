@@ -6,11 +6,11 @@ type ButtonIntent = 'primary' | 'secondary' | 'ghost' | 'danger' | 'gold';
 type ButtonSize = 'sm' | 'md' | 'icon';
 
 const intentClasses: Record<ButtonIntent, string> = {
-  primary: 'border-transparent bg-pine text-white hover:bg-[#1b4a3f] dark:bg-[#1f6b59] dark:hover:bg-[#247c68]',
-  secondary: 'border-line bg-white text-ink hover:border-pine hover:text-pine dark:bg-[#121816]',
-  ghost: 'border-white/[0.12] bg-white/[0.06] text-white hover:border-[#f7d17e]/50 hover:text-[#f7d17e]',
+  primary: 'border-transparent bg-pine text-white hover:bg-pine-hover',
+  secondary: 'border-line bg-surface text-ink hover:border-pine hover:text-pine',
+  ghost: 'border-white/[0.12] bg-white/[0.06] text-white hover:border-gold/50 hover:text-gold',
   danger: 'border-berry/30 bg-berry/10 text-berry hover:border-berry hover:bg-berry/15',
-  gold: 'border-[#f7d17e]/50 bg-[#f7d17e]/10 text-[#f7d17e] hover:bg-[#f7d17e] hover:text-[#101513]',
+  gold: 'border-gold/50 bg-gold/10 text-gold hover:bg-gold hover:text-cream-ink',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

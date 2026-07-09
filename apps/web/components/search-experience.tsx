@@ -1,6 +1,7 @@
 'use client';
 
 import { Bookmark, ChevronLeft, ChevronRight, LockKeyhole, Loader2, Search, Sparkles } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
@@ -11,10 +12,15 @@ import { updateAttribution } from '../lib/attribution';
 import { trackFunnelEvent } from '../lib/funnel-analytics';
 import { saveSearch } from '../lib/saved-searches';
 import { rememberSearchTaste } from '../lib/taste-memory';
-import { BuyerProfileRecovery } from './buyer-profile-recovery';
 import { CustomerEmptyState, CustomerJourneyRail } from './customer-experience';
-import { ProductCard } from './product-card';
 import { ActionLink, Button, Notice, Panel } from './ui';
+
+const BuyerProfileRecovery = dynamic(() => import('./buyer-profile-recovery').then((module) => module.BuyerProfileRecovery), {
+  ssr: false,
+});
+const ProductCard = dynamic(() => import('./product-card').then((module) => module.ProductCard), {
+  ssr: false,
+});
 
 const guestSearchUsedKey = '3s-design-search-preview-used';
 const guestLimit = 3;
@@ -148,7 +154,7 @@ export function SearchExperience() {
     <main className="showcase-page search-experience min-h-screen px-4 py-6 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <Link href="/?intro=0" className="brand-lockup text-white" aria-label="Back home">
+          <Link href="/?intro=0" className="brand-lockup text-white" aria-label="AI concierge search 3S Design back home">
             <span className="brand-mark" aria-hidden="true">
               <span className="brand-mark__stroke brand-mark__stroke--one" />
               <span className="brand-mark__stroke brand-mark__stroke--two" />

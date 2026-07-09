@@ -1,0 +1,322 @@
+# 3S Design Visual System + Figma Handoff
+
+## Purpose
+
+This document turns the recent UI/UX work into a clean handoff map for Figma and future code cleanup.
+
+## Current Visual Foundation
+
+The code now has a first real visual system layer in `apps/web/app/globals.css`.
+
+### Tokens Already Introduced
+
+- Core color tokens:
+  - `--3s-ink`
+  - `--3s-paper`
+  - `--3s-surface`
+  - `--3s-surface-raised`
+  - `--3s-surface-inverse`
+  - `--3s-muted`
+  - `--3s-line`
+  - `--3s-pine`
+  - `--3s-pine-bright`
+  - `--3s-berry`
+  - `--3s-saffron`
+  - `--3s-gold`
+  - `--3s-cream`
+  - `--3s-danger`
+  - `--3s-success`
+  - `--3s-warning`
+  - `--3s-info`
+- Radius tokens:
+  - `--3s-radius-sm`
+  - `--3s-radius-md`
+  - `--3s-radius-lg`
+  - `--3s-radius-xl`
+- Shadow tokens:
+  - `--3s-shadow-soft`
+  - `--3s-shadow-raised`
+  - `--3s-shadow-premium`
+- Type tokens:
+  - `--3s-font-sans`
+  - `--3s-type-display`
+  - `--3s-type-h1`
+  - `--3s-type-h2`
+  - `--3s-type-h3`
+  - `--3s-type-body`
+  - `--3s-type-small`
+  - `--3s-type-caption`
+
+## Components Ready To Mirror In Figma
+
+### Product Card
+
+Code source:
+
+- `apps/web/components/product-card.tsx`
+
+Figma component variants:
+
+- `Default`
+- `Compact`
+- `Featured`
+- `Matched`
+- `Signed out`
+- `Adding`
+- `Error`
+
+Figma anatomy:
+
+- Preview area
+- Featured/match badges
+- Feeling chip
+- Title/subtitle
+- Match decision panel
+- License/delivery proof
+- Signal chips
+- Price/action footer
+
+### Product Detail Decision Page
+
+Code source:
+
+- `apps/web/app/products/[slug]/page.tsx`
+- `apps/web/components/product-detail-actions.tsx`
+
+Figma frames:
+
+- Desktop product detail
+- Mobile product detail
+
+Figma components:
+
+- Hero preview
+- Decision readout
+- Purchase action panel
+- License option row
+- Purchase fact row
+- Delivery reassurance block
+
+### Search + AI Finder
+
+Code source:
+
+- `apps/web/components/search-experience.tsx`
+- `apps/web/components/ai-discovery-panel.tsx`
+
+Figma components:
+
+- Search decision shell
+- Search hero prompt
+- Intent chip
+- Match summary card
+- Result grid
+- No-results recovery state
+
+### Checkout
+
+Code source:
+
+- `apps/web/components/checkout-workspace.tsx`
+
+Figma components:
+
+- Checkout hero
+- Cart item
+- Order summary
+- Total row
+- Confirmation block
+- Checkout CTA
+- Payment expectation panel
+
+### Account + Vault
+
+Code source:
+
+- `apps/web/components/account-dashboard.tsx`
+- `apps/web/components/delivery-vault.tsx`
+
+Figma components:
+
+- Account studio hero
+- Ownership metric card
+- Vault shell
+- Vault entitlement card
+- License ribbon
+- Vault asset download row
+
+## Visual QA Findings
+
+These counts were measured on `apps/web/app` and `apps/web/components`.
+
+| Pattern                          | Count |
+| -------------------------------- | ----: |
+| Hex colors                       |   408 |
+| `rgba(...)` usage                |   252 |
+| `bg-[...]` arbitrary classes     |   146 |
+| `text-[...]` arbitrary classes   |   168 |
+| `border-[...]` arbitrary classes |    30 |
+| `shadow-[...]` arbitrary classes |    12 |
+
+## Meaning
+
+The visual system exists now, but the older interface still contains many hardcoded decisions.
+
+This is acceptable for the current stage, but the next serious design-engineering pass should migrate repeated values into reusable tokens and component classes.
+
+## Figma Build Order
+
+1. Foundations
+   - Colors
+   - Typography
+   - Radius
+   - Shadows
+   - Spacing examples
+
+2. Core UI Components
+   - Button
+   - Badge
+   - Panel/Card
+   - Input
+   - Notice
+   - Chip
+
+3. Sales Components
+   - Product Card
+   - Product Detail Action Panel
+   - Search Match Summary
+   - Cart Item
+   - Checkout Summary
+   - Vault Entitlement Card
+
+4. Screen Frames
+   - Home latest products
+   - Product detail desktop/mobile
+   - Search desktop/mobile
+   - Checkout desktop/mobile
+   - Account/Vault desktop/mobile
+
+## Next Code Cleanup
+
+Recommended next engineering task:
+
+`3-31-token-migration-pass`
+
+Scope:
+
+- Convert repeated `#f7d17e`, `#fff8e8`, `#101513`, `#0f1513`, `#121816`, and `#7bd8bd` usage into semantic tokens.
+- Replace common arbitrary Tailwind classes with component classes where repeated.
+- Keep one-off rich visuals only where they belong: hero/intro/specific art direction.
+
+## Token Migration Pass 3-31
+
+Completed first low-risk migration:
+
+- Added Tailwind semantic aliases for:
+  - `success`
+  - `warning`
+  - `danger`
+  - `surface`
+  - `surface-raised`
+  - `surface-inverse`
+  - `pine-hover`
+  - `gold-strong`
+  - `cream-ink`
+- Migrated core UI primitives:
+  - `Button`
+  - `ActionLink`
+  - `Badge`
+  - `Notice`
+  - `Panel`
+  - `Input`
+
+Updated counts after this pass:
+
+| Pattern                          | Before | After |
+| -------------------------------- | -----: | ----: |
+| Hex colors                       |    408 |   399 |
+| `rgba(...)` usage                |    252 |   252 |
+| `bg-[...]` arbitrary classes     |    146 |   134 |
+| `text-[...]` arbitrary classes   |    168 |   160 |
+| `border-[...]` arbitrary classes |     30 |    24 |
+| `shadow-[...]` arbitrary classes |     12 |    12 |
+
+Next migration target:
+
+- `showcase-header.tsx`
+- `site-footer.tsx`
+- `product-detail-actions.tsx`
+- repeated gold/cream/dark surface utility classes inside customer-facing surfaces
+
+## Token Migration Pass 3-32
+
+Completed header/footer migration:
+
+- Migrated `showcase-header.tsx` repeated cream/gold/ink utilities to semantic tokens.
+- Migrated `site-footer.tsx` repeated dark surface, cream, gold, and success utilities.
+- Migrated `intent-link.tsx` active/hover gold border to token utilities.
+
+Updated counts after this pass:
+
+| Pattern                          | Before 3-32 | After 3-32 |
+| -------------------------------- | ----------: | ---------: |
+| Hex colors                       |         399 |        376 |
+| `rgba(...)` usage                |         252 |        252 |
+| `bg-[...]` arbitrary classes     |         134 |        123 |
+| `text-[...]` arbitrary classes   |         160 |        146 |
+| `border-[...]` arbitrary classes |          24 |         16 |
+| `shadow-[...]` arbitrary classes |          12 |         12 |
+
+Verification:
+
+- Web typecheck passed.
+- Web build passed after removing the stale `.next/lock` build artifact.
+
+Next migration target:
+
+- `product-detail-actions.tsx`
+- `post-order-guidance.tsx`
+- repeated product-detail page surface classes
+
+## Token Migration Pass 3-33
+
+Completed product decision/support migration:
+
+- Migrated `product-detail-actions.tsx` personal-fit and auth notice colors to semantic tokens.
+- Migrated `post-order-guidance.tsx` gold/dark support colors to semantic tokens.
+- Removed stale `.next/lock` build artifact before verification.
+
+Updated counts after this pass:
+
+| Pattern                          | Before 3-33 | After 3-33 |
+| -------------------------------- | ----------: | ---------: |
+| Hex colors                       |         376 |        367 |
+| `rgba(...)` usage                |         252 |        252 |
+| `bg-[...]` arbitrary classes     |         123 |        118 |
+| `text-[...]` arbitrary classes   |         146 |        140 |
+| `border-[...]` arbitrary classes |          16 |         16 |
+| `shadow-[...]` arbitrary classes |          12 |         12 |
+
+Verification:
+
+- Web typecheck passed.
+- Web build passed.
+
+Next migration target:
+
+- Product detail page sections in `apps/web/app/products/[slug]/page.tsx`.
+- `product-card.tsx` notice states.
+
+## Screenshots Captured
+
+Stored in `outputs/`:
+
+- `visual-system-product-card-home.png`
+- `product-detail-v2-desktop.png`
+- `product-detail-v2-mobile.png`
+- `search-ai-redesign-desktop.png`
+- `search-ai-redesign-mobile.png`
+- `checkout-visual-refinement-desktop.png`
+- `checkout-visual-refinement-mobile.png`
+- `account-vault-refinement-desktop.png`
+- `account-vault-refinement-mobile.png`

@@ -48,20 +48,20 @@ export function ShowcaseHeader({ locale }: { locale: AppLocale }) {
 
         <form
           onSubmit={submitSearch}
-          className="hidden h-10 min-w-[220px] max-w-md flex-1 items-center gap-2 rounded-full border border-white/10 bg-[var(--showcase-cream)] px-4 text-sm text-[#101513] md:flex"
+          className="hidden h-10 min-w-[220px] max-w-md flex-1 items-center gap-2 rounded-full border border-white/10 bg-cream px-4 text-sm text-cream-ink md:flex"
         >
           <Search size={16} />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#101513] outline-none placeholder:text-[#101513]/[0.58]"
+            className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-cream-ink outline-none placeholder:text-cream-ink/60"
             placeholder={locale === 'ar' ? 'ابحث بالإحساس أو المجال أو الستايل...' : 'Search by feeling, industry, style...'}
           />
           <Button
             type="submit"
             intent="secondary"
             size="sm"
-            className="h-7 rounded-full border-transparent bg-[#101513] px-3 py-1 text-xs font-black text-[#fff8e8] hover:bg-[#22594b] hover:text-white"
+            className="h-7 rounded-full border-transparent bg-cream-ink px-3 py-1 text-xs font-black text-cream hover:bg-pine hover:text-white"
           >
             {locale === 'ar' ? 'ابحث' : 'Find'}
           </Button>
@@ -71,7 +71,7 @@ export function ShowcaseHeader({ locale }: { locale: AppLocale }) {
           {isSignedIn ? (
             <Link
               href="/account"
-              className="hidden h-10 items-center justify-center gap-2 rounded-full border border-[#f7d17e]/40 bg-[#f7d17e]/12 px-3 text-sm font-bold text-[#f7d17e] transition hover:bg-[#f7d17e] hover:text-[#101513] sm:inline-flex"
+              className="hidden h-10 items-center justify-center gap-2 rounded-full border border-gold/40 bg-gold/12 px-3 text-sm font-bold text-gold transition hover:bg-gold hover:text-cream-ink sm:inline-flex"
             >
               <UserRound size={16} />
               {user?.fullName?.split(' ')[0] || common.myStudio}
@@ -80,14 +80,14 @@ export function ShowcaseHeader({ locale }: { locale: AppLocale }) {
             <>
               <Link
                 href="/login"
-                className="hidden h-10 items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.08] px-3 text-sm font-bold text-white transition hover:border-[#f7d17e] hover:text-[#f7d17e] sm:inline-flex"
+                className="hidden h-10 items-center justify-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.08] px-3 text-sm font-bold text-white transition hover:border-gold hover:text-gold sm:inline-flex"
               >
                 <LogIn size={16} />
                 {common.signIn}
               </Link>
               <Link
                 href="/register"
-                className="hidden h-10 min-w-24 items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-black text-[#101513] shadow-sm transition hover:bg-[#ffe09a] lg:inline-flex"
+                className="hidden h-10 min-w-24 items-center justify-center gap-2 rounded-full bg-surface px-4 text-sm font-black text-cream-ink shadow-sm transition hover:bg-gold-strong lg:inline-flex"
               >
                 <UserPlus className="shrink-0" size={16} />
                 {locale === 'ar' ? 'انضم' : common.create}
