@@ -255,6 +255,37 @@ export class AuthService {
     return { reset: true };
   }
 
+  async assertPasswordForStepUp(userId: string, password: string, action: string) {
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      throw new BadRequestException('Step-up password is required');
+    }
+
+    const [user] = await this.database
+      .requireDb()
+      .select({
+        id: users.id,
+        passwordHash: users.passwordHash,
+        deletedAt: users.deletedAt,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user || user.deletedAt) {
+      throw new UnauthorizedException('Step-up authentication failed');
+    }
+
+    const passwordOk = await bcrypt.compare(password, user.passwordHash);
+
+    if (!passwordOk) {
+      await this.recordAudit(user.id, `${action}.step_up_failed`, 'user', user.id);
+      throw new UnauthorizedException('Step-up authentication failed');
+    }
+
+    await this.recordAudit(user.id, `${action}.step_up_passed`, 'user', user.id);
+    return { verified: true };
+  }
+
   private async createAuthResponse(user: AuthenticatedUser, context: AuthContext) {
     const session = await this.createSession(user.id, context);
 

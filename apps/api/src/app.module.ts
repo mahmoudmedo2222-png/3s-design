@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AiDiscoveryModule } from './ai-discovery/ai-discovery.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AdminAssetsModule } from './admin/assets/admin-assets.module';
 import { AdminCatalogModule } from './admin/catalog/admin-catalog.module';
 import { AdminProductsModule } from './admin/products/admin-products.module';
@@ -16,9 +17,10 @@ import { ProductsModule } from './products/products.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['../../.env', '.env'],
+      envFilePath: ['../../.env.local', '.env.local', '../../.env', '.env'],
     }),
     AiDiscoveryModule,
+    AnalyticsModule,
     AuthModule,
     DatabaseModule,
     DownloadsModule,

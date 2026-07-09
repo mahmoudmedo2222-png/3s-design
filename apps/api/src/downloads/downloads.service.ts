@@ -62,6 +62,7 @@ export class DownloadsService {
         const extraDownloads = await this.getOverrideDownloads(row.entitlement.id);
         const maxDownloads = row.entitlement.maxDownloads + extraDownloads;
         const hourlyUsed = await this.countDownloadsInLastHour(row.entitlement.id);
+        const assets = await this.listDownloadableAssets(row.entitlement.productId, row.entitlement.variantId);
 
         return {
           id: row.entitlement.id,
@@ -74,6 +75,7 @@ export class DownloadsService {
           downloadsUsed: row.entitlement.downloadsUsed,
           downloadsRemaining: Math.max(maxDownloads - row.entitlement.downloadsUsed, 0),
           hourlyDownloadsRemaining: Math.max(maxDownloadsPerHour - hourlyUsed, 0),
+          assets,
         };
       }),
     );
@@ -194,31 +196,32 @@ export class DownloadsService {
         const [existing] = await tx
           .select({ id: entitlements.id })
           .from(entitlements)
-          .where(
-            and(
-              eq(entitlements.userId, order.userId),
-              eq(entitlements.productId, item.productId),
-              eq(entitlements.licenseId, item.licenseId),
-              item.variantId ? eq(entitlements.variantId, item.variantId) : sql`${entitlements.variantId} is null`,
-              eq(entitlements.isActive, true),
-            ),
-          )
+          .where(eq(entitlements.orderItemId, item.id))
           .limit(1);
 
         if (existing) {
           continue;
         }
 
-        await tx.insert(entitlements).values({
-          userId: order.userId,
-          orderId: order.id,
-          orderItemId: item.id,
-          productId: item.productId,
-          variantId: item.variantId,
-          licenseId: item.licenseId,
-          maxDownloads: 5,
-        });
-        granted += 1;
+        const [created] = await tx
+          .insert(entitlements)
+          .values({
+            userId: order.userId,
+            orderId: order.id,
+            orderItemId: item.id,
+            productId: item.productId,
+            variantId: item.variantId,
+            licenseId: item.licenseId,
+            maxDownloads: 5,
+          })
+          .onConflictDoNothing({
+            target: entitlements.orderItemId,
+          })
+          .returning({ id: entitlements.id });
+
+        if (created) {
+          granted += 1;
+        }
       }
     });
 
@@ -250,6 +253,34 @@ export class DownloadsService {
       );
 
     return Number(row?.total ?? 0);
+  }
+
+  private async listDownloadableAssets(productId: string, variantId: string | null, executor = this.database.requireDb()) {
+    const rows = await executor
+      .select({
+        id: productAssets.id,
+        assetType: productAssets.assetType,
+        fileName: productAssets.fileName,
+        mimeType: productAssets.mimeType,
+        fileSize: productAssets.fileSize,
+        variantId: productAssets.variantId,
+        sortOrder: productAssets.sortOrder,
+      })
+      .from(productAssets)
+      .where(
+        and(
+          eq(productAssets.productId, productId),
+          sql`${productAssets.assetType} in ('delivery_zip', 'source_file')`,
+          eq(productAssets.assetStatus, 'ready'),
+          sql`${productAssets.scanStatus} in ('passed', 'skipped')`,
+          variantId
+            ? sql`(${productAssets.variantId} is null or ${productAssets.variantId} = ${variantId})`
+            : sql`${productAssets.variantId} is null`,
+        ),
+      )
+      .orderBy(productAssets.sortOrder);
+
+    return rows;
   }
 
   private async recordDownloadEvent(

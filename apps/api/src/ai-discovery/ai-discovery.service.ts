@@ -74,45 +74,45 @@ type DiscoveryProduct = {
 };
 
 const colorDictionary: Record<string, string[]> = {
-  black: ['black', 'dark', 'aswad', 'eswed', 'اسود', 'أسود', 'غامق'],
-  white: ['white', 'clean', 'abyad', 'ابيض', 'أبيض', 'نظيف'],
-  blue: ['blue', 'navy', 'azraq', 'kahly', 'ازرق', 'أزرق', 'كحلي'],
-  red: ['red', 'ahmar', 'احمر', 'أحمر'],
-  green: ['green', 'akhdar', 'اخضر', 'أخضر'],
-  gold: ['gold', 'golden', 'zahaby', 'dahaby', 'دهبي', 'ذهبي', 'ذهب'],
-  pink: ['pink', 'rose', 'wardy', 'pemby', 'وردي', 'بمبي'],
-  purple: ['purple', 'violet', 'mauve', 'mov', 'بنفسجي', 'موف'],
-  orange: ['orange', 'برتقالي'],
-  yellow: ['yellow', 'اصفر', 'أصفر'],
-  beige: ['beige', 'cream', 'كريمي', 'بيج'],
+  black: ['black', 'dark', 'aswad', 'eswed'],
+  white: ['white', 'clean', 'abyad'],
+  blue: ['blue', 'navy', 'azraq', 'kahly'],
+  red: ['red', 'ahmar'],
+  green: ['green', 'akhdar'],
+  gold: ['gold', 'golden', 'zahaby', 'dahaby'],
+  pink: ['pink', 'rose', 'wardy', 'pemby'],
+  purple: ['purple', 'violet', 'mauve', 'mov'],
+  orange: ['orange'],
+  yellow: ['yellow'],
+  beige: ['beige', 'cream'],
 };
 
 const styleDictionary: Record<string, string[]> = {
-  luxury: ['luxury', 'premium', 'elegant', 'fancy', 'fakhamah', 'expensive', 'high end', 'فاخر', 'فخم', 'برستيج', 'راقي'],
-  minimal: ['minimal', 'simple', 'clean', 'calm', 'هادئ', 'بسيط', 'نضيف', 'نظيف'],
-  modern: ['modern', 'trendy', 'contemporary', 'مودرن', 'عصري'],
-  playful: ['playful', 'fun', 'cute', 'مرح', 'لطيف'],
-  corporate: ['corporate', 'business', 'formal', 'professional', 'رسمي', 'احترافي'],
+  luxury: ['luxury', 'premium', 'elegant', 'fancy', 'fakhamah', 'expensive', 'high end'],
+  minimal: ['minimal', 'simple', 'clean', 'calm'],
+  modern: ['modern', 'trendy', 'contemporary'],
+  playful: ['playful', 'fun', 'cute'],
+  corporate: ['corporate', 'business', 'formal', 'professional'],
   social: ['social', 'instagram', 'facebook', 'post', 'story'],
   print: ['print', 'flyer', 'poster', 'brochure'],
 };
 
 const emotionDictionary: Record<string, string[]> = {
-  trust: ['trust', 'trusted', 'confidence', 'safe', 'secure', 'credible', 'ثقة', 'موثوق', 'امان', 'أمان'],
-  desire: ['desire', 'crave', 'want', 'tempting', 'appetite', 'يشتهي', 'اشتهاء', 'رغبة', 'مغري'],
-  urgency: ['urgent', 'limited', 'scarcity', 'now', 'fast', 'launch', 'sale', 'offer', 'عرض', 'خصم', 'مستعجل', 'سرعة'],
-  prestige: ['prestige', 'exclusive', 'elite', 'signature', 'unique', 'exclusive', 'مميز', 'حصري', 'مش اي موقع', 'راقي'],
-  calm: ['calm', 'soft', 'peaceful', 'relaxed', 'هادئ', 'مريح', 'راقي'],
-  excitement: ['exciting', 'bold', 'wow', 'impact', 'energetic', 'اكشن', 'مبهر', 'جريء'],
+  trust: ['trust', 'trusted', 'confidence', 'safe', 'secure', 'credible'],
+  desire: ['desire', 'crave', 'want', 'tempting', 'appetite'],
+  urgency: ['urgent', 'limited', 'scarcity', 'now', 'fast', 'launch', 'sale', 'offer'],
+  prestige: ['prestige', 'exclusive', 'elite', 'signature', 'unique'],
+  calm: ['calm', 'soft', 'peaceful', 'relaxed'],
+  excitement: ['exciting', 'bold', 'wow', 'impact', 'energetic'],
 };
 
 const useCaseDictionary: Record<string, string[]> = {
-  restaurant: ['restaurant', 'cafe', 'food', 'menu', 'pizza', 'burger', 'مطعم', 'كافيه', 'منيو', 'اكل', 'أكل'],
-  fashion: ['fashion', 'clothes', 'beauty', 'makeup', 'brand', 'موضة', 'ازياء', 'أزياء', 'ملابس', 'براند'],
-  realEstate: ['real estate', 'property', 'apartment', 'broker', 'عقار', 'عقارات', 'شقة', 'كمبوند'],
-  event: ['event', 'wedding', 'party', 'invitation', 'فرح', 'زفاف', 'دعوة', 'حفلة'],
-  ecommerce: ['ecommerce', 'store', 'shop', 'sale', 'offer', 'متجر', 'بيع', 'عرض', 'خصم'],
-  education: ['course', 'school', 'training', 'academy', 'كورس', 'تعليم', 'اكاديمية', 'أكاديمية'],
+  restaurant: ['restaurant', 'cafe', 'food', 'menu', 'pizza', 'burger'],
+  fashion: ['fashion', 'clothes', 'beauty', 'makeup', 'brand'],
+  realEstate: ['real estate', 'property', 'apartment', 'broker'],
+  event: ['event', 'wedding', 'party', 'invitation'],
+  ecommerce: ['ecommerce', 'store', 'shop', 'sale', 'offer'],
+  education: ['course', 'school', 'training', 'academy'],
 };
 
 const platformDictionary: Record<string, string[]> = {
@@ -145,8 +145,8 @@ extendDictionary(styleDictionary, {
 });
 
 extendDictionary(emotionDictionary, {
-  trust: ['ثقة', 'موثوق', 'امان', 'أمان'],
-  desire: ['يشتهي', 'اشتهاء', 'رغبة', 'مغري'],
+  trust: ['ثقة', 'الثقة', 'موثوق', 'امان', 'أمان'],
+  desire: ['يشتهي', 'اشتهاء', 'رغبة', 'مغري', 'جوع', 'الجوع'],
   urgency: ['عرض', 'خصم', 'مستعجل', 'سرعة', 'اطلاق', 'إطلاق'],
   prestige: ['مميز', 'حصري', 'مش اي موقع', 'راقي'],
   calm: ['هادئ', 'مريح', 'راقي'],
@@ -163,7 +163,7 @@ extendDictionary(useCaseDictionary, {
 });
 
 extendDictionary(platformDictionary, {
-  instagram: ['instagram', 'insta', 'انستجرام', 'انستغرام', 'بوست', 'ستوري', 'ريلز'],
+  instagram: ['instagram', 'insta', 'انستجرام', 'انستغرام', 'للانستجرام', 'بوست', 'ستوري', 'ريلز'],
   facebook: ['facebook', 'فيسبوك', 'فيس', 'فيس بوك'],
   print: ['print', 'طباعه', 'طباعة', 'فلاير', 'بوستر', 'منيو'],
   web: ['website', 'web', 'موقع', 'بانر', 'لاندنج'],
@@ -261,9 +261,11 @@ export class AiDiscoveryService {
 
     return {
       openAiConfigured,
-      mode: openAiConfigured ? 'openai' : 'rules',
+      mode: 'rules',
       model: openAiConfigured ? model : null,
-      privacy: openAiConfigured ? 'OpenAI requests are sent with store=false.' : 'Local smart matching only.',
+      privacy: openAiConfigured
+        ? 'OpenAI is configured with store=false; local smart matching remains the fallback when provider access is unavailable.'
+        : 'Local smart matching only.',
       capabilities: {
         arabicIntent: true,
         emotionalSearch: true,

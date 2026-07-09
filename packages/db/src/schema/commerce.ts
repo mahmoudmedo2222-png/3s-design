@@ -89,6 +89,17 @@ export const orders = pgTable(
         country?: string | null;
         city?: string | null;
         preferredCurrency?: string;
+        attribution?: {
+          source?: string | null;
+          campaign?: string | null;
+          medium?: string | null;
+          intent?: string | null;
+          brief?: string | null;
+          referrer?: string | null;
+          landingPath?: string | null;
+          firstSeenAt?: string | null;
+          lastSeenAt?: string | null;
+        };
       }>()
       .notNull()
       .default(sql`'{}'::jsonb`),
@@ -169,30 +180,36 @@ export const paymentWebhookEvents = pgTable(
   }),
 );
 
-export const entitlements = pgTable('entitlements', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  orderId: uuid('order_id')
-    .notNull()
-    .references(() => orders.id, { onDelete: 'cascade' }),
-  orderItemId: uuid('order_item_id')
-    .notNull()
-    .references(() => orderItems.id, { onDelete: 'cascade' }),
-  productId: uuid('product_id')
-    .notNull()
-    .references(() => products.id, { onDelete: 'restrict' }),
-  variantId: uuid('variant_id').references(() => productVariants.id, { onDelete: 'restrict' }),
-  licenseId: uuid('license_id')
-    .notNull()
-    .references(() => licenses.id, { onDelete: 'restrict' }),
-  maxDownloads: integer('max_downloads').notNull().default(5),
-  downloadsUsed: integer('downloads_used').notNull().default(0),
-  expiresAt: timestamp('expires_at', { withTimezone: true }),
-  isActive: boolean('is_active').notNull().default(true),
-  ...timestamps(),
-});
+export const entitlements = pgTable(
+  'entitlements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    orderItemId: uuid('order_item_id')
+      .notNull()
+      .references(() => orderItems.id, { onDelete: 'cascade' }),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'restrict' }),
+    variantId: uuid('variant_id').references(() => productVariants.id, { onDelete: 'restrict' }),
+    licenseId: uuid('license_id')
+      .notNull()
+      .references(() => licenses.id, { onDelete: 'restrict' }),
+    maxDownloads: integer('max_downloads').notNull().default(5),
+    downloadsUsed: integer('downloads_used').notNull().default(0),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    isActive: boolean('is_active').notNull().default(true),
+    ...timestamps(),
+  },
+  (table) => ({
+    orderItemIdx: uniqueIndex('entitlements_order_item_idx').on(table.orderItemId),
+  }),
+);
 
 export const downloadEvents = pgTable('download_events', {
   id: uuid('id').primaryKey().defaultRandom(),

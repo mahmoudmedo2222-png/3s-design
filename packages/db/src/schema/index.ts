@@ -1,3 +1,4 @@
+export * from './analytics';
 export * from './catalog';
 export * from './commerce';
 export * from './engagement';

@@ -1,7 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { orders, payments, paymentWebhookEvents } from '@3s-design/db/schema';
+import { orders, payments, paymentWebhookEvents, users } from '@3s-design/db/schema';
 import { and, desc, eq } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
 import { DatabaseService } from '../database/database.service';
@@ -131,6 +139,36 @@ export class PaymentsService {
     return { items: rows };
   }
 
+  async listAdminPayments() {
+    const rows = await this.database
+      .requireDb()
+      .select({
+        payment: payments,
+        order: {
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          status: orders.status,
+          total: orders.total,
+          currency: orders.currency,
+          billingSnapshot: orders.billingSnapshot,
+          createdAt: orders.createdAt,
+          paidAt: orders.paidAt,
+        },
+        customer: {
+          id: users.id,
+          email: users.email,
+          fullName: users.fullName,
+        },
+      })
+      .from(payments)
+      .innerJoin(orders, eq(orders.id, payments.orderId))
+      .innerJoin(users, eq(users.id, orders.userId))
+      .orderBy(desc(payments.createdAt))
+      .limit(50);
+
+    return { items: rows.map((row) => ({ ...row, payment: this.serializePaymentSession(row.payment) })) };
+  }
+
   async markPaymentPaid(paymentId: string, providerPaymentId?: string, actorUserId?: string) {
     const db = this.database.requireDb();
     const [payment] = await db.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
@@ -144,6 +182,10 @@ export class PaymentsService {
     }
 
     if (payment.status !== 'pending') {
+      if (payment.status === 'failed') {
+        return payment;
+      }
+
       throw new BadRequestException('Payment is not pending');
     }
 
@@ -241,6 +283,21 @@ export class PaymentsService {
       .limit(1);
 
     if (existing) {
+      if (!existing.processedAt) {
+        await this.processProviderWebhook(providerValue, input);
+        const [updatedDuplicate] = await db
+          .update(paymentWebhookEvents)
+          .set({ processedAt: new Date() })
+          .where(eq(paymentWebhookEvents.id, existing.id))
+          .returning();
+
+        return {
+          accepted: true,
+          duplicate: true,
+          processed: Boolean(updatedDuplicate?.processedAt),
+        };
+      }
+
       return {
         accepted: true,
         duplicate: true,
@@ -259,17 +316,41 @@ export class PaymentsService {
           status: input.status,
         },
       })
+      .onConflictDoNothing({
+        target: [paymentWebhookEvents.provider, paymentWebhookEvents.eventId],
+      })
       .returning();
 
     if (!createdEvent) {
-      throw new BadRequestException('Webhook event creation failed');
+      const [duplicate] = await db
+        .select({ id: paymentWebhookEvents.id, processedAt: paymentWebhookEvents.processedAt })
+        .from(paymentWebhookEvents)
+        .where(and(eq(paymentWebhookEvents.provider, providerValue), eq(paymentWebhookEvents.eventId, input.eventId)))
+        .limit(1);
+
+      if (duplicate && !duplicate.processedAt) {
+        await this.processProviderWebhook(providerValue, input);
+        const [updatedDuplicate] = await db
+          .update(paymentWebhookEvents)
+          .set({ processedAt: new Date() })
+          .where(eq(paymentWebhookEvents.id, duplicate.id))
+          .returning();
+
+        return {
+          accepted: true,
+          duplicate: true,
+          processed: Boolean(updatedDuplicate?.processedAt),
+        };
+      }
+
+      return {
+        accepted: true,
+        duplicate: true,
+        processed: Boolean(duplicate?.processedAt),
+      };
     }
 
-    if (input.status === 'paid') {
-      await this.markProviderPaymentPaid(providerValue, input.providerPaymentId);
-    } else {
-      await this.failProviderPayment(providerValue, input.providerPaymentId);
-    }
+    await this.processProviderWebhook(providerValue, input);
 
     const [updatedEvent] = await db
       .update(paymentWebhookEvents)
@@ -282,6 +363,15 @@ export class PaymentsService {
       duplicate: false,
       processed: Boolean(updatedEvent?.processedAt),
     };
+  }
+
+  private async processProviderWebhook(provider: PaymentProvider, input: PaymentWebhookEventDto) {
+    if (input.status === 'paid') {
+      await this.markProviderPaymentPaid(provider, input.providerPaymentId);
+      return;
+    }
+
+    await this.failProviderPayment(provider, input.providerPaymentId);
   }
 
   async assertUserOwnsPayment(userId: string, paymentId: string) {
@@ -330,6 +420,10 @@ export class PaymentsService {
     const expected = this.config.get<string>(envName);
 
     if (!expected) {
+      if (this.config.get<string>('NODE_ENV') === 'production') {
+        throw new ServiceUnavailableException(`${provider} payment webhook secret is not configured`);
+      }
+
       return;
     }
 

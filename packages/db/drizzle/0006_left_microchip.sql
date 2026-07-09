@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "entitlements_order_item_idx" ON "entitlements" USING btree ("order_item_id");

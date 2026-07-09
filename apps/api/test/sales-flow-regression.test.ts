@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
-import { productAssets } from '@3s-design/db/schema';
+import { entitlements, productAssets } from '@3s-design/db/schema';
 import dotenv from 'dotenv';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
@@ -84,6 +84,13 @@ type EntitlementsResponse = {
     isActive: boolean;
     downloadsRemaining: number;
     hourlyDownloadsRemaining: number;
+    assets: Array<{
+      id: string;
+      assetType: string;
+      fileName: string;
+      mimeType: string;
+      fileSize: number;
+    }>;
   }>;
 };
 
@@ -207,6 +214,21 @@ async function ensureDeliveryAsset(product: ProductSummary) {
   }
 }
 
+async function countEntitlementsForOrder(orderId: string) {
+  const databaseUrl = process.env.DATABASE_URL;
+  assert.ok(databaseUrl, 'DATABASE_URL is required for sales-flow regression test setup.');
+
+  const pool = new pg.Pool({ connectionString: databaseUrl });
+  const db = drizzle(pool);
+
+  try {
+    const [row] = await db.select({ total: count() }).from(entitlements).where(eq(entitlements.orderId, orderId));
+    return Number(row?.total ?? 0);
+  } finally {
+    await pool.end();
+  }
+}
+
 function authHeaders(token: string) {
   return { authorization: `Bearer ${token}` };
 }
@@ -279,18 +301,35 @@ void test('sales flow regression: auth -> cart -> checkout -> payment -> entitle
 
   await t.test('manual paid webhook marks order paid and grants entitlement idempotently', async () => {
     const eventId = `manual-paid-${randomUUID()}`;
-    const paid = await postJson<WebhookResponse>(`/webhooks/payments/manual`, {
+    const webhookPayload = {
       eventId,
       eventType: 'payment.paid',
       providerPaymentId: paymentSession.providerPaymentId,
       status: 'paid',
       payload: { source: 'sales-flow-regression' },
-    });
+    };
+    const [firstPaid, concurrentDuplicate] = await Promise.all([
+      postJson<WebhookResponse>(`/webhooks/payments/manual`, webhookPayload),
+      postJson<WebhookResponse>(`/webhooks/payments/manual`, webhookPayload),
+    ]);
 
-    assert.ok(paid.response.ok, `Expected payment webhook to succeed, got ${paid.response.status}`);
-    assert.equal(paid.body.accepted, true);
-    assert.equal(paid.body.duplicate, false);
-    assert.equal(paid.body.processed, true);
+    assert.ok(firstPaid.response.ok, `Expected first payment webhook to succeed, got ${firstPaid.response.status}`);
+    assert.ok(
+      concurrentDuplicate.response.ok,
+      `Expected concurrent duplicate webhook to succeed, got ${concurrentDuplicate.response.status}`,
+    );
+    assert.equal(firstPaid.body.accepted, true);
+    assert.equal(concurrentDuplicate.body.accepted, true);
+    assert.equal(
+      [firstPaid.body.duplicate, concurrentDuplicate.body.duplicate].filter(Boolean).length,
+      1,
+      'Expected exactly one concurrent webhook response to be marked duplicate.',
+    );
+    assert.equal(
+      [firstPaid.body.processed, concurrentDuplicate.body.processed].some(Boolean),
+      true,
+      'Expected at least one concurrent webhook response to process the event.',
+    );
 
     const duplicate = await postJson<WebhookResponse>(`/webhooks/payments/manual`, {
       eventId,
@@ -311,6 +350,7 @@ void test('sales flow regression: auth -> cart -> checkout -> payment -> entitle
 
     const order = await json<OrderResponse>(orderResponse);
     assert.equal(order.status, 'paid');
+    assert.equal(await countEntitlementsForOrder(orderId), 1);
   });
 
   await t.test('buyer receives entitlement and other user does not', async () => {
@@ -326,6 +366,10 @@ void test('sales flow regression: auth -> cart -> checkout -> payment -> entitle
     assert.equal(entitlement.license.id, license.id);
     assert.equal(entitlement.isActive, true);
     assert.ok(entitlement.downloadsRemaining > 0);
+    assert.ok(
+      entitlement.assets.some((asset) => asset.id === deliveryAsset.id && asset.assetType === 'delivery_zip'),
+      'Expected entitlement list to expose downloadable delivery asset.',
+    );
     entitlementId = entitlement.id;
 
     const otherEntitlementsResponse = await request('/downloads', {
