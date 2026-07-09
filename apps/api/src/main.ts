@@ -18,7 +18,7 @@ function isAllowedCorsOrigin(origin: string | undefined, configuredOrigins: stri
 
   try {
     const url = new URL(origin);
-    const isDevPort = url.port === '3000' || url.port === '8080';
+    const isDevPort = ['3000', '3001', '3100', '3101', '8080'].includes(url.port);
     const isLocalHost = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
     const isPrivateLan =
       url.hostname.startsWith('192.168.') || url.hostname.startsWith('10.') || /^172\.(1[6-9]|2\d|3[0-1])\./.test(url.hostname);

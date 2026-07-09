@@ -59,8 +59,9 @@ export function ShowcaseHeader({ locale }: { locale: AppLocale }) {
           />
           <Button
             type="submit"
+            intent="secondary"
             size="sm"
-            className="h-7 rounded-full border-transparent bg-[#101513] px-3 py-1 text-xs font-black text-white hover:bg-[#22594b]"
+            className="h-7 rounded-full border-transparent bg-[#101513] px-3 py-1 text-xs font-black text-[#fff8e8] hover:bg-[#22594b] hover:text-white"
           >
             {locale === 'ar' ? 'ابحث' : 'Find'}
           </Button>

@@ -66,7 +66,7 @@ export default async function HomePage() {
             <Panel tone="glass" className="showcase-side-panel bg-[#101513]/82 p-3 shadow-[0_18px_70px_rgba(0,0,0,0.28)]">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#6f4700]">
                     <Flame size={17} />
                   </span>
                   <div>
@@ -84,7 +84,7 @@ export default async function HomePage() {
             </Panel>
 
             <Panel tone="glass" className="showcase-side-panel bg-[#101513]/82 p-3">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">{copy.newRule}</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffe09a]">{copy.newRule}</p>
               <p className="mt-2 text-sm leading-6 text-white/[0.74]">{copy.newRuleText}</p>
             </Panel>
           </aside>
@@ -104,7 +104,7 @@ export default async function HomePage() {
       <section id="ai-finder" className="ai-concierge relative mx-auto max-w-7xl scroll-mt-24 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">{copy.aiKicker}</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6f4700]">{copy.aiKicker}</p>
             <h2 className="mt-2 max-w-3xl text-xl font-black text-white sm:text-2xl">{copy.aiTitle}</h2>
           </div>
           <ActionLink href="/login" intent="ghost" className="h-10">
@@ -118,7 +118,7 @@ export default async function HomePage() {
 
       <section id="shop-by-emotion" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-4">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">{copy.momentsKicker}</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6f4700]">{copy.momentsKicker}</p>
           <h2 className="mt-2 text-2xl font-black text-white">{copy.momentsTitle}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/[0.75]">{copy.momentsText}</p>
         </div>
@@ -140,7 +140,7 @@ export default async function HomePage() {
       <section id="latest-designs" className="mx-auto max-w-7xl scroll-mt-24 px-4 pb-10 pt-6 sm:px-6 lg:px-8">
         <div className="mb-4 flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">{copy.latestKicker}</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6f4700]">{copy.latestKicker}</p>
             <h2 className="mt-2 text-2xl font-black text-white">{copy.latestTitle}</h2>
           </div>
         </div>
@@ -170,14 +170,14 @@ function HeroShowcase({ product, locale = 'en' }: { product: ProductSummary; loc
       <div className="hero-showcase__grid relative grid min-h-[380px] gap-4 p-4 lg:grid-cols-[0.9fr_1.1fr] xl:min-h-[420px]">
         <div className="hero-showcase__copy flex flex-col justify-start gap-4">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded border border-white/[0.12] bg-white/[0.08] px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#f7d17e]">
+            <div className="mb-4 inline-flex items-center gap-2 rounded border border-white/[0.12] bg-black/30 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#ffe09a]">
               <Sparkles size={14} />
               {copy.featuredDesign}
             </div>
             <h1 className="hero-showcase__title max-w-xl text-3xl font-black leading-[1.02] text-white sm:text-4xl lg:text-[2.65rem]">
               {product.title}
             </h1>
-            <p className="mt-3 max-w-md text-xs font-black uppercase tracking-[0.16em] text-[#f7d17e]">{copy.readyVisuals}</p>
+            <p className="mt-3 max-w-md text-xs font-black uppercase tracking-[0.16em] text-[#ffe09a]">{copy.readyVisuals}</p>
             <p className="mt-3 max-w-lg text-sm leading-6 text-white/[0.70]">{product.subtitle ?? copy.fallbackSubtitle}</p>
           </div>
 
@@ -277,7 +277,7 @@ function MoodCollection({
       id={id}
       className="group scroll-mt-24 overflow-hidden bg-[#101513]/82 p-3 shadow-[0_18px_64px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.35] hover:bg-[#16201c]/90"
     >
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e] transition group-hover:scale-105">
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#6f4700] transition group-hover:scale-105">
         <Icon size={18} />
       </span>
       <h3 className="mt-3 text-base font-black text-white">{title}</h3>

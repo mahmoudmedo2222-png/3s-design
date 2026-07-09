@@ -596,7 +596,7 @@ function DeliveryAssetList({ product }: { product: ProductDetail }) {
 
   if (!deliveryAssets.length) {
     return (
-      <div className="mt-3 rounded border border-saffron/30 bg-saffron/10 p-3 text-xs font-bold leading-5 text-saffron">
+      <div className="mt-3 rounded border border-saffron/35 bg-[#fff8e8] p-3 text-xs font-bold leading-5 text-[#101513] dark:bg-[#211a10] dark:text-[#ffe09a]">
         Delivery package metadata is not public yet. Checkout will stay protected, but this product needs stronger asset details before a
         premium launch.
       </div>
