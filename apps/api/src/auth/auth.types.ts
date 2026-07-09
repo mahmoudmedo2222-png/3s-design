@@ -6,5 +6,6 @@ export type AuthUser = {
 
 export type RequestWithUser = {
   headers: Record<string, string | string[] | undefined>;
+  ip?: string;
   user?: AuthUser;
 };

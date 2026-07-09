@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { DatabaseModule } from '../database/database.module';
+import { RateLimitModule } from '../rate-limit/rate-limit.module';
 import { R2StorageService } from '../storage/r2-storage.service';
 import { DownloadsController } from './downloads.controller';
 import { DownloadsService } from './downloads.service';
 
 @Module({
-  imports: [AuthModule, DatabaseModule],
+  imports: [AuthModule, DatabaseModule, RateLimitModule],
   controllers: [DownloadsController],
   providers: [DownloadsService, R2StorageService],
   exports: [DownloadsService],

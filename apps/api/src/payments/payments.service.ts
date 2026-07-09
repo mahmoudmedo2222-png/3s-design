@@ -9,8 +9,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { orders, payments, paymentWebhookEvents, users } from '@3s-design/db/schema';
-import { and, desc, eq, lt, or } from 'drizzle-orm';
+import { downloadEvents, entitlements, orders, payments, paymentWebhookEvents, users } from '@3s-design/db/schema';
+import { and, desc, eq, lt, or, sql } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
 import { DatabaseService } from '../database/database.service';
 import { DownloadsService } from '../downloads/downloads.service';
@@ -180,6 +180,7 @@ export class PaymentsService {
         ...row,
         payment: this.serializePaymentSession(row.payment),
         latestWebhook: await this.findLatestWebhookForPayment(row.payment),
+        delivery: await this.getOrderDeliverySummary(row.order.id),
       })),
     );
 
@@ -348,8 +349,9 @@ export class PaymentsService {
       throw new BadRequestException('Unsupported payment provider');
     }
 
-    this.assertWebhookAuthenticity(providerValue, input, secret, hmac);
-    const event = this.normalizeProviderWebhook(providerValue, input);
+    const provider = providerValue;
+    this.assertWebhookAuthenticity(provider, input, secret, hmac);
+    const event = this.normalizeProviderWebhook(provider, input);
 
     const db = this.database.requireDb();
     const [existing] = await db
@@ -387,10 +389,13 @@ export class PaymentsService {
         provider: providerValue,
         eventId: event.eventId,
         eventType: event.eventType,
-        payload: event.payload ?? {
-          providerPaymentId: event.providerPaymentId,
-          status: event.status,
-        },
+        payload: this.sanitizeWebhookPayload(
+          provider,
+          event.payload ?? {
+            providerPaymentId: event.providerPaymentId,
+            status: event.status,
+          },
+        ),
       })
       .onConflictDoNothing({
         target: [paymentWebhookEvents.provider, paymentWebhookEvents.eventId],
@@ -534,6 +539,25 @@ export class PaymentsService {
       eventType: event.eventType,
       processedAt: event.processedAt,
       createdAt: event.createdAt,
+    };
+  }
+
+  private async getOrderDeliverySummary(orderId: string) {
+    const db = this.database.requireDb();
+    const [summary] = await db
+      .select({
+        entitlements: sql<number>`count(distinct ${entitlements.id})::int`,
+        activeEntitlements: sql<number>`count(distinct ${entitlements.id}) filter (where ${entitlements.isActive} = true)::int`,
+        downloads: sql<number>`count(${downloadEvents.id}) filter (where ${downloadEvents.status} = 'allowed')::int`,
+      })
+      .from(entitlements)
+      .leftJoin(downloadEvents, eq(downloadEvents.entitlementId, entitlements.id))
+      .where(eq(entitlements.orderId, orderId));
+
+    return {
+      entitlements: Number(summary?.entitlements ?? 0),
+      activeEntitlements: Number(summary?.activeEntitlements ?? 0),
+      downloads: Number(summary?.downloads ?? 0),
     };
   }
 
@@ -746,6 +770,59 @@ export class PaymentsService {
 
   private getRawObject(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  }
+
+  private sanitizeWebhookPayload(provider: PaymentProvider, payload: Record<string, unknown>) {
+    const sensitiveKeys = new Set([
+      'auth_token',
+      'card_number',
+      'cvv',
+      'cvc',
+      'pan',
+      'password',
+      'payment_key',
+      'payment_token',
+      'secret',
+      'token',
+    ]);
+
+    const visit = (value: unknown, depth: number): unknown => {
+      if (value === null || value === undefined) {
+        return value ?? null;
+      }
+
+      if (typeof value === 'string') {
+        return value.length > 300 ? `${value.slice(0, 300)}...` : value;
+      }
+
+      if (typeof value === 'number' || typeof value === 'boolean') {
+        return value;
+      }
+
+      if (Array.isArray(value)) {
+        return depth >= 4 ? '[array]' : value.slice(0, 20).map((item) => visit(item, depth + 1));
+      }
+
+      if (typeof value !== 'object') {
+        return String(value);
+      }
+
+      if (depth >= 4) {
+        return '[object]';
+      }
+
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>)
+          .slice(0, 80)
+          .map(([key, child]) => [key, sensitiveKeys.has(key.toLowerCase()) ? '[redacted]' : visit(child, depth + 1)]),
+      );
+    };
+
+    const sanitized = visit(payload, 0);
+    return {
+      ...this.getRawObject(sanitized),
+      provider,
+    };
   }
 
   private timingSafeStringEqual(left: string, right: string) {

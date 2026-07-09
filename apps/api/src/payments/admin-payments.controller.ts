@@ -5,6 +5,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { MarkPaymentFailedDto } from './dto/mark-payment-failed.dto';
 import { MarkPaymentPaidDto } from './dto/mark-payment-paid.dto';
 import { ReconcilePaymentsDto } from './dto/reconcile-payments.dto';
 import { PaymentsService } from './payments.service';
@@ -36,7 +37,8 @@ export class AdminPaymentsController {
   }
 
   @Post(':paymentId/mark-failed')
-  markFailed(@CurrentUser() user: AuthUser, @Param('paymentId') paymentId: string) {
+  async markFailed(@CurrentUser() user: AuthUser, @Param('paymentId') paymentId: string, @Body() input: MarkPaymentFailedDto) {
+    await this.auth.assertPasswordForStepUp(user.id, input.adminPassword, 'admin.payments.mark_failed');
     return this.payments.failPayment(paymentId, user.id);
   }
 }

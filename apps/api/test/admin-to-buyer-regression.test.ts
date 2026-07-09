@@ -458,6 +458,16 @@ void test('admin-to-buyer regression: publish product from admin and complete cu
   );
   assert.equal(markPaidWithWrongPassword.response.status, 401, 'Expected wrong admin step-up password to be rejected.');
 
+  const markFailedWithoutStepUp = await sendJson(`/admin/payments/${payment.body.id}/mark-failed`, {}, adminToken);
+  assert.equal(markFailedWithoutStepUp.response.status, 400, 'Expected admin mark-failed to require step-up password.');
+
+  const markFailedWithWrongPassword = await sendJson(
+    `/admin/payments/${payment.body.id}/mark-failed`,
+    { adminPassword: 'WrongPassword123' },
+    adminToken,
+  );
+  assert.equal(markFailedWithWrongPassword.response.status, 401, 'Expected wrong admin mark-failed step-up password to be rejected.');
+
   const markPaid = await sendJson(
     `/admin/payments/${payment.body.id}/mark-paid`,
     { adminPassword, providerPaymentId: `admin-approved-${randomUUID()}` },

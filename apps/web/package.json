@@ -8,7 +8,7 @@
     "dev": "next dev --port 3000",
     "lint": "eslint .",
     "test": "node --import tsx --test test/api-url.test.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit --incremental false"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.8",

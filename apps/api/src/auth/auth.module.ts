@@ -12,7 +12,7 @@ import { RolesGuard } from './roles.guard';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_ACCESS_SECRET', 'dev-only-change-me'),
+        secret: resolveJwtAccessSecret(config.get<string>('JWT_ACCESS_SECRET'), config.get<string>('NODE_ENV')),
         signOptions: {
           expiresIn: jwtTtlSeconds(config.get<string>('JWT_ACCESS_TTL', '15m')),
         },
@@ -24,6 +24,26 @@ import { RolesGuard } from './roles.guard';
   exports: [AuthService, JwtModule, JwtAuthGuard, RolesGuard],
 })
 export class AuthModule {}
+
+export function resolveJwtAccessSecret(secret: string | undefined, nodeEnv: string | undefined) {
+  const value = secret?.trim();
+  const isProduction = nodeEnv === 'production';
+  const unsafeDefaults = new Set(['change-me-in-production', 'dev-only-change-me']);
+
+  if (!value) {
+    if (isProduction) {
+      throw new Error('JWT_ACCESS_SECRET is required in production');
+    }
+
+    return 'dev-only-change-me';
+  }
+
+  if (isProduction && (value.length < 32 || unsafeDefaults.has(value))) {
+    throw new Error('JWT_ACCESS_SECRET must be a strong production secret');
+  }
+
+  return value;
+}
 
 function jwtTtlSeconds(value: string) {
   const match = value.trim().match(/^(\d+)([smhd])$/i);

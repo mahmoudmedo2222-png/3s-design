@@ -1,5 +1,6 @@
 import { Inject, Injectable, OnModuleDestroy, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { sql } from 'drizzle-orm';
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import * as schema from '@3s-design/db/schema';
@@ -30,6 +31,11 @@ export class DatabaseService implements OnModuleDestroy {
     }
 
     return this.db;
+  }
+
+  async ping() {
+    const db = this.requireDb();
+    await db.execute(sql`select 1`);
   }
 
   async onModuleDestroy() {

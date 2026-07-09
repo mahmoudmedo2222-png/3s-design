@@ -166,6 +166,11 @@ export type AdminPaymentRow = {
     processedAt: string | null;
     createdAt: string;
   } | null;
+  delivery: {
+    entitlements: number;
+    activeEntitlements: number;
+    downloads: number;
+  };
 };
 
 export type AdminRefundRow = {
@@ -366,11 +371,11 @@ export function markAdminPaymentPaid(token: string, paymentId: string, input: { 
   });
 }
 
-export function markAdminPaymentFailed(token: string, paymentId: string) {
+export function markAdminPaymentFailed(token: string, paymentId: string, input: { adminPassword: string }) {
   return adminRequest<unknown>(`/admin/payments/${paymentId}/mark-failed`, {
     token,
     method: 'POST',
-    body: {},
+    body: input,
   });
 }
 

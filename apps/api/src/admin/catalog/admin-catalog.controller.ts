@@ -1,4 +1,6 @@
 import { Body, Controller, Get, Inject, Post, UseGuards } from '@nestjs/common';
+import type { AuthUser } from '../../auth/auth.types';
+import { CurrentUser } from '../../auth/current-user.decorator';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { Roles } from '../../auth/roles.decorator';
 import { RolesGuard } from '../../auth/roles.guard';
@@ -19,8 +21,8 @@ export class AdminCatalogController {
   }
 
   @Post('categories')
-  createCategory(@Body() body: CreateCategoryDto) {
-    return this.catalog.createCategory(body);
+  createCategory(@CurrentUser() user: AuthUser, @Body() body: CreateCategoryDto) {
+    return this.catalog.createCategory(body, user.id);
   }
 
   @Get('tags')
@@ -29,8 +31,8 @@ export class AdminCatalogController {
   }
 
   @Post('tags')
-  createTag(@Body() body: CreateTagDto) {
-    return this.catalog.createTag(body);
+  createTag(@CurrentUser() user: AuthUser, @Body() body: CreateTagDto) {
+    return this.catalog.createTag(body, user.id);
   }
 
   @Get('licenses')
@@ -39,7 +41,7 @@ export class AdminCatalogController {
   }
 
   @Post('licenses')
-  createLicense(@Body() body: CreateLicenseDto) {
-    return this.catalog.createLicense(body);
+  createLicense(@CurrentUser() user: AuthUser, @Body() body: CreateLicenseDto) {
+    return this.catalog.createLicense(body, user.id);
   }
 }

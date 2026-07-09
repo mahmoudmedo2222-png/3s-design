@@ -1,13 +1,29 @@
 import { spawn, spawnSync } from 'node:child_process';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 const port = process.env.SITE_AUDIT_PORT ?? '3100';
-const baseUrl = process.env.SITE_AUDIT_BASE_URL ?? `http://localhost:${port}`;
+const baseUrl = process.env.SITE_AUDIT_BASE_URL ?? `http://127.0.0.1:${port}`;
+const webDir = path.resolve('apps/web');
+const corepackCommand = process.platform === 'win32' ? (process.env.ComSpec ?? 'cmd.exe') : 'corepack';
 
-run('corepack', ['pnpm', '--filter', '@3s-design/web', 'build']);
+cleanupStaleProjectBuilds();
+runCorepack(['pnpm', 'typecheck'], { cwd: webDir });
+await removeStaleBuildLock();
+runCorepack(['pnpm', 'build'], {
+  cwd: webDir,
+  env: {
+    ...process.env,
+    NEXT_PRIVATE_BUILD_WORKER: '0',
+    NODE_OPTIONS: process.env.NODE_OPTIONS ?? '--max-old-space-size=4096',
+    SITE_AUDIT_SKIP_NEXT_TYPECHECK: 'true',
+  },
+});
+await waitForProductionBuild();
 
-const server = spawn('corepack', ['pnpm', '--filter', '@3s-design/web', 'exec', 'next', 'start', '-p', port], {
+const server = spawn(corepackCommand, corepackArgs(['pnpm', 'exec', 'next', 'start', '-p', port]), {
+  cwd: webDir,
   env: { ...process.env, PORT: port },
-  shell: true,
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 
@@ -24,14 +40,79 @@ try {
   process.env.SITE_AUDIT_BASE_URL = baseUrl;
   await import('./site-quality.mjs');
 } finally {
-  server.kill();
+  stopProcessTree(server.pid);
 }
 
-function run(command, args) {
-  const result = spawnSync(command, args, { shell: true, stdio: 'inherit' });
+function runCorepack(args, options = {}) {
+  const result = spawnSync(corepackCommand, corepackArgs(args), { stdio: 'inherit', ...options });
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
+}
+
+function corepackArgs(args) {
+  if (process.platform !== 'win32') {
+    return args;
+  }
+
+  return ['/d', '/s', '/c', ['corepack', ...args].join(' ')];
+}
+
+function cleanupStaleProjectBuilds() {
+  if (process.platform !== 'win32') {
+    return;
+  }
+
+  const result = spawnSync('wmic.exe', ['process', 'where', "name='node.exe'", 'get', 'ProcessId,CommandLine', '/FORMAT:CSV'], {
+    encoding: 'utf8',
+  });
+  if (result.status !== 0 || !result.stdout) {
+    return;
+  }
+
+  const projectPath = path.resolve('.').toLowerCase();
+  for (const line of result.stdout.split(/\r?\n/)) {
+    const lower = line.toLowerCase();
+    if (!lower.includes(projectPath) || !lower.includes('next') || !lower.includes('build')) {
+      continue;
+    }
+
+    const pid = line.split(',').at(-1)?.trim();
+    if (/^\d+$/.test(pid ?? '')) {
+      spawnSync('taskkill.exe', ['/PID', pid, '/T', '/F'], { stdio: 'ignore' });
+    }
+  }
+}
+
+async function removeStaleBuildLock() {
+  await fs.rm(path.join(webDir, '.next/lock'), { force: true });
+}
+
+async function waitForProductionBuild() {
+  const deadline = Date.now() + 30_000;
+  const requiredFiles = ['.next/BUILD_ID', '.next/routes-manifest.json', '.next/server'];
+
+  while (Date.now() < deadline) {
+    const checks = await Promise.all(
+      requiredFiles.map(async (file) => {
+        try {
+          await fs.stat(path.join(webDir, file));
+          return true;
+        } catch {
+          return false;
+        }
+      }),
+    );
+
+    if (checks.every(Boolean)) {
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  throw new Error('Production build files were not ready after next build completed.');
 }
 
 async function waitForServer(url) {
@@ -57,4 +138,25 @@ async function waitForServer(url) {
     console.error(serverOutput.trim());
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+function stopProcessTree(pid) {
+  if (!pid) {
+    return;
+  }
+
+  if (process.platform === 'win32') {
+    spawnSync('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
+    return;
+  }
+
+  try {
+    process.kill(-pid);
+  } catch {
+    try {
+      process.kill(pid);
+    } catch {
+      // The server may already be gone after a failed startup.
+    }
+  }
 }

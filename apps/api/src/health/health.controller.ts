@@ -13,4 +13,15 @@ export class HealthController {
       databaseConfigured: this.database.isConfigured,
     };
   }
+
+  @Get('ready')
+  async ready() {
+    await this.database.ping();
+
+    return {
+      ok: true,
+      service: 'api',
+      database: 'ready',
+    };
+  }
 }

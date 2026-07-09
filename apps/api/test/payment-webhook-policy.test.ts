@@ -184,3 +184,38 @@ void test('payment webhook policy: paymob currency mismatch is rejected before d
     BadRequestException,
   );
 });
+
+void test('payment webhook policy: stored paymob payload redacts payment secrets', () => {
+  const service = createService({
+    NODE_ENV: 'production',
+    PAYMOB_HMAC_SECRET: 'expected-paymob-hmac-secret',
+  });
+
+  const sanitized = (
+    service as unknown as {
+      sanitizeWebhookPayload(provider: string, payload: Record<string, unknown>): Record<string, unknown>;
+    }
+  ).sanitizeWebhookPayload('paymob', {
+    ...paymobPayload,
+    token: 'provider-session-token',
+    obj: {
+      ...paymobPayload.obj,
+      source_data: {
+        ...paymobPayload.obj.source_data,
+        pan: '4111111111111111',
+      },
+    },
+  });
+
+  const obj = (sanitized.obj ?? {}) as {
+    order?: { merchant_order_id?: string };
+    source_data?: { pan?: string; sub_type?: string; type?: string };
+  };
+
+  assert.equal(sanitized.provider, 'paymob');
+  assert.equal(sanitized.token, '[redacted]');
+  assert.equal(obj.order?.merchant_order_id, 'paymob_test_payment');
+  assert.equal(obj.source_data?.pan, '[redacted]');
+  assert.equal(obj.source_data?.sub_type, 'MasterCard');
+  assert.equal(obj.source_data?.type, 'card');
+});

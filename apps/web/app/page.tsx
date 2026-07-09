@@ -2,17 +2,19 @@ import { ArrowUpRight, Crown, Flame, HeartHandshake, Sparkles, Wand2 } from 'luc
 import type { Route } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { AiDiscoveryPanel } from '../components/ai-discovery-panel';
-import { BuyerProfileRecovery } from '../components/buyer-profile-recovery';
-import { ClientStudioPreview } from '../components/client-studio-preview';
 import { CompareTray } from '../components/compare-tray';
 import { CustomerTrustStrip } from '../components/customer-experience';
 import { DesignPreview } from '../components/design-preview';
+import {
+  DeferredAiDiscoveryPanel,
+  DeferredBuyerProfileRecovery,
+  DeferredClientStudioPreview,
+  DeferredSiteFooter,
+  DeferredStorefrontDiscovery,
+} from '../components/home-deferred';
 import { IntentLink } from '../components/intent-link';
 import { ShowcaseHeader } from '../components/showcase-header';
-import { SiteFooter } from '../components/site-footer';
 import { SiteIntro } from '../components/site-intro';
-import { StorefrontDiscovery } from '../components/storefront-discovery';
 import { ActionLink, Badge, Panel } from '../components/ui';
 import { fetchBestSellers, fetchProducts, type ProductSummary } from '../lib/api';
 import { type AppLocale, homeCopy } from '../lib/locale';
@@ -91,10 +93,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <ClientStudioPreview locale={locale} />
+      <DeferredClientStudioPreview locale={locale} />
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <BuyerProfileRecovery />
+        <DeferredBuyerProfileRecovery />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
@@ -112,7 +114,7 @@ export default async function HomePage() {
           </ActionLink>
         </div>
         <Panel tone="glass" className="ai-concierge__panel p-2 shadow-[0_18px_70px_rgba(0,0,0,0.18)]">
-          <AiDiscoveryPanel />
+          <DeferredAiDiscoveryPanel />
         </Panel>
       </section>
 
@@ -146,7 +148,7 @@ export default async function HomePage() {
         </div>
 
         {products.items.length ? (
-          <StorefrontDiscovery products={products.items} />
+          <DeferredStorefrontDiscovery products={products.items} />
         ) : (
           <Panel tone="glass" className="border-dashed border-white/[0.14] p-10 text-center text-sm text-white/[0.60]">
             {copy.emptyCatalog}
@@ -154,7 +156,7 @@ export default async function HomePage() {
         )}
       </section>
 
-      <SiteFooter products={featured.length ? featured : products.items} locale={locale} />
+      <DeferredSiteFooter products={featured.length ? featured : products.items} locale={locale} />
     </main>
   );
 }

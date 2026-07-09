@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { categories, licenses, tags } from '@3s-design/db/schema';
 import { asc } from 'drizzle-orm';
+import { AuditService } from '../../audit/audit.service';
 import { DatabaseService } from '../../database/database.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateLicenseDto } from './dto/create-license.dto';
@@ -8,7 +9,10 @@ import { CreateTagDto } from './dto/create-tag.dto';
 
 @Injectable()
 export class AdminCatalogService {
-  constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
+  constructor(
+    @Inject(DatabaseService) private readonly database: DatabaseService,
+    @Inject(AuditService) private readonly audit: AuditService,
+  ) {}
 
   async listCategories() {
     const rows = await this.database.requireDb().select().from(categories).orderBy(asc(categories.sortOrder), asc(categories.name));
@@ -16,7 +20,7 @@ export class AdminCatalogService {
     return { items: rows };
   }
 
-  async createCategory(input: CreateCategoryDto) {
+  async createCategory(input: CreateCategoryDto, actorUserId?: string) {
     const [created] = await this.database
       .requireDb()
       .insert(categories)
@@ -29,6 +33,10 @@ export class AdminCatalogService {
       })
       .returning();
 
+    if (created) {
+      await this.recordAudit(actorUserId, 'admin.catalog.create_category', 'category', created.id, created);
+    }
+
     return created;
   }
 
@@ -38,7 +46,7 @@ export class AdminCatalogService {
     return { items: rows };
   }
 
-  async createTag(input: CreateTagDto) {
+  async createTag(input: CreateTagDto, actorUserId?: string) {
     const [created] = await this.database
       .requireDb()
       .insert(tags)
@@ -47,6 +55,10 @@ export class AdminCatalogService {
         name: input.name,
       })
       .returning();
+
+    if (created) {
+      await this.recordAudit(actorUserId, 'admin.catalog.create_tag', 'tag', created.id, created);
+    }
 
     return created;
   }
@@ -57,7 +69,7 @@ export class AdminCatalogService {
     return { items: rows };
   }
 
-  async createLicense(input: CreateLicenseDto) {
+  async createLicense(input: CreateLicenseDto, actorUserId?: string) {
     const [created] = await this.database
       .requireDb()
       .insert(licenses)
@@ -73,6 +85,28 @@ export class AdminCatalogService {
       })
       .returning();
 
+    if (created) {
+      await this.recordAudit(actorUserId, 'admin.catalog.create_license', 'license', created.id, created);
+    }
+
     return created;
+  }
+
+  private async recordAudit(actorUserId: string | undefined, action: string, entityType: string, entityId: string, after: unknown) {
+    await this.audit.record({
+      actorUserId,
+      action,
+      entityType,
+      entityId,
+      after: this.toAuditObject(after),
+    });
+  }
+
+  private toAuditObject(value: unknown) {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+
+    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
   }
 }

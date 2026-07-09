@@ -688,8 +688,15 @@ export function AdminDashboard() {
     setMessage(null);
 
     try {
-      await markAdminPaymentFailed(session.token, paymentId);
+      await markAdminPaymentFailed(session.token, paymentId, {
+        adminPassword: paymentAdminPasswords[paymentId] ?? '',
+      });
       setMessage('Payment marked as failed. Customer downloads remain locked.');
+      setPaymentAdminPasswords((current) => {
+        const next = { ...current };
+        delete next[paymentId];
+        return next;
+      });
       await refreshAdminData(session.token);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Payment failure update failed');
@@ -1310,6 +1317,12 @@ export function AdminDashboard() {
           {message ? <div className="rounded-lg border border-line bg-white p-3 text-sm text-ink shadow-sm">{message}</div> : null}
 
           <AdminAnalyticsPanel summary={analyticsSummary} />
+          <ExperienceCommandCenter
+            summary={analyticsSummary}
+            payments={adminPayments}
+            productSummary={productAnalytics}
+            launchReadiness={launchReadiness}
+          />
 
           <PaymentDesk
             loading={loading}
@@ -1718,6 +1731,172 @@ function AdminAnalyticsPanel({ summary }: { summary: AdminAnalyticsSummary | nul
   );
 }
 
+function ExperienceCommandCenter({
+  summary,
+  payments,
+  productSummary,
+  launchReadiness,
+}: {
+  summary: AdminAnalyticsSummary | null;
+  payments: AdminPaymentRow[];
+  productSummary: AdminProductAnalyticsSummary | null;
+  launchReadiness: Array<{ label: string; passed: boolean; value: string; detail: string }>;
+}) {
+  const actions = buildExperienceActions(summary, payments, productSummary, launchReadiness);
+  const top = actions[0];
+
+  return (
+    <section className="rounded-lg border border-line bg-ink p-4 text-white shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-saffron/15 text-saffron">
+            <Sparkles size={18} />
+          </span>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-saffron">Experience command center</p>
+            <h2 className="mt-1 text-lg font-black">Next UI/UX bets</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-white/60">
+              A working board for deciding what to improve next across discovery, product confidence, checkout, payment, and delivery.
+            </p>
+          </div>
+        </div>
+        <span className="rounded bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-white/62">
+          {top?.priority ?? 'watch'} priority
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded border border-white/[0.1] bg-white/[0.06] p-3">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-white/45">Primary move</p>
+          <h3 className="mt-2 text-xl font-black text-white">{top?.title ?? 'Collect more customer signals'}</h3>
+          <p className="mt-2 text-sm leading-6 text-white/62">
+            {top?.reason ?? 'Use customer searches, product views, and checkout events to decide which UI moment is weakest.'}
+          </p>
+          <p className="mt-3 rounded border border-saffron/20 bg-saffron/10 p-2 text-xs font-bold leading-5 text-saffron">
+            {top?.nextStep ?? 'Drive a few test sessions through search, product detail, checkout, and delivery.'}
+          </p>
+        </div>
+
+        <div className="grid gap-2">
+          {actions.slice(0, 4).map((action) => (
+            <ExperienceActionRow key={action.title} action={action} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ExperienceActionRow({
+  action,
+}: {
+  action: {
+    title: string;
+    reason: string;
+    nextStep: string;
+    priority: 'high' | 'medium' | 'watch';
+  };
+}) {
+  return (
+    <div className="rounded border border-white/[0.1] bg-white/[0.05] p-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-black text-white">{action.title}</p>
+        <span
+          className={`rounded px-2 py-1 text-[0.65rem] font-black uppercase tracking-[0.12em] ${
+            action.priority === 'high'
+              ? 'bg-berry/15 text-[#f08bb0]'
+              : action.priority === 'medium'
+                ? 'bg-saffron/15 text-saffron'
+                : 'bg-white/10 text-white/50'
+          }`}
+        >
+          {action.priority}
+        </span>
+      </div>
+      <p className="mt-1 text-xs leading-5 text-white/52">{action.reason}</p>
+      <p className="mt-2 text-xs font-bold leading-5 text-saffron">{action.nextStep}</p>
+    </div>
+  );
+}
+
+function buildExperienceActions(
+  summary: AdminAnalyticsSummary | null,
+  payments: AdminPaymentRow[],
+  productSummary: AdminProductAnalyticsSummary | null,
+  launchReadiness: Array<{ passed: boolean; label: string; detail: string }>,
+) {
+  const conversion = summary?.conversion;
+  const pendingPayments = payments.filter((row) => row.payment.status === 'pending').length;
+  const paidWithoutVault = payments.filter((row) => row.order.status === 'paid' && row.delivery.activeEntitlements === 0).length;
+  const failedReadiness = launchReadiness.filter((item) => !item.passed);
+  const actions: Array<{ title: string; reason: string; nextStep: string; priority: 'high' | 'medium' | 'watch' }> = [];
+
+  if (paidWithoutVault > 0) {
+    actions.push({
+      title: 'Fix paid orders without vault evidence',
+      reason: `${paidWithoutVault} paid payment/order row${paidWithoutVault === 1 ? '' : 's'} do not show active delivery entitlement.`,
+      nextStep: 'Design an admin repair path before scaling paid traffic.',
+      priority: 'high',
+    });
+  }
+
+  if ((conversion?.checkoutToOrder ?? 100) < 50 && (summary?.totals.checkoutAttempts ?? 0) > 0) {
+    actions.push({
+      title: 'Reduce checkout hesitation',
+      reason: `Checkout to order conversion is ${conversion?.checkoutToOrder ?? 0}%.`,
+      nextStep: 'Tighten checkout copy, payment expectations, and order creation confidence.',
+      priority: 'high',
+    });
+  }
+
+  if ((conversion?.viewToCart ?? 100) < 25 && (summary?.totals.productViews ?? 0) > 0) {
+    actions.push({
+      title: 'Strengthen product decision pages',
+      reason: `View to cart conversion is ${conversion?.viewToCart ?? 0}%.`,
+      nextStep: 'Improve product detail proof, license clarity, and personalized reasons.',
+      priority: 'medium',
+    });
+  }
+
+  if (pendingPayments > 0) {
+    actions.push({
+      title: 'Shorten manual payment uncertainty',
+      reason: `${pendingPayments} payment session${pendingPayments === 1 ? ' is' : 's are'} waiting for admin action.`,
+      nextStep: 'Make admin approval and customer payment-status messaging stay in sync.',
+      priority: 'medium',
+    });
+  }
+
+  if (failedReadiness.length > 0) {
+    actions.push({
+      title: 'Improve launch readiness UX',
+      reason: `${failedReadiness.length} readiness check${failedReadiness.length === 1 ? '' : 's'} still need attention.`,
+      nextStep: failedReadiness[0]?.detail ?? 'Close the highest-friction launch checklist item.',
+      priority: 'medium',
+    });
+  }
+
+  if ((productSummary?.conversion.paidToDownload ?? 100) < 80 && (productSummary?.totals.paidOrders ?? 0) > 0) {
+    actions.push({
+      title: 'Make delivery easier to find',
+      reason: `Selected product paid-to-vault conversion is ${productSummary?.conversion.paidToDownload ?? 0}%.`,
+      nextStep: 'Improve account delivery prompts and download-vault entry points.',
+      priority: 'medium',
+    });
+  }
+
+  if (!actions.length) {
+    actions.push({
+      title: 'Run more customer sessions',
+      reason: 'No urgent UX leak is visible from the current data.',
+      nextStep: 'Test one full path: search, product, cart, checkout, payment status, account vault.',
+      priority: 'watch',
+    });
+  }
+
+  return actions;
+}
+
 function FunnelDatum({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded border border-line bg-paper p-3">
@@ -2030,6 +2209,7 @@ function PaymentDesk({
               </div>
 
               <PaymentReviewDecision row={row} />
+              <AdminVaultReview row={row} />
 
               {row.payment.status === 'pending' ? (
                 <div className="mt-3 grid gap-2">
@@ -2060,9 +2240,9 @@ function PaymentDesk({
                     </button>
                     <button
                       type="button"
-                      disabled={loading}
+                      disabled={loading || (adminPasswords[row.payment.id] ?? '').length < 8}
                       onClick={() => onMarkFailed(row.payment.id)}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded border border-berry/30 bg-white px-4 text-sm font-semibold text-berry disabled:opacity-60"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded border border-berry/30 bg-white px-4 text-sm font-semibold text-berry disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <XCircle size={16} />
                       Fail
@@ -2229,6 +2409,64 @@ function RefundDesk({
       </div>
     </section>
   );
+}
+
+function AdminVaultReview({ row }: { row: AdminPaymentRow }) {
+  const paid = row.order.status === 'paid' || row.payment.status === 'paid';
+  const hasActiveEntitlements = row.delivery.activeEntitlements > 0;
+  const needsAttention = paid && !hasActiveEntitlements;
+
+  return (
+    <div
+      className={`mt-3 rounded border p-3 ${
+        needsAttention ? 'border-berry/30 bg-berry/10' : hasActiveEntitlements ? 'border-pine/20 bg-pine/10' : 'border-line bg-white'
+      }`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className={`text-xs font-black uppercase tracking-[0.12em] ${needsAttention ? 'text-berry' : 'text-muted'}`}>Vault review</p>
+          <p className="mt-1 text-sm font-bold text-ink">{vaultReviewMessage(row)}</p>
+        </div>
+        <span
+          className={`rounded px-2 py-1 text-[0.68rem] font-black uppercase tracking-[0.12em] ${
+            needsAttention ? 'bg-berry/15 text-berry' : hasActiveEntitlements ? 'bg-pine/10 text-pine' : 'bg-paper text-muted'
+          }`}
+        >
+          {needsAttention ? 'attention' : hasActiveEntitlements ? 'vault ready' : 'locked'}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2 md:grid-cols-3">
+        <VaultMetric label="Entitlements" value={row.delivery.entitlements} />
+        <VaultMetric label="Active" value={row.delivery.activeEntitlements} />
+        <VaultMetric label="Downloads" value={row.delivery.downloads} />
+      </div>
+    </div>
+  );
+}
+
+function VaultMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded border border-line bg-paper p-2">
+      <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-muted">{label}</p>
+      <p className="mt-1 text-sm font-black text-ink">{value}</p>
+    </div>
+  );
+}
+
+function vaultReviewMessage(row: AdminPaymentRow) {
+  if (row.order.status === 'paid' && row.delivery.activeEntitlements === 0) {
+    return 'Paid order has no active vault entitlement. Inspect entitlement creation before telling the customer files are ready.';
+  }
+
+  if (row.delivery.activeEntitlements > 0 && row.delivery.downloads > 0) {
+    return 'Vault is active and the customer has downloaded files.';
+  }
+
+  if (row.delivery.activeEntitlements > 0) {
+    return 'Vault entitlement exists. Customer can open delivery after payment approval.';
+  }
+
+  return 'Vault is still locked. Approval should create entitlements before downloads become available.';
 }
 
 function PaymentReviewDecision({ row }: { row: AdminPaymentRow }) {

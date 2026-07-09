@@ -19,3 +19,4 @@ tools/*.exe
 tmp-visual-audit/
 reports/
 test-results/
+outputs/

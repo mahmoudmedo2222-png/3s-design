@@ -54,6 +54,7 @@ try {
   };
 
   await fs.writeFile(path.join(outputDir, 'summary.json'), JSON.stringify(summary, null, 2));
+  await fs.writeFile(path.join(outputDir, 'summary.md'), renderMarkdownSummary(summary));
   printSummary(summary);
 
   if (summary.average < 80 || rows.some((row) => row.accessibility < 90 || row.seo < 85)) {
@@ -86,6 +87,57 @@ function printSummary(summary) {
     })),
   );
   console.log(`\nReports: ${outputDir}`);
+}
+
+function renderMarkdownSummary(summary) {
+  const generatedAt = new Date(summary.generatedAt).toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+  const rows = summary.pages
+    .map(
+      (row) =>
+        `| ${row.page} | ${row.average} | ${row.performance} | ${row.accessibility} | ${row.bestPractices} | ${row.seo} | ${priority(row)} |`,
+    )
+    .join('\n');
+  const weakPages = summary.pages
+    .filter((row) => row.performance < 80 || row.accessibility < 95 || row.seo < 90 || row.bestPractices < 95)
+    .map((row) => `- ${row.page}: ${priority(row)}`)
+    .join('\n');
+
+  return `# Site Quality Report
+
+Generated: ${generatedAt}
+Base URL: ${summary.baseUrl}
+Overall score: ${summary.average}/100
+
+| Page | Average | Performance | Accessibility | Best Practices | SEO | Priority |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+${rows}
+
+## Next Priorities
+
+${weakPages || '- No urgent page-level quality issues.'}
+`;
+}
+
+function priority(row) {
+  if (row.accessibility < 95) {
+    return 'Fix accessibility regressions first';
+  }
+  if (row.seo < 90) {
+    return 'Fix SEO metadata and crawlability';
+  }
+  if (row.bestPractices < 95) {
+    return 'Review browser and security best-practice warnings';
+  }
+  if (row.performance < 70) {
+    return 'Reduce main-thread work and first-screen hydration';
+  }
+  if (row.performance < 80) {
+    return 'Keep improving first-screen speed';
+  }
+  return 'Healthy';
 }
 
 async function assertServerReady(url) {

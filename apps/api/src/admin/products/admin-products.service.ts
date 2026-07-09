@@ -15,7 +15,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { AuditService } from '../../audit/audit.service';
 import { DatabaseService } from '../../database/database.service';
 import { designDnaFromAttributes, scoreProductQuality } from '../../products/design-dna';
-import { isPublicPreviewAssetType } from '../assets/asset-upload-policy';
+import { isPublicPreviewAssetType, isUploadAssetType, uploadPolicy } from '../assets/asset-upload-policy';
 import { CreateAdminProductDto } from './dto/create-admin-product.dto';
 import { CreateProductAssetDto } from './dto/create-product-asset.dto';
 import { CreateProductAttributeDto } from './dto/create-product-attribute.dto';
@@ -350,6 +350,8 @@ export class AdminProductsService {
       throw new BadRequestException('Only preview assets can be public previews');
     }
 
+    this.assertAssetMatchesPolicy(input);
+
     if (input.isPrimary) {
       await db
         .update(productAssets)
@@ -633,6 +635,33 @@ export class AdminProductsService {
 
     if (rows.length !== ids.length) {
       throw new NotFoundException('One or more licenses were not found');
+    }
+  }
+
+  private assertAssetMatchesPolicy(input: CreateProductAssetDto) {
+    if (!isUploadAssetType(input.assetType)) {
+      throw new BadRequestException('Unsupported asset type');
+    }
+
+    const policy = uploadPolicy[input.assetType];
+    const fileName = input.fileName.trim().toLowerCase();
+    const storageKey = input.storageKey.trim().toLowerCase();
+    const hasAllowedExtension = policy.extensions.some((extension) => fileName.endsWith(extension) && storageKey.endsWith(extension));
+
+    if (!hasAllowedExtension) {
+      throw new BadRequestException('Asset file extension does not match its asset type');
+    }
+
+    if (!policy.mimeTypes.includes(input.mimeType)) {
+      throw new BadRequestException('Asset mime type does not match its asset type');
+    }
+
+    if (input.fileSize > policy.maxBytes) {
+      throw new BadRequestException('Asset file is larger than the allowed limit');
+    }
+
+    if (!storageKey.startsWith(`products/`) || !storageKey.includes(`/${policy.folder}/`)) {
+      throw new BadRequestException('Asset storage key does not match its asset type');
     }
   }
 }
