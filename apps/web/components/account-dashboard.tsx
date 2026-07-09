@@ -18,12 +18,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
+  createRefundRequest,
   fetchDownloads,
   fetchOrders,
   fetchPayments,
+  fetchRefunds,
   requestEmailVerification,
   type DownloadEntitlement,
   type OrderResponse,
+  type UserRefundRequest,
   type UserPayment,
 } from '../lib/api';
 import { clearAuthSession, useAuthSession } from '../lib/auth-session';
@@ -54,8 +57,10 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [payments, setPayments] = useState<UserPayment[]>([]);
   const [downloads, setDownloads] = useState<DownloadEntitlement[]>([]);
+  const [refunds, setRefunds] = useState<UserRefundRequest[]>([]);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [refundReasons, setRefundReasons] = useState<Record<string, string>>({});
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
 
@@ -65,6 +70,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
       setOrders([]);
       setPayments([]);
       setDownloads([]);
+      setRefunds([]);
       return;
     }
 
@@ -89,11 +95,17 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
     setWorkspaceError(null);
 
     try {
-      const [orderResponse, paymentResponse, downloadResponse] = await Promise.all([fetchOrders(), fetchPayments(), fetchDownloads()]);
+      const [orderResponse, paymentResponse, downloadResponse, refundResponse] = await Promise.all([
+        fetchOrders(),
+        fetchPayments(),
+        fetchDownloads(),
+        fetchRefunds(),
+      ]);
 
       setOrders(orderResponse.items);
       setPayments(paymentResponse.items);
       setDownloads(downloadResponse.items);
+      setRefunds(refundResponse.items);
     } catch (error) {
       setWorkspaceError(error instanceof Error ? error.message : 'Client studio could not refresh.');
     }
@@ -114,6 +126,19 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
       setVerificationMessage('Verification link issued. Check email, or use the dev token shown here in local development.');
     } catch (error) {
       setVerificationMessage(error instanceof Error ? error.message : 'Could not request verification email.');
+    }
+  }
+
+  async function submitRefundRequest(orderId: string) {
+    setWorkspaceError(null);
+    const reason = refundReasons[orderId]?.trim() ?? '';
+
+    try {
+      await createRefundRequest({ orderId, reason });
+      setRefundReasons((current) => ({ ...current, [orderId]: '' }));
+      await refreshWorkspace();
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : 'Refund request could not be created.');
     }
   }
 
@@ -383,6 +408,13 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
                     <p className="mt-1 text-xs text-white/55">
                       {order.currency} {order.total}
                     </p>
+                    <RefundRequestInline
+                      order={order}
+                      refunds={refunds}
+                      reason={refundReasons[order.id] ?? ''}
+                      onReasonChange={(value) => setRefundReasons((current) => ({ ...current, [order.id]: value }))}
+                      onSubmit={() => void submitRefundRequest(order.id)}
+                    />
                   </div>
                 ))}
               </div>
@@ -422,6 +454,54 @@ function StudioMetric({ label, value }: { label: string; value: number }) {
     <div className="flex items-center justify-between rounded border border-white/[0.1] bg-white/[0.05] px-3 py-2">
       <span className="text-xs font-bold text-white/58">{label}</span>
       <span className="text-sm font-black text-gold">{value}</span>
+    </div>
+  );
+}
+
+function RefundRequestInline({
+  order,
+  refunds,
+  reason,
+  onReasonChange,
+  onSubmit,
+}: {
+  order: OrderResponse;
+  refunds: UserRefundRequest[];
+  reason: string;
+  onReasonChange: (value: string) => void;
+  onSubmit: () => void;
+}) {
+  const existing = refunds.find((item) => item.order.id === order.id);
+
+  if (existing) {
+    return (
+      <div className="mt-3 rounded border border-white/[0.1] bg-black/15 p-3">
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-gold">Refund request</p>
+        <p className="mt-1 text-sm font-bold text-white/75">{existing.refundRequest.status.replaceAll('_', ' ')}</p>
+        {existing.refundRequest.adminNote ? (
+          <p className="mt-1 text-xs leading-5 text-white/55">{existing.refundRequest.adminNote}</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (order.status !== 'paid' || !order.paidAt) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 rounded border border-gold/20 bg-gold/5 p-3">
+      <p className="text-xs font-black uppercase tracking-[0.12em] text-gold">24h refund review</p>
+      <textarea
+        value={reason}
+        onChange={(event) => onReasonChange(event.target.value)}
+        rows={3}
+        placeholder="Explain what is not working with the file. Minimum 20 characters."
+        className="mt-2 w-full resize-y rounded border border-white/[0.12] bg-black/25 px-3 py-2 text-sm text-white placeholder:text-white/35"
+      />
+      <Button type="button" onClick={onSubmit} disabled={reason.trim().length < 20} intent="secondary" className="mt-2 rounded-full">
+        Request refund review
+      </Button>
     </div>
   );
 }

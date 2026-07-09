@@ -159,6 +159,32 @@ export type AdminPaymentRow = {
   };
 };
 
+export type AdminRefundRow = {
+  refundRequest: {
+    id: string;
+    orderId: string;
+    userId: string;
+    status: string;
+    reason: string;
+    adminNote: string | null;
+    requestedAt: string;
+    resolvedAt: string | null;
+  };
+  order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    total: string;
+    currency: string;
+    paidAt: string | null;
+  };
+  customer: {
+    id: string;
+    email: string;
+    fullName: string;
+  };
+};
+
 export type AdminAnalyticsSummary = {
   window: {
     days: number;
@@ -286,6 +312,30 @@ export function fetchAdminPaymentProviderReadiness(token: string) {
 
 export function fetchAdminPayments(token: string) {
   return adminRequest<{ items: AdminPaymentRow[] }>('/admin/payments', { token });
+}
+
+export function fetchAdminRefunds(token: string) {
+  return adminRequest<{ items: AdminRefundRow[] }>('/admin/refunds', { token });
+}
+
+export function approveAdminRefund(
+  token: string,
+  refundRequestId: string,
+  input: { adminPassword: string; adminNote?: string; providerRefundId?: string },
+) {
+  return adminRequest<AdminRefundRow>(`/admin/refunds/${refundRequestId}/approve`, {
+    token,
+    method: 'POST',
+    body: input,
+  });
+}
+
+export function rejectAdminRefund(token: string, refundRequestId: string, input: { adminPassword: string; adminNote?: string }) {
+  return adminRequest<AdminRefundRow>(`/admin/refunds/${refundRequestId}/reject`, {
+    token,
+    method: 'POST',
+    body: input,
+  });
 }
 
 export function fetchAdminAnalyticsSummary(token: string, days = 7) {

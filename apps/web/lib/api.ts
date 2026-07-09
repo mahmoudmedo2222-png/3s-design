@@ -275,6 +275,27 @@ export type UserPayment = {
   };
 };
 
+export type UserRefundRequest = {
+  refundRequest: {
+    id: string;
+    orderId: string;
+    userId: string;
+    status: string;
+    reason: string;
+    adminNote: string | null;
+    requestedAt: string;
+    resolvedAt: string | null;
+  };
+  order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    total: string;
+    currency: string;
+    paidAt: string | null;
+  };
+};
+
 export type DownloadEntitlement = {
   id: string;
   product: {
@@ -591,6 +612,17 @@ export function fetchOrders() {
 
 export function fetchPayments() {
   return sendCustomerRequest<{ items: UserPayment[] }>('/payments');
+}
+
+export function fetchRefunds() {
+  return sendCustomerRequest<{ items: UserRefundRequest[] }>('/refunds');
+}
+
+export function createRefundRequest(input: { orderId: string; reason: string }) {
+  return sendCustomerRequest<UserRefundRequest['refundRequest']>('/refunds', {
+    method: 'POST',
+    body: input,
+  });
 }
 
 export function fetchDownloads() {

@@ -32,12 +32,15 @@ import {
   AdminAnalyticsSummary,
   AdminProduct,
   AdminProductAnalyticsSummary,
+  AdminRefundRow,
   AdminUser,
   CatalogResponse,
+  approveAdminRefund,
   createAdminProduct,
   createAssetUploadUrl,
   fetchAdminPaymentProviderReadiness,
   fetchAdminPayments,
+  fetchAdminRefunds,
   createProductAsset,
   createProductAttribute,
   fetchAdminAnalyticsSummary,
@@ -49,6 +52,7 @@ import {
   markAdminPaymentFailed,
   markAdminPaymentPaid,
   publishProduct,
+  rejectAdminRefund,
   PublishingChecksResponse,
   setProductCategories,
   setProductLicensePrices,
@@ -130,6 +134,7 @@ export function AdminDashboard() {
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [paymentReadiness, setPaymentReadiness] = useState<AdminPaymentProviderReadiness[]>([]);
   const [adminPayments, setAdminPayments] = useState<AdminPaymentRow[]>([]);
+  const [adminRefunds, setAdminRefunds] = useState<AdminRefundRow[]>([]);
   const [analyticsSummary, setAnalyticsSummary] = useState<AdminAnalyticsSummary | null>(null);
   const [productAnalytics, setProductAnalytics] = useState<AdminProductAnalyticsSummary | null>(null);
   const [aiStatus, setAiStatus] = useState<AiDiscoveryStatus | null>(null);
@@ -147,6 +152,9 @@ export function AdminDashboard() {
   const [licensePrices, setLicensePrices] = useState<Record<string, string>>({});
   const [paymentRefs, setPaymentRefs] = useState<Record<string, string>>({});
   const [paymentAdminPasswords, setPaymentAdminPasswords] = useState<Record<string, string>>({});
+  const [refundAdminPasswords, setRefundAdminPasswords] = useState<Record<string, string>>({});
+  const [refundNotes, setRefundNotes] = useState<Record<string, string>>({});
+  const [refundProviderRefs, setRefundProviderRefs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const stored = window.localStorage.getItem(sessionStorageKey);
@@ -297,11 +305,20 @@ export function AdminDashboard() {
     setMessage(null);
 
     try {
-      const [productsResponse, catalogResponse, paymentResponse, adminPaymentsResponse, analyticsResponse, aiResponse] = await Promise.all([
+      const [
+        productsResponse,
+        catalogResponse,
+        paymentResponse,
+        adminPaymentsResponse,
+        adminRefundsResponse,
+        analyticsResponse,
+        aiResponse,
+      ] = await Promise.all([
         fetchAdminProducts(token),
         fetchCatalog(token),
         fetchAdminPaymentProviderReadiness(token),
         fetchAdminPayments(token),
+        fetchAdminRefunds(token),
         fetchAdminAnalyticsSummary(token).catch(() => null),
         fetchAiDiscoveryStatus().catch(() => null),
       ]);
@@ -310,6 +327,7 @@ export function AdminDashboard() {
       setCatalog(catalogResponse);
       setPaymentReadiness(paymentResponse.items);
       setAdminPayments(adminPaymentsResponse.items);
+      setAdminRefunds(adminRefundsResponse.items);
       setAnalyticsSummary(analyticsResponse);
       setAiStatus(aiResponse);
       setCatalogCounts({
@@ -676,6 +694,71 @@ export function AdminDashboard() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleApproveRefund(refundRequestId: string) {
+    if (!session) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      await approveAdminRefund(session.token, refundRequestId, {
+        adminPassword: refundAdminPasswords[refundRequestId] ?? '',
+        adminNote: refundNotes[refundRequestId]?.trim() || undefined,
+        providerRefundId: refundProviderRefs[refundRequestId]?.trim() || undefined,
+      });
+      clearRefundResolutionInputs(refundRequestId);
+      setMessage('Refund approved. Order access has been revoked and the request is closed.');
+      await refreshAdminData(session.token);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Refund approval failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRejectRefund(refundRequestId: string) {
+    if (!session) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      await rejectAdminRefund(session.token, refundRequestId, {
+        adminPassword: refundAdminPasswords[refundRequestId] ?? '',
+        adminNote: refundNotes[refundRequestId]?.trim() || undefined,
+      });
+      clearRefundResolutionInputs(refundRequestId);
+      setMessage('Refund request rejected and kept on record.');
+      await refreshAdminData(session.token);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Refund rejection failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function clearRefundResolutionInputs(refundRequestId: string) {
+    setRefundAdminPasswords((current) => {
+      const next = { ...current };
+      delete next[refundRequestId];
+      return next;
+    });
+    setRefundNotes((current) => {
+      const next = { ...current };
+      delete next[refundRequestId];
+      return next;
+    });
+    setRefundProviderRefs((current) => {
+      const next = { ...current };
+      delete next[refundRequestId];
+      return next;
+    });
   }
 
   if (!session) {
@@ -1186,6 +1269,21 @@ export function AdminDashboard() {
             onChangePaymentRef={(paymentId, value) => setPaymentRefs((current) => ({ ...current, [paymentId]: value }))}
             onMarkFailed={(paymentId) => void handleMarkPaymentFailed(paymentId)}
             onMarkPaid={(paymentId) => void handleMarkPaymentPaid(paymentId)}
+          />
+
+          <RefundDesk
+            loading={loading}
+            refunds={adminRefunds}
+            adminPasswords={refundAdminPasswords}
+            notes={refundNotes}
+            providerRefs={refundProviderRefs}
+            onChangeAdminPassword={(refundRequestId, value) =>
+              setRefundAdminPasswords((current) => ({ ...current, [refundRequestId]: value }))
+            }
+            onChangeNote={(refundRequestId, value) => setRefundNotes((current) => ({ ...current, [refundRequestId]: value }))}
+            onChangeProviderRef={(refundRequestId, value) => setRefundProviderRefs((current) => ({ ...current, [refundRequestId]: value }))}
+            onApprove={(refundRequestId) => void handleApproveRefund(refundRequestId)}
+            onReject={(refundRequestId) => void handleRejectRefund(refundRequestId)}
           />
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -1890,6 +1988,147 @@ function PaymentDesk({
         ) : (
           <p className="rounded border border-line bg-paper p-4 text-sm text-muted">
             No payment sessions yet. Create a checkout from a customer account to see manual approvals here.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function RefundDesk({
+  refunds,
+  loading,
+  adminPasswords,
+  notes,
+  providerRefs,
+  onChangeAdminPassword,
+  onChangeNote,
+  onChangeProviderRef,
+  onApprove,
+  onReject,
+}: {
+  refunds: AdminRefundRow[];
+  loading: boolean;
+  adminPasswords: Record<string, string>;
+  notes: Record<string, string>;
+  providerRefs: Record<string, string>;
+  onChangeAdminPassword: (refundRequestId: string, value: string) => void;
+  onChangeNote: (refundRequestId: string, value: string) => void;
+  onChangeProviderRef: (refundRequestId: string, value: string) => void;
+  onApprove: (refundRequestId: string) => void;
+  onReject: (refundRequestId: string) => void;
+}) {
+  const pending = refunds.filter((row) => row.refundRequest.status === 'requested' || row.refundRequest.status === 'under_review');
+  const visible = pending.length ? pending : refunds.slice(0, 5);
+
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-saffron/15 text-[#8a5c16]">
+            <ShieldCheck size={18} />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Refund desk</p>
+            <h2 className="mt-1 text-lg font-semibold text-ink">Customer refund reviews</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
+              Resolve requests with an admin password. Approved refunds close the request and revoke the order delivery access.
+            </p>
+          </div>
+        </div>
+        <span className="rounded bg-saffron/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a5c16]">
+          {pending.length} pending
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        {visible.length ? (
+          visible.map((row) => {
+            const isOpen = row.refundRequest.status === 'requested' || row.refundRequest.status === 'under_review';
+            const passwordReady = (adminPasswords[row.refundRequest.id] ?? '').length >= 8;
+
+            return (
+              <div key={row.refundRequest.id} className="rounded-lg border border-line bg-paper p-3">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px] lg:items-start">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-black text-ink">{row.order.orderNumber}</span>
+                      <StatusPill status={row.refundRequest.status} />
+                      <StatusPill status={row.order.status} />
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      {row.customer.fullName || row.customer.email} / requested {formatDate(row.refundRequest.requestedAt)}
+                    </p>
+                    <p className="mt-2 rounded border border-line bg-white p-3 text-sm leading-6 text-ink">{row.refundRequest.reason}</p>
+                    {row.refundRequest.adminNote ? (
+                      <p className="mt-2 text-xs leading-5 text-muted">Admin note: {row.refundRequest.adminNote}</p>
+                    ) : null}
+                  </div>
+                  <div className="text-left lg:text-right">
+                    <p className="text-xs font-semibold uppercase text-muted">Order value</p>
+                    <p className="text-2xl font-black text-pine">
+                      {row.order.currency} {row.order.total}
+                    </p>
+                  </div>
+                </div>
+
+                {isOpen ? (
+                  <div className="mt-3 grid gap-2">
+                    <textarea
+                      value={notes[row.refundRequest.id] ?? ''}
+                      onChange={(event) => onChangeNote(row.refundRequest.id, event.target.value)}
+                      rows={2}
+                      placeholder="Optional internal note for the customer record"
+                      className="w-full resize-y rounded border border-line bg-white px-3 py-2 text-sm text-ink"
+                    />
+                    <div className="grid gap-2 lg:grid-cols-2">
+                      <input
+                        value={providerRefs[row.refundRequest.id] ?? ''}
+                        onChange={(event) => onChangeProviderRef(row.refundRequest.id, event.target.value)}
+                        placeholder="Optional Paymob/Fawry/PayPal refund reference"
+                        className="h-10 rounded border border-line bg-white px-3 text-sm text-ink"
+                      />
+                      <input
+                        type="password"
+                        value={adminPasswords[row.refundRequest.id] ?? ''}
+                        onChange={(event) => onChangeAdminPassword(row.refundRequest.id, event.target.value)}
+                        placeholder="Admin password required"
+                        className="h-10 rounded border border-line bg-white px-3 text-sm text-ink"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={loading || !passwordReady}
+                        onClick={() => onApprove(row.refundRequest.id)}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded bg-pine px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <CheckCircle2 size={16} />
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        disabled={loading || !passwordReady}
+                        onClick={() => onReject(row.refundRequest.id)}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded border border-berry/30 bg-white px-4 text-sm font-semibold text-berry disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <XCircle size={16} />
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-3 rounded border border-line bg-white p-3 text-sm text-muted">
+                    This request is {row.refundRequest.status.replaceAll('_', ' ')}
+                    {row.refundRequest.resolvedAt ? ` since ${formatDate(row.refundRequest.resolvedAt)}` : ''}.
+                  </p>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <p className="rounded border border-line bg-paper p-4 text-sm text-muted">
+            No refund requests yet. Customer account requests will appear here for review.
           </p>
         )}
       </div>

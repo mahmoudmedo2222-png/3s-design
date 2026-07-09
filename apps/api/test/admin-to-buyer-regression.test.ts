@@ -93,11 +93,41 @@ type AdminPaymentsResponse = {
   }>;
 };
 
+type AdminRefundsResponse = {
+  items: Array<{
+    refundRequest: {
+      id: string;
+      orderId: string;
+      status: string;
+      reason: string;
+      adminNote: string | null;
+    };
+    order: {
+      id: string;
+      orderNumber: string;
+      status: string;
+      total: string;
+      currency: string;
+    };
+    customer: {
+      email: string;
+    };
+  }>;
+};
+
+type RefundRequestResponse = {
+  id: string;
+  orderId: string;
+  status: string;
+  reason: string;
+};
+
 type EntitlementsResponse = {
   items: Array<{
     id: string;
     order: { id: string };
     product: { id: string };
+    isActive: boolean;
     assets: Array<{ id: string; assetType: string; fileName: string }>;
   }>;
 };
@@ -403,4 +433,64 @@ void test('admin-to-buyer regression: publish product from admin and complete cu
   assert.equal(download.body.assetId, asset.id);
   assert.equal(download.body.method, 'GET');
   assert.ok(download.body.downloadUrl.includes(`test/deliveries/${slug}.zip`));
+
+  const refundRequest = await sendJson<RefundRequestResponse>(
+    '/refunds',
+    {
+      orderId: checkout.body.id,
+      reason: 'The delivered file does not open correctly in the expected software.',
+    },
+    buyerToken,
+  );
+  assert.ok(refundRequest.response.ok, `Expected refund request to succeed, got ${refundRequest.response.status}`);
+  assert.equal(refundRequest.body.orderId, checkout.body.id);
+  assert.equal(refundRequest.body.status, 'requested');
+
+  const buyerAdminRefunds = await request('/admin/refunds', {
+    headers: authHeaders(buyerToken),
+  });
+  assert.equal(buyerAdminRefunds.status, 403, 'Expected buyer to be blocked from admin refund desk.');
+
+  const adminRefundsResponse = await request('/admin/refunds', {
+    headers: authHeaders(adminToken),
+  });
+  assert.ok(adminRefundsResponse.ok, `Expected admin refunds list to succeed, got ${adminRefundsResponse.status}`);
+  const adminRefunds = await json<AdminRefundsResponse>(adminRefundsResponse);
+  assert.ok(
+    adminRefunds.items.some((item) => item.refundRequest.id === refundRequest.body.id && item.order.id === checkout.body.id),
+    'Expected admin refund desk to list the buyer refund request.',
+  );
+
+  const approveRefundWithoutStepUp = await sendJson(`/admin/refunds/${refundRequest.body.id}/approve`, {}, adminToken);
+  assert.equal(approveRefundWithoutStepUp.response.status, 400, 'Expected admin refund approval to require step-up password.');
+
+  const approveRefundWithWrongPassword = await sendJson(
+    `/admin/refunds/${refundRequest.body.id}/approve`,
+    { adminPassword: 'WrongPassword123' },
+    adminToken,
+  );
+  assert.equal(approveRefundWithWrongPassword.response.status, 401, 'Expected wrong admin refund step-up password to be rejected.');
+
+  const approveRefund = await sendJson(
+    `/admin/refunds/${refundRequest.body.id}/approve`,
+    {
+      adminPassword,
+      adminNote: 'Approved after file access review.',
+      providerRefundId: `refund-${randomUUID()}`,
+    },
+    adminToken,
+  );
+  assert.ok(approveRefund.response.ok, `Expected admin refund approval to succeed, got ${approveRefund.response.status}`);
+
+  const lockedEntitlementsResponse = await request('/downloads', {
+    headers: authHeaders(buyerToken),
+  });
+  assert.ok(lockedEntitlementsResponse.ok, `Expected entitlements after refund to be readable, got ${lockedEntitlementsResponse.status}`);
+  const lockedEntitlements = await json<EntitlementsResponse>(lockedEntitlementsResponse);
+  const lockedEntitlement = lockedEntitlements.items.find((item) => item.id === entitlement.id);
+  assert.ok(lockedEntitlement, 'Expected refunded entitlement to remain visible for customer history.');
+  assert.equal(lockedEntitlement.isActive, false, 'Expected approved refund to deactivate the entitlement.');
+
+  const downloadAfterRefund = await sendJson(`/downloads/${entitlement.id}/assets/${asset.id}/url`, {}, buyerToken);
+  assert.equal(downloadAfterRefund.response.status, 403, 'Expected refunded entitlement download URLs to be blocked.');
 });
