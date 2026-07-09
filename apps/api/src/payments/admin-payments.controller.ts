@@ -1,4 +1,5 @@
-import { Body, Controller, Inject, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, UseGuards } from '@nestjs/common';
+import { AuthService } from '../auth/auth.service';
 import type { AuthUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -11,10 +12,19 @@ import { PaymentsService } from './payments.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
 export class AdminPaymentsController {
-  constructor(@Inject(PaymentsService) private readonly payments: PaymentsService) {}
+  constructor(
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(PaymentsService) private readonly payments: PaymentsService,
+  ) {}
+
+  @Get()
+  list() {
+    return this.payments.listAdminPayments();
+  }
 
   @Post(':paymentId/mark-paid')
-  markPaid(@CurrentUser() user: AuthUser, @Param('paymentId') paymentId: string, @Body() input: MarkPaymentPaidDto) {
+  async markPaid(@CurrentUser() user: AuthUser, @Param('paymentId') paymentId: string, @Body() input: MarkPaymentPaidDto) {
+    await this.auth.assertPasswordForStepUp(user.id, input.adminPassword, 'admin.payments.mark_paid');
     return this.payments.markPaymentPaid(paymentId, input.providerPaymentId, user.id);
   }
 

@@ -2,9 +2,11 @@
 
 import {
   ArrowRight,
+  AlertTriangle,
   BadgeCheck,
   Boxes,
   CheckCircle2,
+  CreditCard,
   Eye,
   FileCheck2,
   FolderTree,
@@ -22,18 +24,37 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { fetchAiDiscoveryStatus, type AiDiscoveryStatus } from '../lib/api';
 import { ThemeToggle } from './theme-toggle';
 import {
+  AdminPaymentRow,
+  AdminPaymentProviderReadiness,
+  AdminAnalyticsSummary,
   AdminProduct,
+  AdminProductAnalyticsSummary,
   AdminUser,
+  CatalogResponse,
   createAdminProduct,
+  createAssetUploadUrl,
+  fetchAdminPaymentProviderReadiness,
+  fetchAdminPayments,
+  createProductAsset,
+  createProductAttribute,
+  fetchAdminAnalyticsSummary,
+  fetchAdminProductAnalyticsSummary,
   fetchAdminProducts,
   fetchCatalog,
   fetchPublishingChecks,
   loginAdmin,
+  markAdminPaymentFailed,
+  markAdminPaymentPaid,
   publishProduct,
   PublishingChecksResponse,
+  setProductCategories,
+  setProductLicensePrices,
+  setProductTags,
   unpublishProduct,
+  updateAdminProduct,
 } from '../lib/admin-api';
 
 type AdminSession = {
@@ -51,6 +72,25 @@ type ProductForm = {
   isFeatured: boolean;
 };
 
+type AssetForm = {
+  assetType: string;
+  storageKey: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: string;
+  assetStatus: string;
+  scanStatus: string;
+  altText: string;
+  isPrimary: boolean;
+  isPublicPreview: boolean;
+};
+
+type AttributeForm = {
+  key: string;
+  value: string;
+  label: string;
+};
+
 const emptyProductForm: ProductForm = {
   title: '',
   slug: '',
@@ -61,6 +101,25 @@ const emptyProductForm: ProductForm = {
   isFeatured: false,
 };
 
+const emptyAssetForm: AssetForm = {
+  assetType: 'watermarked_preview',
+  storageKey: '',
+  fileName: '',
+  mimeType: 'image/png',
+  fileSize: '2048',
+  assetStatus: 'ready',
+  scanStatus: 'skipped',
+  altText: '',
+  isPrimary: true,
+  isPublicPreview: true,
+};
+
+const emptyAttributeForm: AttributeForm = {
+  key: 'dna.industry',
+  value: '',
+  label: '',
+};
+
 const sessionStorageKey = '3s-design-admin-session';
 
 export function AdminDashboard() {
@@ -68,11 +127,26 @@ export function AdminDashboard() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [checks, setChecks] = useState<PublishingChecksResponse | null>(null);
+  const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
+  const [paymentReadiness, setPaymentReadiness] = useState<AdminPaymentProviderReadiness[]>([]);
+  const [adminPayments, setAdminPayments] = useState<AdminPaymentRow[]>([]);
+  const [analyticsSummary, setAnalyticsSummary] = useState<AdminAnalyticsSummary | null>(null);
+  const [productAnalytics, setProductAnalytics] = useState<AdminProductAnalyticsSummary | null>(null);
+  const [aiStatus, setAiStatus] = useState<AiDiscoveryStatus | null>(null);
   const [catalogCounts, setCatalogCounts] = useState({ categories: 0, tags: 0, licenses: 0 });
   const [query, setQuery] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<ProductForm>(emptyProductForm);
+  const [editForm, setEditForm] = useState<ProductForm>(emptyProductForm);
+  const [assetForm, setAssetForm] = useState<AssetForm>(emptyAssetForm);
+  const [assetFile, setAssetFile] = useState<File | null>(null);
+  const [attributeForm, setAttributeForm] = useState<AttributeForm>(emptyAttributeForm);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [licensePrices, setLicensePrices] = useState<Record<string, string>>({});
+  const [paymentRefs, setPaymentRefs] = useState<Record<string, string>>({});
+  const [paymentAdminPasswords, setPaymentAdminPasswords] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const stored = window.localStorage.getItem(sessionStorageKey);
@@ -101,6 +175,33 @@ export function AdminDashboard() {
     [products, selectedProductId],
   );
 
+  useEffect(() => {
+    if (!selectedProduct) {
+      setEditForm(emptyProductForm);
+      return;
+    }
+
+    setEditForm({
+      title: selectedProduct.title,
+      slug: selectedProduct.slug,
+      subtitle: selectedProduct.subtitle ?? '',
+      description: selectedProduct.description,
+      basePrice: selectedProduct.basePrice,
+      currency: selectedProduct.currency,
+      isFeatured: selectedProduct.isFeatured,
+    });
+  }, [selectedProduct]);
+
+  useEffect(() => {
+    if (!checks?.current) {
+      return;
+    }
+
+    setSelectedCategoryIds(checks.current.categoryIds);
+    setSelectedTagIds(checks.current.tagIds);
+    setLicensePrices(Object.fromEntries(checks.current.licensePrices.map((price) => [price.licenseId, price.price])));
+  }, [checks]);
+
   const filteredProducts = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) {
@@ -120,6 +221,73 @@ export function AdminDashboard() {
     return { total: products.length, published, draft, featured };
   }, [products]);
 
+  const launchReadiness = useMemo(() => {
+    const livePayments = paymentReadiness.filter((provider) => provider.provider !== 'manual');
+    const configuredLivePayments = livePayments.filter((provider) => provider.configured);
+    const selectedCanPublish = checks?.canPublish ?? false;
+    const selectedQualityScore = checks?.quality.score ?? 0;
+    const hasDeliveryAsset = Boolean(
+      checks?.current.assets.some((asset) => asset.assetType === 'delivery_zip' || asset.assetType === 'source_file'),
+    );
+    const hasPreviewAsset = Boolean(
+      checks?.current.assets.some(
+        (asset) => asset.isPublicPreview || asset.assetType === 'watermarked_preview' || asset.assetType === 'preview',
+      ),
+    );
+
+    return [
+      {
+        key: 'published-products',
+        label: 'Published catalog',
+        passed: stats.published > 0,
+        value: `${stats.published} live`,
+        detail: stats.published > 0 ? 'Customers have sellable designs to browse.' : 'Publish at least one production-ready design.',
+      },
+      {
+        key: 'selected-product',
+        label: 'Selected product readiness',
+        passed: selectedCanPublish && selectedQualityScore >= 70,
+        value: selectedProduct ? `${selectedQualityScore}/100` : 'No product',
+        detail: selectedProduct
+          ? selectedCanPublish
+            ? 'The selected product passes publishing checks.'
+            : 'Fix the selected product checks before relying on it in launch demos.'
+          : 'Create or select a product to inspect launch quality.',
+      },
+      {
+        key: 'delivery-assets',
+        label: 'Preview and delivery assets',
+        passed: hasPreviewAsset && hasDeliveryAsset,
+        value: `${checks?.current.assets.length ?? 0} assets`,
+        detail:
+          hasPreviewAsset && hasDeliveryAsset
+            ? 'Preview and delivery files are represented.'
+            : 'Each sellable design needs a watermarked preview and a delivery/source asset.',
+      },
+      {
+        key: 'ai-discovery',
+        label: 'AI discovery',
+        passed: Boolean(aiStatus),
+        value: aiStatus ? aiStatus.mode : 'Unknown',
+        detail: aiStatus
+          ? aiStatus.mode === 'openai'
+            ? 'OpenAI-backed matching is active.'
+            : 'Rule fallback is active; enable OpenAI billing for smarter matching.'
+          : 'AI status could not be loaded.',
+      },
+      {
+        key: 'payments',
+        label: 'Real payment providers',
+        passed: configuredLivePayments.length > 0,
+        value: `${configuredLivePayments.length}/${livePayments.length || 3} ready`,
+        detail:
+          configuredLivePayments.length > 0
+            ? 'At least one live checkout provider is configured.'
+            : 'Manual review works, but Paymob/Fawry/PayPal need keys before real checkout.',
+      },
+    ];
+  }, [aiStatus, checks, paymentReadiness, selectedProduct, stats.published]);
+
   async function refreshAdminData(token = session?.token) {
     if (!token) {
       return;
@@ -129,9 +297,21 @@ export function AdminDashboard() {
     setMessage(null);
 
     try {
-      const [productsResponse, catalogResponse] = await Promise.all([fetchAdminProducts(token), fetchCatalog(token)]);
+      const [productsResponse, catalogResponse, paymentResponse, adminPaymentsResponse, analyticsResponse, aiResponse] = await Promise.all([
+        fetchAdminProducts(token),
+        fetchCatalog(token),
+        fetchAdminPaymentProviderReadiness(token),
+        fetchAdminPayments(token),
+        fetchAdminAnalyticsSummary(token).catch(() => null),
+        fetchAiDiscoveryStatus().catch(() => null),
+      ]);
 
       setProducts(productsResponse.items);
+      setCatalog(catalogResponse);
+      setPaymentReadiness(paymentResponse.items);
+      setAdminPayments(adminPaymentsResponse.items);
+      setAnalyticsSummary(analyticsResponse);
+      setAiStatus(aiResponse);
       setCatalogCounts({
         categories: catalogResponse.categories.items.length,
         tags: catalogResponse.tags.items.length,
@@ -147,8 +327,11 @@ export function AdminDashboard() {
 
       if (nextSelectedId) {
         setChecks(await fetchPublishingChecks(token, nextSelectedId));
+        const nextProduct = productsResponse.items.find((product) => product.id === nextSelectedId);
+        setProductAnalytics(nextProduct ? await fetchAdminProductAnalyticsSummary(token, nextProduct).catch(() => null) : null);
       } else {
         setChecks(null);
+        setProductAnalytics(null);
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Admin data refresh failed');
@@ -213,8 +396,14 @@ export function AdminDashboard() {
       return;
     }
 
+    const product = products.find((item) => item.id === productId);
     setSelectedProductId(productId);
-    setChecks(await fetchPublishingChecks(session.token, productId));
+    const [nextChecks, nextAnalytics] = await Promise.all([
+      fetchPublishingChecks(session.token, productId),
+      product ? fetchAdminProductAnalyticsSummary(session.token, product).catch(() => null) : Promise.resolve(null),
+    ]);
+    setChecks(nextChecks);
+    setProductAnalytics(nextAnalytics);
   }
 
   async function handlePublish(product: AdminProduct) {
@@ -253,11 +442,247 @@ export function AdminDashboard() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function updateEditForm<K extends keyof ProductForm>(key: K, value: ProductForm[K]) {
+    setEditForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateAssetForm<K extends keyof AssetForm>(key: K, value: AssetForm[K]) {
+    setAssetForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateAttributeForm<K extends keyof AttributeForm>(key: K, value: AttributeForm[K]) {
+    setAttributeForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function handleUpdateSelectedProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session || !selectedProduct) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      await updateAdminProduct(session.token, selectedProduct.id, {
+        ...editForm,
+        status: selectedProduct.status,
+      });
+      setMessage('Product details updated');
+      await refreshAdminData(session.token);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Product update failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSaveLicensePrices() {
+    if (!session || !selectedProduct || !catalog) {
+      return;
+    }
+
+    const prices = catalog.licenses.items
+      .map((license) => ({
+        licenseId: license.id,
+        price: licensePrices[license.id] || selectedProduct.basePrice,
+        currency: selectedProduct.currency,
+      }))
+      .filter((price) => Number(price.price) > 0);
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      await setProductLicensePrices(session.token, selectedProduct.id, prices);
+      setMessage('License prices saved');
+      await handleCheckProduct(selectedProduct.id);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'License prices failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSaveDiscoveryLinks() {
+    if (!session || !selectedProduct) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      await Promise.all([
+        setProductCategories(session.token, selectedProduct.id, selectedCategoryIds),
+        setProductTags(session.token, selectedProduct.id, selectedTagIds),
+      ]);
+      setMessage('Categories and tags saved');
+      await handleCheckProduct(selectedProduct.id);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Discovery links failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCreateAsset(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session || !selectedProduct) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      let uploadStorageKey = assetForm.storageKey;
+      let assetStatus = assetForm.assetStatus;
+      let scanStatus = assetForm.scanStatus;
+      let mimeType = assetForm.mimeType;
+      let fileSize = Number(assetForm.fileSize);
+      let fileName = assetForm.fileName;
+
+      if (assetFile) {
+        fileName = assetFile.name;
+        mimeType = assetFile.type || assetForm.mimeType;
+        fileSize = assetFile.size;
+
+        const upload = await createAssetUploadUrl(session.token, {
+          productId: selectedProduct.id,
+          assetType: assetForm.assetType,
+          fileName,
+          mimeType,
+          fileSize,
+        });
+
+        const uploadResponse = await fetch(upload.uploadUrl, {
+          method: upload.method,
+          headers: upload.headers,
+          body: assetFile,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed with ${uploadResponse.status}`);
+        }
+
+        uploadStorageKey = upload.storageKey;
+        assetStatus = upload.suggestedAssetStatus;
+        scanStatus = upload.suggestedScanStatus;
+      }
+
+      if (!uploadStorageKey) {
+        throw new Error('Storage key is required when no file upload is available.');
+      }
+
+      await createProductAsset(session.token, selectedProduct.id, {
+        ...assetForm,
+        storageKey: uploadStorageKey,
+        fileName,
+        mimeType,
+        fileSize,
+        assetStatus,
+        scanStatus,
+        sortOrder: 0,
+        altText: assetForm.altText || undefined,
+      });
+      setAssetForm(emptyAssetForm);
+      setAssetFile(null);
+      setMessage('Asset metadata attached');
+      await handleCheckProduct(selectedProduct.id);
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `${error.message}. If storage is not configured locally, leave file empty and enter a known dev storageKey manually.`
+          : 'Asset creation failed',
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCreateAttribute(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session || !selectedProduct) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      await createProductAttribute(session.token, selectedProduct.id, {
+        key: attributeForm.key,
+        value: attributeForm.value,
+        label: attributeForm.label || undefined,
+        sortOrder: 0,
+      });
+      setAttributeForm(emptyAttributeForm);
+      setMessage('Design DNA attribute added');
+      await handleCheckProduct(selectedProduct.id);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Attribute creation failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleMarkPaymentPaid(paymentId: string) {
+    if (!session) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      await markAdminPaymentPaid(session.token, paymentId, {
+        adminPassword: paymentAdminPasswords[paymentId] ?? '',
+        providerPaymentId: paymentRefs[paymentId]?.trim() || undefined,
+      });
+      setMessage('Payment approved. Delivery vault access is now unlocked for the customer.');
+      setPaymentRefs((current) => {
+        const next = { ...current };
+        delete next[paymentId];
+        return next;
+      });
+      setPaymentAdminPasswords((current) => {
+        const next = { ...current };
+        delete next[paymentId];
+        return next;
+      });
+      await refreshAdminData(session.token);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Payment approval failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleMarkPaymentFailed(paymentId: string) {
+    if (!session) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      await markAdminPaymentFailed(session.token, paymentId);
+      setMessage('Payment marked as failed. Customer downloads remain locked.');
+      await refreshAdminData(session.token);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Payment failure update failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (!session) {
     return (
       <main className="min-h-screen bg-[#f5f7f5] dark:bg-[#0b0f0e]">
         <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
-          <div className="overflow-hidden rounded-lg border border-line bg-white shadow-panel">
+          <div className="premium-panel overflow-hidden">
             <div className="border-b border-white/10 bg-ink p-5 text-white">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded bg-white/10">
@@ -287,7 +712,7 @@ export function AdminDashboard() {
                     name="email"
                     type="email"
                     placeholder="admin@yourdomain.com"
-                    className="mt-1 h-11 w-full rounded border border-line bg-white px-3 text-sm text-ink"
+                    className="premium-control mt-1 h-11 w-full bg-white px-3 text-sm text-ink"
                   />
                 </label>
 
@@ -297,7 +722,7 @@ export function AdminDashboard() {
                     name="password"
                     type="password"
                     placeholder="Enter admin password"
-                    className="mt-1 h-11 w-full rounded border border-line bg-white px-3 text-sm text-ink"
+                    className="premium-control mt-1 h-11 w-full bg-white px-3 text-sm text-ink"
                   />
                 </label>
 
@@ -306,7 +731,7 @@ export function AdminDashboard() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded bg-ink px-4 text-sm font-semibold text-white transition hover:bg-pine disabled:cursor-not-allowed disabled:opacity-60"
+                  className="premium-control premium-action inline-flex h-11 w-full items-center justify-center gap-2 bg-ink px-4 text-sm font-semibold text-white hover:bg-pine disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? <Loader2 className="animate-spin" size={17} /> : <ShieldCheck size={17} />}
                   Sign in
@@ -321,7 +746,7 @@ export function AdminDashboard() {
 
   return (
     <main className="min-h-screen bg-[#f5f7f5] dark:bg-[#0b0f0e]">
-      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur dark:bg-[#0b0f0e]/95">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-ink text-white shadow-sm">
@@ -338,7 +763,7 @@ export function AdminDashboard() {
             <button
               type="button"
               onClick={() => refreshAdminData()}
-              className="inline-flex h-10 w-10 items-center justify-center rounded border border-line bg-white text-ink transition hover:border-pine hover:text-pine"
+              className="premium-control premium-action inline-flex h-10 w-10 items-center justify-center bg-white text-ink hover:border-pine hover:text-pine"
               title="Refresh"
               aria-label="Refresh"
             >
@@ -347,7 +772,7 @@ export function AdminDashboard() {
             <button
               type="button"
               onClick={logout}
-              className="inline-flex h-10 w-10 items-center justify-center rounded border border-line bg-white text-ink transition hover:border-berry hover:text-berry"
+              className="premium-control premium-action inline-flex h-10 w-10 items-center justify-center bg-white text-ink hover:border-berry hover:text-berry"
               title="Sign out"
               aria-label="Sign out"
             >
@@ -378,6 +803,366 @@ export function AdminDashboard() {
           </section>
 
           <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Launch readiness</p>
+                <h2 className="mt-1 text-sm font-semibold text-ink">Production blockers</h2>
+              </div>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-saffron/15 text-saffron">
+                <AlertTriangle size={17} />
+              </span>
+            </div>
+            <div className="mt-4 grid gap-2">
+              {launchReadiness.map((item) => (
+                <LaunchReadinessRow key={item.key} item={item} />
+              ))}
+            </div>
+          </section>
+
+          {selectedProduct ? <SelectedProductAnalyticsPanel product={selectedProduct} summary={productAnalytics} /> : null}
+
+          {selectedProduct ? (
+            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+              <form className="rounded-lg border border-line bg-white p-4 shadow-sm" onSubmit={handleUpdateSelectedProduct}>
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-pine/10 text-pine">
+                    <PackagePlus size={17} />
+                  </span>
+                  <div>
+                    <h2 className="text-base font-semibold text-ink">Product editor</h2>
+                    <p className="text-sm text-muted">Update the core selling copy before publishing.</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <AdminField label="Title">
+                    <input
+                      value={editForm.title}
+                      onChange={(event) => updateEditForm('title', event.target.value)}
+                      required
+                      minLength={3}
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                  <AdminField label="Slug">
+                    <input
+                      value={editForm.slug}
+                      onChange={(event) => updateEditForm('slug', slugify(event.target.value))}
+                      required
+                      minLength={3}
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                  <AdminField label="Subtitle" wide>
+                    <input
+                      value={editForm.subtitle}
+                      onChange={(event) => updateEditForm('subtitle', event.target.value)}
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                  <AdminField label="Description" wide>
+                    <textarea
+                      value={editForm.description}
+                      onChange={(event) => updateEditForm('description', event.target.value)}
+                      required
+                      minLength={10}
+                      rows={4}
+                      className="mt-1 w-full resize-y rounded border border-line bg-white px-3 py-2 text-sm"
+                    />
+                  </AdminField>
+                  <AdminField label="Base price">
+                    <input
+                      value={editForm.basePrice}
+                      onChange={(event) => updateEditForm('basePrice', event.target.value)}
+                      inputMode="decimal"
+                      required
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                  <div className="grid grid-cols-[1fr_auto] gap-3">
+                    <AdminField label="Currency">
+                      <select
+                        value={editForm.currency}
+                        onChange={(event) => updateEditForm('currency', event.target.value)}
+                        className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                      >
+                        <option value="USD">USD</option>
+                        <option value="EGP">EGP</option>
+                        <option value="EUR">EUR</option>
+                      </select>
+                    </AdminField>
+                    <label className="mt-6 inline-flex h-10 items-center gap-2 rounded border border-line bg-paper px-3 text-sm text-ink">
+                      <input
+                        type="checkbox"
+                        checked={editForm.isFeatured}
+                        onChange={(event) => updateEditForm('isFeatured', event.target.checked)}
+                      />
+                      Featured
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-4 inline-flex h-10 items-center gap-2 rounded bg-ink px-4 text-sm font-semibold text-white hover:bg-pine disabled:opacity-60"
+                >
+                  {loading ? <Loader2 className="animate-spin" size={16} /> : <BadgeCheck size={16} />}
+                  Save product
+                </button>
+              </form>
+
+              <section className="space-y-4">
+                <div className="rounded-lg border border-line bg-white p-4 shadow-sm">
+                  <h2 className="text-base font-semibold text-ink">License pricing</h2>
+                  <p className="mt-1 text-sm text-muted">Set one price per license. Missing prices block publishing.</p>
+                  <div className="mt-3 grid gap-2">
+                    {catalog?.licenses.items.length ? (
+                      catalog.licenses.items.map((license) => (
+                        <label
+                          key={license.id}
+                          className="grid grid-cols-[minmax(0,1fr)_120px] items-center gap-3 rounded border border-line bg-paper p-3"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-semibold text-ink">{license.name}</span>
+                            <span className="block truncate text-xs text-muted">{license.licenseType}</span>
+                          </span>
+                          <input
+                            value={licensePrices[license.id] ?? selectedProduct.basePrice}
+                            onChange={(event) => setLicensePrices((current) => ({ ...current, [license.id]: event.target.value }))}
+                            inputMode="decimal"
+                            className="h-9 rounded border border-line bg-white px-2 text-sm"
+                          />
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted">No licenses found. Create licenses first.</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveLicensePrices()}
+                    disabled={loading || !catalog?.licenses.items.length}
+                    className="mt-3 h-10 rounded bg-pine px-4 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    Save license prices
+                  </button>
+                </div>
+
+                <div className="rounded-lg border border-line bg-white p-4 shadow-sm">
+                  <h2 className="text-base font-semibold text-ink">Discovery links</h2>
+                  <div className="mt-3 grid gap-3">
+                    <MultiCheck
+                      label="Categories"
+                      items={catalog?.categories.items ?? []}
+                      selected={selectedCategoryIds}
+                      onChange={setSelectedCategoryIds}
+                    />
+                    <MultiCheck label="Tags" items={catalog?.tags.items ?? []} selected={selectedTagIds} onChange={setSelectedTagIds} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveDiscoveryLinks()}
+                    disabled={loading}
+                    className="mt-3 h-10 rounded bg-pine px-4 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    Save discovery links
+                  </button>
+                </div>
+              </section>
+            </section>
+          ) : null}
+
+          {selectedProduct ? (
+            <section className="grid gap-5 xl:grid-cols-2">
+              <form className="rounded-lg border border-line bg-white p-4 shadow-sm" onSubmit={handleCreateAsset}>
+                <h2 className="text-base font-semibold text-ink">Attach asset metadata</h2>
+                <p className="mt-1 text-sm text-muted">
+                  Upload when R2 is configured, or register a known dev storage key when working locally.
+                </p>
+
+                {checks?.current.assets.length ? (
+                  <div className="mt-4 rounded border border-line bg-paper p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase text-muted">Current assets</p>
+                    <div className="grid gap-2">
+                      {checks.current.assets.map((asset) => (
+                        <div key={asset.id} className="rounded bg-white p-2 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate font-semibold text-ink">{asset.fileName}</span>
+                            <span className="shrink-0 rounded bg-pine/10 px-2 py-0.5 font-semibold text-pine">{asset.assetType}</span>
+                          </div>
+                          <p className="mt-1 truncate text-muted">{asset.storageKey}</p>
+                          <p className="mt-1 text-muted">
+                            {asset.assetStatus} / {asset.scanStatus}
+                            {asset.isPrimary ? ' / primary' : ''}
+                            {asset.isPublicPreview ? ' / public' : ''}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <label className="mt-4 block rounded border border-dashed border-line bg-paper p-3">
+                  <span className="text-sm font-medium text-ink">Upload file</span>
+                  <input
+                    type="file"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      setAssetFile(file);
+                      if (file) {
+                        updateAssetForm('fileName', file.name);
+                        updateAssetForm('mimeType', file.type || assetForm.mimeType);
+                        updateAssetForm('fileSize', String(file.size));
+                      }
+                    }}
+                    className="mt-2 block w-full text-sm text-muted"
+                  />
+                  <span className="mt-2 block text-xs leading-5 text-muted">
+                    If upload fails because storage is not configured, clear the file and enter storage key metadata manually.
+                  </span>
+                </label>
+
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                  <AdminField label="Asset type">
+                    <select
+                      value={assetForm.assetType}
+                      onChange={(event) => {
+                        const assetType = event.target.value;
+                        updateAssetForm('assetType', assetType);
+                        updateAssetForm('isPublicPreview', assetType === 'preview' || assetType === 'watermarked_preview');
+                        updateAssetForm('mimeType', assetType === 'delivery_zip' ? 'application/zip' : 'image/png');
+                      }}
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    >
+                      <option value="watermarked_preview">watermarked preview</option>
+                      <option value="preview">preview</option>
+                      <option value="delivery_zip">delivery zip</option>
+                      <option value="source_file">source file</option>
+                    </select>
+                  </AdminField>
+                  <AdminField label="File name">
+                    <input
+                      value={assetForm.fileName}
+                      onChange={(event) => updateAssetForm('fileName', event.target.value)}
+                      required={!assetFile}
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                  <AdminField label="Storage key" wide>
+                    <input
+                      value={assetForm.storageKey}
+                      onChange={(event) => updateAssetForm('storageKey', event.target.value)}
+                      required={!assetFile}
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                  <AdminField label="Mime type">
+                    <input
+                      value={assetForm.mimeType}
+                      onChange={(event) => updateAssetForm('mimeType', event.target.value)}
+                      required
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                  <AdminField label="File size bytes">
+                    <input
+                      value={assetForm.fileSize}
+                      onChange={(event) => updateAssetForm('fileSize', event.target.value)}
+                      inputMode="numeric"
+                      required={!assetFile}
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                  <AdminField label="Alt text" wide>
+                    <input
+                      value={assetForm.altText}
+                      onChange={(event) => updateAssetForm('altText', event.target.value)}
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <label className="inline-flex items-center gap-2 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      checked={assetForm.isPrimary}
+                      onChange={(event) => updateAssetForm('isPrimary', event.target.checked)}
+                    />
+                    Primary
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      checked={assetForm.isPublicPreview}
+                      onChange={(event) => updateAssetForm('isPublicPreview', event.target.checked)}
+                    />
+                    Public preview
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-4 h-10 rounded bg-ink px-4 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  Attach asset
+                </button>
+              </form>
+
+              <form className="rounded-lg border border-line bg-white p-4 shadow-sm" onSubmit={handleCreateAttribute}>
+                <h2 className="text-base font-semibold text-ink">Design DNA attribute</h2>
+                <p className="mt-1 text-sm text-muted">Add AI/search signals like industry, style, mood, color, platform, format.</p>
+                <div className="mt-4 grid gap-3">
+                  <AdminField label="Key">
+                    <select
+                      value={attributeForm.key}
+                      onChange={(event) => updateAttributeForm('key', event.target.value)}
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    >
+                      {[
+                        'dna.industry',
+                        'dna.style',
+                        'dna.mood',
+                        'dna.color',
+                        'dna.platform',
+                        'dna.format',
+                        'dna.occasion',
+                        'dna.audience',
+                      ].map((key) => (
+                        <option key={key} value={key}>
+                          {key}
+                        </option>
+                      ))}
+                    </select>
+                  </AdminField>
+                  <AdminField label="Value">
+                    <input
+                      value={attributeForm.value}
+                      onChange={(event) => updateAttributeForm('value', event.target.value)}
+                      required
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                  <AdminField label="Label">
+                    <input
+                      value={attributeForm.label}
+                      onChange={(event) => updateAttributeForm('label', event.target.value)}
+                      className="mt-1 h-10 w-full rounded border border-line bg-white px-3 text-sm"
+                    />
+                  </AdminField>
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-4 h-10 rounded bg-ink px-4 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  Add DNA signal
+                </button>
+              </form>
+            </section>
+          ) : null}
+
+          <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
             <h2 className="text-sm font-semibold text-ink">Catalog readiness</h2>
             <div className="mt-3 space-y-2 text-sm">
               <CatalogRow icon={FolderTree} label="Categories" value={catalogCounts.categories} />
@@ -389,6 +1174,19 @@ export function AdminDashboard() {
 
         <div className="space-y-5">
           {message ? <div className="rounded-lg border border-line bg-white p-3 text-sm text-ink shadow-sm">{message}</div> : null}
+
+          <AdminAnalyticsPanel summary={analyticsSummary} />
+
+          <PaymentDesk
+            loading={loading}
+            payments={adminPayments}
+            adminPasswords={paymentAdminPasswords}
+            paymentRefs={paymentRefs}
+            onChangeAdminPassword={(paymentId, value) => setPaymentAdminPasswords((current) => ({ ...current, [paymentId]: value }))}
+            onChangePaymentRef={(paymentId, value) => setPaymentRefs((current) => ({ ...current, [paymentId]: value }))}
+            onMarkFailed={(paymentId) => void handleMarkPaymentFailed(paymentId)}
+            onMarkPaid={(paymentId) => void handleMarkPaymentPaid(paymentId)}
+          />
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="overflow-hidden rounded-lg border border-line bg-white shadow-sm">
@@ -686,6 +1484,469 @@ function Metric({ icon: Icon, label, value }: { icon: LucideIcon; label: string;
   );
 }
 
+function AdminAnalyticsPanel({ summary }: { summary: AdminAnalyticsSummary | null }) {
+  const totals = summary?.totals;
+  const conversion = summary?.conversion;
+  const leak = summary ? strongestLeak(summary) : 'Collect events to reveal the first weak decision point.';
+
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-pine/10 text-pine">
+            <Eye size={18} />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Customer funnel</p>
+            <h2 className="mt-1 text-lg font-semibold text-ink">Where buyers continue or drop</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
+              Last {summary?.window.days ?? 7} days. Use this to decide whether to improve discovery, product clarity, checkout, or
+              delivery.
+            </p>
+          </div>
+        </div>
+        <span className="rounded bg-pine/10 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-pine">
+          {totals?.events ?? 0} events
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <FunnelDatum label="Searches" value={totals?.searches ?? 0} />
+        <FunnelDatum label="Views" value={totals?.productViews ?? 0} />
+        <FunnelDatum label="Cart adds" value={totals?.cartAdds ?? 0} />
+        <FunnelDatum label="Checkout" value={totals?.checkoutAttempts ?? 0} />
+        <FunnelDatum label="Orders" value={totals?.ordersCreated ?? 0} />
+        <FunnelDatum label="Downloads" value={totals?.downloadsRequested ?? 0} />
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_1.2fr]">
+        <div className="rounded border border-line bg-paper p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Conversion health</p>
+          <div className="mt-3 grid gap-2">
+            <ConversionRow label="View -> cart" value={conversion?.viewToCart ?? 0} />
+            <ConversionRow label="Cart -> checkout" value={conversion?.cartToCheckout ?? 0} />
+            <ConversionRow label="Checkout -> order" value={conversion?.checkoutToOrder ?? 0} />
+            <ConversionRow label="Order -> download" value={conversion?.orderToDownload ?? 0} />
+          </div>
+          <p className="mt-3 rounded border border-saffron/25 bg-saffron/10 p-2 text-xs font-bold leading-5 text-[#8a5c16]">{leak}</p>
+        </div>
+
+        <div className="rounded border border-line bg-paper p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Top searches</p>
+          <div className="mt-3 grid gap-2">
+            {(summary?.topSearches.length ? summary.topSearches : [{ query: 'No searches captured yet', count: 0 }])
+              .slice(0, 5)
+              .map((item) => (
+                <RankRow key={item.query} label={item.query} value={item.count} />
+              ))}
+          </div>
+        </div>
+
+        <div className="rounded border border-line bg-paper p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Top product signals</p>
+          <div className="mt-3 grid gap-2">
+            {(summary?.topProducts.length ? summary.topProducts : [{ slug: 'No product events captured yet', title: null, count: 0 }])
+              .slice(0, 5)
+              .map((item) => (
+                <RankRow key={item.slug} label={item.title || item.slug} value={item.count} />
+              ))}
+          </div>
+        </div>
+      </div>
+
+      <AttributionBreakdownPanel
+        title="Attribution leaders"
+        emptyLabel="No attribution captured yet"
+        sources={summary?.attribution.sources ?? []}
+        campaigns={summary?.attribution.campaigns ?? []}
+        intents={summary?.attribution.intents ?? []}
+        briefs={summary?.attribution.briefs ?? []}
+      />
+    </section>
+  );
+}
+
+function FunnelDatum({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded border border-line bg-paper p-3">
+      <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-muted">{label}</p>
+      <p className="mt-1 text-xl font-black text-ink">{value}</p>
+    </div>
+  );
+}
+
+function FunnelMoneyDatum({ label, value, currency }: { label: string; value: string; currency: string }) {
+  return (
+    <div className="rounded border border-line bg-paper p-3">
+      <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-muted">{label}</p>
+      <p className="mt-1 truncate text-xl font-black text-ink">
+        {currency} {value}
+      </p>
+    </div>
+  );
+}
+
+function ConversionRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded border border-line bg-white px-3 py-2">
+      <span className="text-xs font-bold text-muted">{label}</span>
+      <span className="text-sm font-black text-pine">{value}%</span>
+    </div>
+  );
+}
+
+function RankRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded border border-line bg-white px-3 py-2">
+      <span className="min-w-0 truncate text-xs font-bold text-ink">{label}</span>
+      <span className="shrink-0 text-xs font-black text-pine">{value}</span>
+    </div>
+  );
+}
+
+function strongestLeak(summary: AdminAnalyticsSummary) {
+  const entries = [
+    { label: 'Product page is not convincing enough to add to cart.', value: summary.conversion.viewToCart },
+    { label: 'Cart is not confident enough to start checkout.', value: summary.conversion.cartToCheckout },
+    { label: 'Checkout is not clear enough to create orders.', value: summary.conversion.checkoutToOrder },
+    { label: 'Post-purchase delivery needs attention.', value: summary.conversion.orderToDownload },
+  ].filter((item) => item.value > 0);
+
+  if (!summary.totals.events) {
+    return 'No funnel events yet. Browse as a customer first, then refresh this dashboard.';
+  }
+
+  if (!entries.length) {
+    return 'Not enough conversion movement yet. Focus on driving product views and cart adds.';
+  }
+
+  return entries.sort((left, right) => left.value - right.value)[0]?.label ?? 'Keep collecting events before deciding.';
+}
+
+function SelectedProductAnalyticsPanel({ product, summary }: { product: AdminProduct; summary: AdminProductAnalyticsSummary | null }) {
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-saffron/15 text-saffron">
+            <Sparkles size={18} />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Selected product analytics</p>
+            <h2 className="mt-1 text-lg font-semibold text-ink">{product.title}</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
+              Product-level readout for the last {summary?.window.days ?? 7} days. Use it to decide whether the preview, copy, license, or
+              sign-in step needs work.
+            </p>
+          </div>
+        </div>
+        <span className="rounded bg-saffron/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a5c16]">
+          {summary?.totals.events ?? 0} events
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <FunnelDatum label="Result clicks" value={summary?.totals.resultClicks ?? 0} />
+        <FunnelDatum label="Views" value={summary?.totals.productViews ?? 0} />
+        <FunnelDatum label="License picks" value={summary?.totals.licenseSelections ?? 0} />
+        <FunnelDatum label="Cart attempts" value={summary?.totals.cartAttempts ?? 0} />
+        <FunnelDatum label="Cart adds" value={summary?.totals.cartAdds ?? 0} />
+        <FunnelDatum label="Signals" value={summary?.counts.length ?? 0} />
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <FunnelDatum label="Orders" value={summary?.totals.ordersCreated ?? 0} />
+        <FunnelDatum label="Paid" value={summary?.totals.paidOrders ?? 0} />
+        <FunnelDatum label="Sold qty" value={summary?.totals.quantitySold ?? 0} />
+        <FunnelMoneyDatum label="Revenue" value={summary?.totals.revenue ?? '0'} currency={product.currency} />
+        <FunnelDatum label="Entitlements" value={summary?.totals.entitlements ?? 0} />
+        <FunnelDatum label="Downloads" value={summary?.totals.downloads ?? 0} />
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_1.2fr]">
+        <div className="rounded border border-line bg-paper p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Product conversion</p>
+          <div className="mt-3 grid gap-2">
+            <ConversionRow label="Click -> view" value={summary?.conversion.clickToView ?? 0} />
+            <ConversionRow label="View -> license" value={summary?.conversion.viewToLicenseSelection ?? 0} />
+            <ConversionRow label="View -> cart" value={summary?.conversion.viewToCart ?? 0} />
+            <ConversionRow label="Attempt -> cart" value={summary?.conversion.cartAttemptSuccess ?? 0} />
+            <ConversionRow label="Cart -> order" value={summary?.conversion.cartToOrder ?? 0} />
+            <ConversionRow label="Order -> paid" value={summary?.conversion.orderToPaid ?? 0} />
+            <ConversionRow label="Paid -> vault" value={summary?.conversion.paidToDownload ?? 0} />
+          </div>
+          <p className="mt-3 rounded border border-pine/20 bg-pine/10 p-2 text-xs font-bold leading-5 text-pine">
+            {summary?.recommendation ?? 'No product-level events yet. Open this product as a customer and refresh admin.'}
+          </p>
+        </div>
+
+        <div className="rounded border border-line bg-paper p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Search terms that led here</p>
+          <div className="mt-3 grid gap-2">
+            {(summary?.searchTerms.length ? summary.searchTerms : [{ query: 'No search-result clicks captured yet', count: 0 }])
+              .slice(0, 5)
+              .map((item) => (
+                <RankRow key={item.query} label={item.query} value={item.count} />
+              ))}
+          </div>
+        </div>
+
+        <div className="rounded border border-line bg-paper p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">License demand</p>
+          <div className="mt-3 grid gap-2">
+            {(summary?.licensePicks.length
+              ? summary.licensePicks
+              : [{ licenseId: 'empty', licenseName: 'No license choices captured yet', count: 0 }]
+            )
+              .slice(0, 5)
+              .map((item) => (
+                <RankRow key={item.licenseId} label={item.licenseName || item.licenseId} value={item.count} />
+              ))}
+          </div>
+        </div>
+      </div>
+
+      <AttributionBreakdownPanel
+        title="Where this product came from"
+        emptyLabel="No product attribution captured yet"
+        sources={summary?.attribution.sources ?? []}
+        campaigns={summary?.attribution.campaigns ?? []}
+        intents={summary?.attribution.intents ?? []}
+        briefs={summary?.attribution.briefs ?? []}
+      />
+    </section>
+  );
+}
+
+function AttributionBreakdownPanel({
+  title,
+  emptyLabel,
+  sources,
+  campaigns,
+  intents,
+  briefs,
+}: {
+  title: string;
+  emptyLabel: string;
+  sources: Array<{ value: string; count: number }>;
+  campaigns: Array<{ value: string; count: number }>;
+  intents: Array<{ value: string; count: number }>;
+  briefs: Array<{ value: string; count: number }>;
+}) {
+  return (
+    <div className="mt-4 rounded border border-line bg-paper p-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{title}</p>
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <AttributionColumn title="Sources" rows={sources} emptyLabel={emptyLabel} />
+        <AttributionColumn title="Campaigns" rows={campaigns} emptyLabel={emptyLabel} />
+        <AttributionColumn title="Intents" rows={intents} emptyLabel={emptyLabel} />
+        <AttributionColumn title="Briefs" rows={briefs} emptyLabel={emptyLabel} />
+      </div>
+    </div>
+  );
+}
+
+function AttributionColumn({
+  title,
+  rows,
+  emptyLabel,
+}: {
+  title: string;
+  rows: Array<{ value: string; count: number }>;
+  emptyLabel: string;
+}) {
+  const visible = rows.length ? rows.slice(0, 4) : [{ value: emptyLabel, count: 0 }];
+
+  return (
+    <div className="rounded border border-line bg-white p-3">
+      <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-muted">{title}</p>
+      <div className="mt-2 grid gap-2">
+        {visible.map((item) => (
+          <RankRow key={`${title}-${item.value}`} label={item.value} value={item.count} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PaymentDesk({
+  payments,
+  loading,
+  adminPasswords,
+  paymentRefs,
+  onChangeAdminPassword,
+  onChangePaymentRef,
+  onMarkPaid,
+  onMarkFailed,
+}: {
+  payments: AdminPaymentRow[];
+  loading: boolean;
+  adminPasswords: Record<string, string>;
+  paymentRefs: Record<string, string>;
+  onChangeAdminPassword: (paymentId: string, value: string) => void;
+  onChangePaymentRef: (paymentId: string, value: string) => void;
+  onMarkPaid: (paymentId: string) => void;
+  onMarkFailed: (paymentId: string) => void;
+}) {
+  const pending = payments.filter((row) => row.payment.status === 'pending');
+  const visible = pending.length ? pending : payments.slice(0, 5);
+
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-pine/10 text-pine">
+            <CreditCard size={18} />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Payment desk</p>
+            <h2 className="mt-1 text-lg font-semibold text-ink">Manual payment approvals</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
+              Approving a payment marks the order as paid and unlocks the customer delivery vault. Failed payments keep downloads locked.
+            </p>
+          </div>
+        </div>
+        <span className="rounded bg-saffron/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#8a5c16]">
+          {pending.length} pending
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        {visible.length ? (
+          visible.map((row) => (
+            <div key={row.payment.id} className="rounded-lg border border-line bg-paper p-3">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-black text-ink">{row.order.orderNumber}</span>
+                    <StatusPill status={row.payment.status} />
+                    <StatusPill status={row.order.status} />
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-muted">
+                    {row.customer.fullName || row.customer.email} / {row.payment.provider} / {row.payment.mode.replaceAll('_', ' ')}
+                  </p>
+                  <p className="text-xs text-muted">
+                    Created {formatDate(row.order.createdAt)} / Payment ref {row.payment.providerPaymentId ?? 'not supplied'}
+                  </p>
+                  <PaymentAttributionLine attribution={row.order.billingSnapshot?.attribution ?? null} />
+                </div>
+                <div className="text-left lg:text-right">
+                  <p className="text-xs font-semibold uppercase text-muted">Amount</p>
+                  <p className="text-2xl font-black text-pine">
+                    {row.payment.currency} {row.payment.amount}
+                  </p>
+                </div>
+              </div>
+
+              {row.payment.status === 'pending' ? (
+                <div className="mt-3 grid gap-2">
+                  <div className="grid gap-2 lg:grid-cols-2">
+                    <input
+                      value={paymentRefs[row.payment.id] ?? ''}
+                      onChange={(event) => onChangePaymentRef(row.payment.id, event.target.value)}
+                      placeholder="Optional bank/Fawry/Paymob reference"
+                      className="h-10 rounded border border-line bg-white px-3 text-sm text-ink"
+                    />
+                    <input
+                      type="password"
+                      value={adminPasswords[row.payment.id] ?? ''}
+                      onChange={(event) => onChangeAdminPassword(row.payment.id, event.target.value)}
+                      placeholder="Admin password required to unlock delivery"
+                      className="h-10 rounded border border-line bg-white px-3 text-sm text-ink"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={loading || (adminPasswords[row.payment.id] ?? '').length < 8}
+                      onClick={() => onMarkPaid(row.payment.id)}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded bg-pine px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <CheckCircle2 size={16} />
+                      Mark paid
+                    </button>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => onMarkFailed(row.payment.id)}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded border border-berry/30 bg-white px-4 text-sm font-semibold text-berry disabled:opacity-60"
+                    >
+                      <XCircle size={16} />
+                      Fail
+                    </button>
+                    <span className="inline-flex items-center text-xs font-bold text-muted">
+                      Password is verified by the API before files unlock.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 rounded border border-line bg-white p-3 text-sm text-muted">
+                  This payment is {row.payment.status}. Downloads are{' '}
+                  {row.order.status === 'paid' ? 'available from the vault' : 'still locked'}.
+                </p>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="rounded border border-line bg-paper p-4 text-sm text-muted">
+            No payment sessions yet. Create a checkout from a customer account to see manual approvals here.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PaymentAttributionLine({
+  attribution,
+}: {
+  attribution?: {
+    source?: string | null;
+    campaign?: string | null;
+    intent?: string | null;
+    brief?: string | null;
+  } | null;
+}) {
+  const parts = [
+    attribution?.source ? `Source ${attribution.source}` : null,
+    attribution?.campaign ? `Campaign ${attribution.campaign}` : null,
+    attribution?.intent ? `Intent ${attribution.intent}` : null,
+    attribution?.brief ? `Brief ${attribution.brief}` : null,
+  ].filter(Boolean);
+
+  return <p className="mt-1 text-xs text-muted">Attribution: {parts.length ? parts.join(' / ') : 'not captured'}</p>;
+}
+
+function LaunchReadinessRow({
+  item,
+}: {
+  item: {
+    label: string;
+    passed: boolean;
+    value: string;
+    detail: string;
+  };
+}) {
+  return (
+    <div className="rounded border border-line bg-paper p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-ink">{item.label}</p>
+          <p className="mt-1 text-xs leading-5 text-muted">{item.detail}</p>
+        </div>
+        <span
+          className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-1 text-[0.68rem] font-black uppercase tracking-[0.1em] ${
+            item.passed ? 'bg-pine/10 text-pine' : 'bg-saffron/15 text-[#8a5c16]'
+          }`}
+        >
+          {item.passed ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
+          {item.value}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function CatalogRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -694,6 +1955,52 @@ function CatalogRow({ icon: Icon, label, value }: { icon: LucideIcon; label: str
         <span className="truncate">{label}</span>
       </span>
       <span className="font-semibold text-ink">{value}</span>
+    </div>
+  );
+}
+
+function AdminField({ label, wide = false, children }: { label: string; wide?: boolean; children: React.ReactNode }) {
+  return (
+    <label className={`block ${wide ? 'lg:col-span-2' : ''}`}>
+      <span className="text-sm font-medium text-ink">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function MultiCheck({
+  label,
+  items,
+  selected,
+  onChange,
+}: {
+  label: string;
+  items: Array<{ id: string; name: string; slug?: string }>;
+  selected: string[];
+  onChange: (value: string[]) => void;
+}) {
+  function toggle(id: string) {
+    onChange(selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
+  }
+
+  return (
+    <div>
+      <p className="mb-2 text-sm font-medium text-ink">{label}</p>
+      {items.length ? (
+        <div className="grid max-h-44 gap-2 overflow-auto rounded border border-line bg-paper p-2">
+          {items.map((item) => (
+            <label key={item.id} className="flex items-center gap-2 rounded bg-white px-2 py-1.5 text-sm text-ink">
+              <input type="checkbox" checked={selected.includes(item.id)} onChange={() => toggle(item.id)} />
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">{item.name}</span>
+                {item.slug ? <span className="block truncate text-xs text-muted">{item.slug}</span> : null}
+              </span>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded border border-line bg-paper p-3 text-sm text-muted">No {label.toLowerCase()} found.</p>
+      )}
     </div>
   );
 }

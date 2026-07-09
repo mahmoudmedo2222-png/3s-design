@@ -98,45 +98,73 @@ export class AdminProductsService {
       throw new NotFoundException('Product not found');
     }
 
-    const [licensePrice, watermarkedPreview, deliveryAsset, category, tag, attributes] = await Promise.all([
-      db.select({ id: productLicensePrices.id }).from(productLicensePrices).where(eq(productLicensePrices.productId, productId)).limit(1),
-      db
-        .select({ id: productAssets.id })
-        .from(productAssets)
-        .where(
-          and(
-            eq(productAssets.productId, productId),
-            eq(productAssets.assetType, 'watermarked_preview'),
-            eq(productAssets.isPublicPreview, true),
-            eq(productAssets.isPrimary, true),
-            eq(productAssets.assetStatus, 'ready'),
-            inArray(productAssets.scanStatus, ['passed', 'skipped']),
-          ),
-        )
-        .limit(1),
-      db
-        .select({ id: productAssets.id })
-        .from(productAssets)
-        .where(
-          and(
-            eq(productAssets.productId, productId),
-            inArray(productAssets.assetType, ['delivery_zip', 'source_file']),
-            eq(productAssets.assetStatus, 'ready'),
-            inArray(productAssets.scanStatus, ['passed', 'skipped']),
-          ),
-        )
-        .limit(1),
-      db
-        .select({ categoryId: productCategories.categoryId })
-        .from(productCategories)
-        .where(eq(productCategories.productId, productId))
-        .limit(1),
-      db.select({ tagId: productTags.tagId }).from(productTags).where(eq(productTags.productId, productId)).limit(1),
-      db
-        .select({ key: productAttributes.key, value: productAttributes.value })
-        .from(productAttributes)
-        .where(eq(productAttributes.productId, productId)),
-    ]);
+    const [licensePrice, watermarkedPreview, deliveryAsset, category, tag, attributes, licensePrices, categories, tags, assets] =
+      await Promise.all([
+        db.select({ id: productLicensePrices.id }).from(productLicensePrices).where(eq(productLicensePrices.productId, productId)).limit(1),
+        db
+          .select({ id: productAssets.id })
+          .from(productAssets)
+          .where(
+            and(
+              eq(productAssets.productId, productId),
+              eq(productAssets.assetType, 'watermarked_preview'),
+              eq(productAssets.isPublicPreview, true),
+              eq(productAssets.isPrimary, true),
+              eq(productAssets.assetStatus, 'ready'),
+              inArray(productAssets.scanStatus, ['passed', 'skipped']),
+            ),
+          )
+          .limit(1),
+        db
+          .select({ id: productAssets.id })
+          .from(productAssets)
+          .where(
+            and(
+              eq(productAssets.productId, productId),
+              inArray(productAssets.assetType, ['delivery_zip', 'source_file']),
+              eq(productAssets.assetStatus, 'ready'),
+              inArray(productAssets.scanStatus, ['passed', 'skipped']),
+            ),
+          )
+          .limit(1),
+        db
+          .select({ categoryId: productCategories.categoryId })
+          .from(productCategories)
+          .where(eq(productCategories.productId, productId))
+          .limit(1),
+        db.select({ tagId: productTags.tagId }).from(productTags).where(eq(productTags.productId, productId)).limit(1),
+        db
+          .select({ key: productAttributes.key, value: productAttributes.value })
+          .from(productAttributes)
+          .where(eq(productAttributes.productId, productId)),
+        db
+          .select({
+            id: productLicensePrices.id,
+            licenseId: productLicensePrices.licenseId,
+            price: productLicensePrices.price,
+            currency: productLicensePrices.currency,
+          })
+          .from(productLicensePrices)
+          .where(eq(productLicensePrices.productId, productId)),
+        db.select({ categoryId: productCategories.categoryId }).from(productCategories).where(eq(productCategories.productId, productId)),
+        db.select({ tagId: productTags.tagId }).from(productTags).where(eq(productTags.productId, productId)),
+        db
+          .select({
+            id: productAssets.id,
+            assetType: productAssets.assetType,
+            storageKey: productAssets.storageKey,
+            fileName: productAssets.fileName,
+            mimeType: productAssets.mimeType,
+            fileSize: productAssets.fileSize,
+            assetStatus: productAssets.assetStatus,
+            scanStatus: productAssets.scanStatus,
+            isPrimary: productAssets.isPrimary,
+            isPublicPreview: productAssets.isPublicPreview,
+            sortOrder: productAssets.sortOrder,
+          })
+          .from(productAssets)
+          .where(eq(productAssets.productId, productId)),
+      ]);
 
     const designDna = designDnaFromAttributes(attributes);
     const designDnaReadiness = this.getDesignDnaReadiness(designDna);
@@ -218,6 +246,12 @@ export class AdminProductsService {
       quality,
       designDna,
       designDnaReadiness,
+      current: {
+        licensePrices,
+        categoryIds: categories.map((item) => item.categoryId),
+        tagIds: tags.map((item) => item.tagId),
+        assets,
+      },
       missing: missing.map((check) => ({
         key: check.key,
         message: check.message,
