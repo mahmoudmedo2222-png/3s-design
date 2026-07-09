@@ -99,6 +99,10 @@ export class AnalyticsService {
     const cartAdds = byName.product_add_to_cart_succeeded ?? 0;
     const checkoutAttempts = byName.checkout_order_attempted ?? 0;
     const ordersCreated = byName.checkout_order_created ?? 0;
+    const paymentStatusViews = byName.payment_status_viewed ?? 0;
+    const paymentStatusRefreshes = byName.payment_status_refreshed ?? 0;
+    const paymentProviderOpens = byName.payment_status_provider_opened ?? 0;
+    const paymentRecoveryActions = byName.payment_recovery_action_clicked ?? 0;
     const downloadsRequested = byName.download_asset_requested ?? 0;
 
     return {
@@ -113,6 +117,10 @@ export class AnalyticsService {
         cartAdds,
         checkoutAttempts,
         ordersCreated,
+        paymentStatusViews,
+        paymentStatusRefreshes,
+        paymentProviderOpens,
+        paymentRecoveryActions,
         downloadsRequested,
       },
       conversion: {

@@ -12,6 +12,10 @@ export const allowedAnalyticsEvents = [
   'checkout_confirmation_toggled',
   'checkout_order_attempted',
   'checkout_order_created',
+  'payment_status_viewed',
+  'payment_status_refreshed',
+  'payment_status_provider_opened',
+  'payment_recovery_action_clicked',
   'download_receipt_copied',
   'download_asset_requested',
 ] as const;

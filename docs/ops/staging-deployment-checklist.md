@@ -99,6 +99,20 @@ Run manually in staging:
 - Resolve refund from admin.
 - Confirm entitlement becomes inactive.
 
+Run readiness command after API deploy:
+
+```bash
+pnpm phase2:beta-readiness
+```
+
+For the current Paymob-first rollout:
+
+```bash
+pnpm phase2:paymob-readiness
+```
+
+Use `pnpm phase2:beta-readiness:manual` only for controlled manual-flow demos. It is not enough for paid beta approval.
+
 ## 7. Admin Smoke Test
 
 - Login to `/admin`.

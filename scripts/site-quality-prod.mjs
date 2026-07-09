@@ -5,6 +5,7 @@ import path from 'node:path';
 const port = process.env.SITE_AUDIT_PORT ?? '3100';
 const baseUrl = process.env.SITE_AUDIT_BASE_URL ?? `http://127.0.0.1:${port}`;
 const webDir = path.resolve('apps/web');
+const nextBin = path.join(webDir, 'node_modules/next/dist/bin/next');
 
 cleanupStaleProjectBuilds();
 runTypecheck({
@@ -15,6 +16,7 @@ runTypecheck({
   },
 });
 await removeStaleBuildLock();
+const buildStartedAt = Date.now();
 runNextBuild({
   cwd: webDir,
   env: {
@@ -24,9 +26,9 @@ runNextBuild({
     SITE_AUDIT_SKIP_NEXT_TYPECHECK: 'true',
   },
 });
-await waitForProductionBuild();
+await waitForProductionBuild(buildStartedAt);
 
-const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-H', '127.0.0.1', '-p', port], {
+const server = spawn(process.execPath, [nextBin, 'start', '-H', '127.0.0.1', '-p', port], {
   cwd: webDir,
   env: { ...process.env, PORT: port },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -59,7 +61,7 @@ function runTypecheck(options = {}) {
 }
 
 function runNextBuild(options = {}) {
-  const result = spawnSync(process.execPath, ['node_modules/next/dist/bin/next', 'build'], { stdio: 'inherit', ...options });
+  const result = spawnSync(process.execPath, [nextBin, 'build'], { stdio: 'inherit', ...options });
   if (result.status !== 0) {
     console.warn(`next build exited with ${result.status ?? 1}; verifying production build files before failing.`);
   }
@@ -95,7 +97,7 @@ async function removeStaleBuildLock() {
   await fs.rm(path.join(webDir, '.next/lock'), { force: true });
 }
 
-async function waitForProductionBuild() {
+async function waitForProductionBuild(buildStartedAt) {
   const deadline = Date.now() + 30_000;
   const requiredFiles = ['.next/BUILD_ID', '.next/routes-manifest.json', '.next/server'];
 
@@ -103,8 +105,8 @@ async function waitForProductionBuild() {
     const checks = await Promise.all(
       requiredFiles.map(async (file) => {
         try {
-          await fs.stat(path.join(webDir, file));
-          return true;
+          const stat = await fs.stat(path.join(webDir, file));
+          return stat.mtimeMs >= buildStartedAt;
         } catch {
           return false;
         }
@@ -119,7 +121,7 @@ async function waitForProductionBuild() {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  throw new Error('Production build files were not ready after next build completed.');
+  throw new Error('Fresh production build files were not ready after next build completed.');
 }
 
 async function waitForServer(url) {

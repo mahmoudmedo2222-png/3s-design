@@ -1,6 +1,7 @@
 'use client';
 
-import { ArrowRight, BadgeCheck, Crown, LockKeyhole, ShoppingBag, Sparkles } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Crown, Download, LockKeyhole, ReceiptText, ShoppingBag, Sparkles } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useState } from 'react';
@@ -33,6 +34,11 @@ export function ProductDetailActions({ product, fitContext }: { product: Product
   const displayPrice = selectedLicense?.price ?? product.basePrice;
   const displayCurrency = selectedLicense?.currency ?? product.currency;
   const canPurchase = Boolean(selectedLicense);
+  const deliveryLabel = product.assets.some((asset) => !asset.isPublicPreview)
+    ? `${product.assets.filter((asset) => !asset.isPublicPreview).length} protected file${product.assets.filter((asset) => !asset.isPublicPreview).length === 1 ? '' : 's'}`
+    : product.variants.length
+      ? `${product.variants.length} delivery variant${product.variants.length === 1 ? '' : 's'}`
+      : 'Vault delivery after review';
   const licenseRules = [
     selectedLicense?.allowsCommercialUse ? 'Commercial use allowed' : 'Commercial use needs confirmation',
     selectedLicense?.allowsModification ? 'Brand edits allowed' : 'Edits need confirmation',
@@ -83,7 +89,7 @@ export function ProductDetailActions({ product, fitContext }: { product: Product
   }
 
   return (
-    <Panel className="p-3">
+    <Panel className="product-detail-actions p-3">
       {fitContext?.brief ? (
         <Panel className="mb-3 border-saffron/35 bg-[#fff8e8] p-3 shadow-none dark:bg-[#211a10]">
           <div className="flex items-start gap-2">
@@ -114,6 +120,16 @@ export function ProductDetailActions({ product, fitContext }: { product: Product
           <CompareButton product={product} />
           <MoodboardButton product={product} />
         </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 rounded-lg border border-pine/15 bg-pine/5 p-3">
+        <PurchaseFact icon={ReceiptText} label="You are buying" value={selectedLicense?.name ?? 'A protected design license'} />
+        <PurchaseFact icon={Download} label="After payment" value={deliveryLabel} />
+        <PurchaseFact
+          icon={BadgeCheck}
+          label="Main guardrail"
+          value={selectedLicense?.allowsCommercialUse ? 'Commercial use is included' : 'Confirm commercial use before checkout'}
+        />
       </div>
 
       {licenseOptions.length > 1 ? (
@@ -232,5 +248,19 @@ export function ProductDetailActions({ product, fitContext }: { product: Product
         )}
       </Panel>
     </Panel>
+  );
+}
+
+function PurchaseFact({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[1.6rem_minmax(0,1fr)] gap-2">
+      <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded bg-pine/10 text-pine">
+        <Icon size={14} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[0.68rem] font-black uppercase tracking-[0.12em] text-muted">{label}</span>
+        <span className="mt-0.5 block truncate text-xs font-black text-ink">{value}</span>
+      </span>
+    </div>
   );
 }

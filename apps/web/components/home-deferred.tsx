@@ -33,41 +33,41 @@ const StorefrontDiscovery = dynamic(() => import('./storefront-discovery').then(
 
 export function DeferredAiDiscoveryPanel() {
   return (
-    <IdleMount fallback={<DeferredBlock className="min-h-[420px]" />}>
+    <ViewportMount fallback={<DeferredBlock className="min-h-[420px]" />}>
       <AiDiscoveryPanel />
-    </IdleMount>
+    </ViewportMount>
   );
 }
 
 export function DeferredBuyerProfileRecovery() {
   return (
-    <IdleMount fallback={<DeferredBlock className="min-h-28" />}>
+    <ViewportMount fallback={<DeferredBlock className="min-h-28" />} rootMargin="500px">
       <BuyerProfileRecovery />
-    </IdleMount>
+    </ViewportMount>
   );
 }
 
 export function DeferredClientStudioPreview({ locale }: { locale: AppLocale }) {
   return (
-    <IdleMount fallback={<DeferredBlock className="mx-auto my-4 min-h-[520px] max-w-7xl" />}>
+    <ViewportMount fallback={<DeferredBlock className="mx-auto my-4 min-h-[520px] max-w-7xl" />} rootMargin="420px">
       <ClientStudioPreview locale={locale} />
-    </IdleMount>
+    </ViewportMount>
   );
 }
 
 export function DeferredSiteFooter({ products, locale }: { products: ProductSummary[]; locale: AppLocale }) {
   return (
-    <IdleMount fallback={<DeferredBlock className="min-h-56 rounded-none" />}>
+    <ViewportMount fallback={<DeferredBlock className="min-h-56 rounded-none" />}>
       <SiteFooter products={products} locale={locale} />
-    </IdleMount>
+    </ViewportMount>
   );
 }
 
 export function DeferredStorefrontDiscovery({ products }: { products: ProductSummary[] }) {
   return (
-    <IdleMount fallback={<DeferredBlock className="min-h-[640px]" />}>
+    <ViewportMount fallback={<DeferredBlock className="min-h-[640px]" />}>
       <StorefrontDiscovery products={products} />
-    </IdleMount>
+    </ViewportMount>
   );
 }
 
@@ -75,23 +75,33 @@ function DeferredBlock({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse rounded-lg border border-white/[0.08] bg-white/[0.045] ${className}`} aria-hidden="true" />;
 }
 
-function IdleMount({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
+function ViewportMount({ children, fallback, rootMargin = '300px' }: { children: ReactNode; fallback: ReactNode; rootMargin?: string }) {
   const [mounted, setMounted] = useState(false);
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const windowWithIdle = window as Window & {
-      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-
-    if (windowWithIdle.requestIdleCallback) {
-      const handle = windowWithIdle.requestIdleCallback(() => setMounted(true), { timeout: 1_200 });
-      return () => windowWithIdle.cancelIdleCallback?.(handle);
+    if (mounted || !element) {
+      return;
     }
 
-    const handle = window.setTimeout(() => setMounted(true), 1_200);
-    return () => window.clearTimeout(handle);
-  }, []);
+    if (!('IntersectionObserver' in window)) {
+      const handle = globalThis.setTimeout(() => setMounted(true), 1_800);
+      return () => globalThis.clearTimeout(handle);
+    }
 
-  return mounted ? children : fallback;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setMounted(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin },
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element, mounted, rootMargin]);
+
+  return <div ref={setElement}>{mounted ? children : fallback}</div>;
 }

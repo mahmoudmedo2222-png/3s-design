@@ -6,13 +6,14 @@ import { DownloadsModule } from '../downloads/downloads.module';
 import { RateLimitModule } from '../rate-limit/rate-limit.module';
 import { AdminPaymentsController } from './admin-payments.controller';
 import { PaymentWebhooksController } from './payment-webhooks.controller';
+import { PaymentReadinessService } from './payment-readiness.service';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 
 @Module({
   imports: [AuthModule, AuditModule, DatabaseModule, DownloadsModule, RateLimitModule],
   controllers: [PaymentsController, AdminPaymentsController, PaymentWebhooksController],
-  providers: [PaymentsService],
-  exports: [PaymentsService],
+  providers: [PaymentsService, PaymentReadinessService],
+  exports: [PaymentsService, PaymentReadinessService],
 })
 export class PaymentsModule {}

@@ -68,6 +68,8 @@ Never commit real secrets. Templates should contain placeholders only.
 | `PAYMOB_PAYMENT_KEY_TTL_SECONDS`        | API     | when Paymob checkout is enabled        |
 | `FAWRY_CHECKOUT_URL_TEMPLATE`           | API     | when Fawry redirect mode is enabled    |
 
+Payment provider readiness can be checked without exposing secrets at `GET /api/health/beta-readiness`.
+
 ### Observability
 
 | Variable                            | Used by | Required                             | Notes |

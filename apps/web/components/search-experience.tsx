@@ -170,9 +170,9 @@ export function SearchExperience() {
           <CustomerJourneyRail current="discover" tone="dark" />
         </div>
 
-        <section className="overflow-hidden rounded-lg border border-white/[0.12] bg-white/[0.06] text-white shadow-[0_24px_90px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+        <section className="search-decision-shell text-white">
           <div className="grid gap-4 p-4 lg:grid-cols-[0.82fr_1.18fr] lg:p-5">
-            <Panel tone="glass" className="flex min-h-[360px] flex-col justify-between p-4">
+            <Panel tone="glass" className="search-hero-panel flex flex-col justify-between p-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">Find by feeling</p>
                 <h1 className="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">
@@ -186,7 +186,7 @@ export function SearchExperience() {
               <form onSubmit={submit} className="mt-5 grid gap-3">
                 <label className="grid gap-2 text-sm font-bold text-white">
                   Search brief
-                  <span className="flex h-12 items-center gap-2 rounded border border-white/[0.12] bg-[#fff8e8] px-3 text-[#101513]">
+                  <span className="search-brief-input">
                     <Search size={18} />
                     <input
                       value={query}
@@ -209,19 +209,17 @@ export function SearchExperience() {
 
               <div className="mt-3 flex flex-wrap gap-2">
                 {starterBriefs.map((brief) => (
-                  <Button
+                  <button
                     key={brief}
                     type="button"
                     onClick={() => {
                       setQuery(brief);
                       void runSearch(brief, 1);
                     }}
-                    intent="ghost"
-                    size="sm"
-                    className="h-auto py-2 text-white/64"
+                    className="search-intent-chip"
                   >
                     {brief}
-                  </Button>
+                  </button>
                 ))}
               </div>
 
@@ -234,7 +232,7 @@ export function SearchExperience() {
               </div>
             </Panel>
 
-            <Panel tone="glass" className="p-3">
+            <Panel tone="glass" className="search-results-panel p-3">
               {response ? (
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -271,6 +269,8 @@ export function SearchExperience() {
                     <Signal title="Platform" values={response.brief.platforms} />
                   </div>
 
+                  <SearchMatchSummary response={response} lastQuery={lastQuery} signedIn={isSignedIn} />
+
                   {notice ? <Notice className="border-[#f7d17e]/30 bg-[#f7d17e]/10 text-[#f7d17e]">{notice}</Notice> : null}
                   {error ? <Notice tone="error">{error}</Notice> : null}
 
@@ -304,12 +304,7 @@ export function SearchExperience() {
                       ))}
                     </div>
                   ) : (
-                    <CustomerEmptyState
-                      tone="dark"
-                      icon={Search}
-                      title="No strong match yet."
-                      text="Broaden the brief with industry, mood, colors, and where the design will be used. A clearer commercial moment gives better matches."
-                    />
+                    <SearchRecoveryState onPick={(brief) => void runSearch(brief, 1)} />
                   )}
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.1] pt-3">
@@ -371,6 +366,56 @@ function Signal({ title, values }: { title: string; values: string[] }) {
     <div className="rounded border border-white/[0.1] bg-black/20 p-3">
       <p className="text-xs font-black uppercase tracking-[0.12em] text-white/45">{title}</p>
       <p className="mt-2 text-sm font-bold text-white">{values.length ? values.join(', ') : 'Needs refinement'}</p>
+    </div>
+  );
+}
+
+function SearchMatchSummary({ response, lastQuery, signedIn }: { response: AiDiscoveryResponse; lastQuery: string; signedIn: boolean }) {
+  const topMatch = response.items[0];
+  const topReason = topMatch?.match?.reason ?? response.assistantMessage;
+  const confidence = response.brief.confidence ? `${Math.round(response.brief.confidence * 100)}%` : 'Needs refinement';
+
+  return (
+    <div className="search-match-summary">
+      <SearchMatchCard label="Intent" value={lastQuery || response.brief.summary || 'Fresh discovery'} />
+      <SearchMatchCard label="Confidence" value={confidence} />
+      <SearchMatchCard label="Top reason" value={topReason} />
+      <SearchMatchCard label="Access" value={signedIn ? 'Full result pages unlocked' : 'Protected preview only'} />
+    </div>
+  );
+}
+
+function SearchMatchCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="search-match-card">
+      <p className="search-match-card__label">{label}</p>
+      <p className="search-match-card__value line-clamp-3">{value}</p>
+    </div>
+  );
+}
+
+function SearchRecoveryState({ onPick }: { onPick: (brief: string) => void }) {
+  const recoveryBriefs = [
+    'restaurant launch, appetite, premium, Instagram',
+    'real estate trust, calm luxury, property listing',
+    'sale campaign, urgency, clean ecommerce banner',
+  ];
+
+  return (
+    <div className="rounded-lg border border-white/[0.12] bg-black/20 p-4">
+      <CustomerEmptyState
+        tone="dark"
+        icon={Search}
+        title="No strong match yet."
+        text="The brief needs a clearer business, mood, platform, or buying moment. Try one of these recovery directions."
+      />
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        {recoveryBriefs.map((brief) => (
+          <button key={brief} type="button" onClick={() => onPick(brief)} className="search-intent-chip">
+            {brief}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

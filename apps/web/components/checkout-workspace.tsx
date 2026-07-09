@@ -20,7 +20,7 @@ import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuthSession } from '../lib/auth-session';
-import { fetchPaymentProviderReadiness, type PaymentProviderReadiness } from '../lib/api';
+import { fetchPaymentProviderReadiness, type OrderResponse, type PaymentProviderReadiness, type PaymentSession } from '../lib/api';
 import { captureAttributionFromLocation, readAttribution, type AttributionSnapshot } from '../lib/attribution';
 import { useCartStore, type CartItem } from '../lib/cart-store';
 import { trackFunnelEvent } from '../lib/funnel-analytics';
@@ -196,11 +196,11 @@ export function CheckoutWorkspace() {
   }
 
   return (
-    <section className="mx-auto grid max-w-7xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8">
+    <section className="checkout-decision-page mx-auto grid max-w-7xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8">
       <div className="space-y-4">
         <CustomerJourneyRail current="checkout" />
 
-        <div className="premium-panel p-4">
+        <div className="checkout-hero p-4">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-pine">Review order</p>
           <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -218,41 +218,11 @@ export function CheckoutWorkspace() {
           </div>
         </div>
 
-        <div className="premium-panel overflow-hidden">
+        <div className="checkout-cart-panel">
           {items.length ? (
             <div className="divide-y divide-line">
-              {items.map((item) => (
-                <div key={item.id} className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                  <div className="min-w-0">
-                    <p className="line-clamp-1 text-base font-black text-ink">{item.title}</p>
-                    <p className="mt-1 text-sm text-muted">
-                      {item.licenseName} / Qty {item.quantity} / {item.currency} {item.unitPrice}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Badge tone="success" className="normal-case tracking-normal">
-                        {item.licenseType}
-                      </Badge>
-                      <Badge tone="gold" className="normal-case tracking-normal text-ink">
-                        Account-owned license
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 sm:justify-end">
-                    <p className="text-lg font-black text-ink">
-                      {item.currency} {item.total}
-                    </p>
-                    <Button
-                      type="button"
-                      onClick={() => void remove(item.id)}
-                      intent="danger"
-                      size="icon"
-                      aria-label={`Remove ${item.title}`}
-                      title="Remove"
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </div>
+              {items.map((item, index) => (
+                <CheckoutCartItem key={item.id} item={item} index={index} onRemove={() => void remove(item.id)} />
               ))}
             </div>
           ) : (
@@ -282,6 +252,7 @@ export function CheckoutWorkspace() {
               />
               <CheckoutPromise title="3. Vault delivery" text="Approved purchases unlock download access from the account dashboard." />
             </Panel>
+            <CheckoutPaymentExpectation providers={providers} />
           </>
         ) : null}
 
@@ -292,7 +263,7 @@ export function CheckoutWorkspace() {
       </div>
 
       <aside className="space-y-3 lg:sticky lg:top-5 lg:self-start">
-        <Panel className="p-4">
+        <Panel className="checkout-summary-panel p-4">
           <div className="mb-4 flex items-center gap-2">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-pine/10 text-pine">
               <CreditCard size={17} />
@@ -307,15 +278,15 @@ export function CheckoutWorkspace() {
             <SummaryRow label="Subtotal" value={`${totals.currency} ${totals.subtotal}`} />
             <SummaryRow label="Discount" value={`${totals.currency} ${totals.discountTotal}`} />
             <SummaryRow label="Tax" value={`${totals.currency} ${totals.taxTotal}`} />
-            <div className="mt-2 flex items-center justify-between border-t border-line pt-3 text-base font-black">
+            <div className="checkout-total-row">
               <span>Total</span>
-              <span>
+              <strong>
                 {totals.currency} {totals.total}
-              </span>
+              </strong>
             </div>
           </div>
 
-          <div className="mt-4 rounded border border-saffron/30 bg-saffron/10 p-3">
+          <div className="checkout-next-step mt-4">
             <p className="text-sm font-black text-ink">Before you create the order</p>
             <div className="mt-3 grid gap-2">
               <SummaryCheck
@@ -330,7 +301,7 @@ export function CheckoutWorkspace() {
             </div>
           </div>
 
-          <label className="mt-3 flex cursor-pointer items-start gap-3 rounded border border-line bg-paper p-3 text-sm font-bold leading-6 text-ink dark:bg-[#0f1513]">
+          <label className="checkout-confirm-label mt-3 flex cursor-pointer items-start gap-3 border border-line bg-paper p-3 text-sm font-bold leading-6 text-ink dark:bg-[#0f1513]">
             <input
               type="checkbox"
               checked={licenseConfirmed}
@@ -351,7 +322,7 @@ export function CheckoutWorkspace() {
             type="button"
             onClick={() => void createOrder()}
             disabled={!items.length || isLoading || isCheckingOut || !licenseConfirmed}
-            className="mt-4 h-11 w-full font-black"
+            className="checkout-primary-action mt-4 w-full"
           >
             {isCheckingOut
               ? 'Creating order...'
@@ -381,6 +352,41 @@ export function CheckoutWorkspace() {
         <CheckoutTrustPanel />
       </aside>
     </section>
+  );
+}
+
+function CheckoutCartItem({ item, index, onRemove }: { item: CartItem; index: number; onRemove: () => void }) {
+  return (
+    <div className="checkout-cart-item">
+      <div className="flex min-w-0 gap-3">
+        <span className="checkout-cart-item__index">{String(index + 1).padStart(2, '0')}</span>
+        <div className="min-w-0">
+          <p className="line-clamp-1 text-base font-black text-ink">{item.title}</p>
+          <p className="mt-1 text-sm text-muted">
+            {item.licenseName} / Qty {item.quantity} / {item.currency} {item.unitPrice}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Badge tone="success" className="normal-case tracking-normal">
+              {item.licenseType}
+            </Badge>
+            <Badge tone="gold" className="normal-case tracking-normal text-ink">
+              Account-owned license
+            </Badge>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-3 sm:justify-end">
+        <div className="text-end">
+          <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-muted">Line total</p>
+          <p className="mt-1 text-lg font-black text-ink">
+            {item.currency} {item.total}
+          </p>
+        </div>
+        <Button type="button" onClick={onRemove} intent="danger" size="icon" aria-label={`Remove ${item.title}`} title="Remove">
+          <Trash2 size={16} />
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -416,15 +422,7 @@ function OrderCreatedPanel({ copied, onCopy }: { copied: boolean; onCopy: () => 
         <SuccessDatum label="Status" value={order.status} />
       </div>
 
-      <div className="mt-4 rounded border border-pine/20 bg-white/70 p-3 dark:bg-[#101816]">
-        <p className="text-sm font-black text-ink">Manual payment instructions</p>
-        <ol className="mt-2 grid gap-2 text-sm leading-6 text-muted">
-          <li>1. Pay the exact amount shown above using the approved manual payment method.</li>
-          <li>2. Use order number {order.orderNumber} as the payment reference.</li>
-          <li>3. Payment is reviewed by the 3S team before downloads are unlocked.</li>
-          <li>4. After approval, files appear in your account Delivery Vault.</li>
-        </ol>
-      </div>
+      <PostOrderPaymentInstructions order={order} payment={payment} />
 
       <div className="mt-4">
         <PostOrderGuidance order={order} payment={payment} />
@@ -435,18 +433,76 @@ function OrderCreatedPanel({ copied, onCopy }: { copied: boolean; onCopy: () => 
           <Copy size={16} />
           {copied ? 'Copied' : 'Copy order number'}
         </Button>
-        <ActionLink href="/account" intent="secondary" className="h-10" icon={FileArchive}>
+        <ActionLink
+          href="/account"
+          intent="secondary"
+          className="h-10"
+          icon={FileArchive}
+          onClick={() => trackCheckoutRecoveryAction(payment, 'open_delivery_desk')}
+        >
           Open delivery desk
+        </ActionLink>
+        <ActionLink
+          href={`/checkout/status?paymentId=${encodeURIComponent(payment.id)}`}
+          intent="secondary"
+          className="h-10"
+          icon={CreditCard}
+          onClick={() => trackCheckoutRecoveryAction(payment, 'track_payment')}
+        >
+          Track payment
         </ActionLink>
         <ActionLink href="/?intro=0#latest-designs" intent="secondary" className="h-10" icon={ShoppingBag}>
           Continue shopping
         </ActionLink>
-        <ActionLink href="/account" intent="secondary" className="h-10" icon={MessageCircle}>
+        <ActionLink
+          href="/account"
+          intent="secondary"
+          className="h-10"
+          icon={MessageCircle}
+          onClick={() => trackCheckoutRecoveryAction(payment, 'contact_support')}
+        >
           Contact support
         </ActionLink>
       </div>
     </section>
   );
+}
+
+function PostOrderPaymentInstructions({ order, payment }: { order: OrderResponse; payment: PaymentSession }) {
+  if (payment.mode === 'provider_checkout') {
+    return (
+      <div className="mt-4 rounded border border-pine/20 bg-white/70 p-3 dark:bg-[#101816]">
+        <p className="text-sm font-black text-ink">Secure provider checkout</p>
+        <ol className="mt-2 grid gap-2 text-sm leading-6 text-muted">
+          <li>1. Continue to the provider checkout from the payment status page.</li>
+          <li>2. Pay the exact amount shown above for order {order.orderNumber}.</li>
+          <li>3. Keep the provider reference if confirmation takes longer than expected.</li>
+          <li>4. Delivery unlocks only after the trusted webhook confirms payment.</li>
+        </ol>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded border border-pine/20 bg-white/70 p-3 dark:bg-[#101816]">
+      <p className="text-sm font-black text-ink">Manual payment instructions</p>
+      <ol className="mt-2 grid gap-2 text-sm leading-6 text-muted">
+        <li>1. Pay the exact amount shown above using the approved manual payment method.</li>
+        <li>2. Use order number {order.orderNumber} as the payment reference.</li>
+        <li>3. Payment is reviewed by the 3S team before downloads are unlocked.</li>
+        <li>4. After approval, files appear in your account Delivery Vault.</li>
+      </ol>
+    </div>
+  );
+}
+
+function trackCheckoutRecoveryAction(payment: PaymentSession, action: string) {
+  trackFunnelEvent('payment_recovery_action_clicked', {
+    action,
+    provider: payment.provider,
+    status: payment.status,
+    mode: payment.mode,
+  });
 }
 
 function SuccessDatum({ label, value }: { label: string; value: string }) {
@@ -514,6 +570,43 @@ function CheckoutPromise({ title, text }: { title: string; text: string }) {
       <p className="text-sm font-black text-ink">{title}</p>
       <p className="mt-2 text-xs leading-5 text-muted">{text}</p>
     </div>
+  );
+}
+
+function CheckoutPaymentExpectation({ providers }: { providers: PaymentProviderReadiness[] }) {
+  const provider = selectCheckoutProvider(providers);
+  const paymob = providers.find((item) => item.provider === 'paymob');
+  const providerReady = provider !== 'manual';
+
+  return (
+    <Panel className="border-saffron/25 p-4">
+      <div className="flex items-start gap-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-saffron/15 text-saffron">
+          {providerReady ? <CreditCard size={18} /> : <ShieldCheck size={18} />}
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-pine">Payment expectation</p>
+          <h2 className="mt-1 text-xl font-black text-ink">
+            {providerReady ? 'You will continue to secure provider checkout.' : 'This order will wait for manual payment review.'}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            {providerReady
+              ? 'The order is saved first, then the payment status page sends you to provider checkout and waits for webhook confirmation.'
+              : 'The order is saved first, then support/admin approval unlocks the delivery vault after a verified manual payment reference.'}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 md:grid-cols-3">
+        <DecisionFact label="Selected route" value={providerReady ? provider : 'Manual review'} fallback="Manual review" />
+        <DecisionFact
+          label="Provider status"
+          value={paymob?.configured ? 'Paymob configured' : 'Paymob not configured'}
+          fallback="Provider pending"
+        />
+        <DecisionFact label="Delivery rule" value="Webhook or admin approval unlocks files" fallback="Protected vault" />
+      </div>
+    </Panel>
   );
 }
 

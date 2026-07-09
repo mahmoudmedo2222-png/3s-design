@@ -6,6 +6,43 @@
 - `paymob`: sandbox-ready card checkout through Paymob Accept iframe.
 - `fawry` and `paypal`: provider slots are reserved; checkout adapters are not live yet.
 
+## Beta Readiness Check
+
+Use the API readiness endpoint before beta tests or sales demos:
+
+```http
+GET /api/health/beta-readiness
+```
+
+The response includes:
+
+- `databaseConfigured`: whether the API has database wiring.
+- `providerCheckoutReady`: whether at least one non-manual checkout provider is configured.
+- `paymentProviders`: provider readiness without secret values.
+- `blockers`: missing provider checkout requirements and the next action.
+
+Beta is blocked when only `manual` payment is ready. Manual review is a fallback, not a provider checkout substitute.
+
+Local command:
+
+```bash
+pnpm phase2:beta-readiness
+```
+
+Paymob-focused command:
+
+```bash
+pnpm phase2:paymob-readiness
+```
+
+For a controlled manual-flow demo only:
+
+```bash
+pnpm phase2:beta-readiness:manual
+```
+
+The manual command does not mean paid beta is ready. It only accepts the manual fallback while provider checkout is still missing.
+
 ## Paymob Environment
 
 Required for `paymob` readiness:

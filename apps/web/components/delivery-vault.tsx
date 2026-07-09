@@ -54,7 +54,7 @@ export function DeliveryVault({ downloads }: { downloads: DownloadEntitlement[] 
   }
 
   return (
-    <Panel tone="glass" className="p-4 shadow-[0_22px_82px_rgba(0,0,0,0.22)]">
+    <Panel tone="glass" className="vault-shell p-4 shadow-[0_22px_82px_rgba(0,0,0,0.22)]">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
@@ -78,91 +78,105 @@ export function DeliveryVault({ downloads }: { downloads: DownloadEntitlement[] 
             </Notice>
           ) : null}
           {downloads.map((item) => (
-            <Panel key={item.id} tone="glass" className="p-3 shadow-none">
-              <div className="flex items-start justify-between gap-3">
+            <article key={item.id} className="vault-entitlement-card">
+              <div className="vault-entitlement-card__top">
                 <div className="min-w-0">
                   <p className="line-clamp-1 text-sm font-black text-white">{item.product.title}</p>
                   <p className="mt-1 text-xs text-white/50">
                     {item.license.name} / Order {item.order.orderNumber}
                   </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="vault-license-ribbon">
+                      <ShieldCheck size={13} />
+                      {item.license.name}
+                    </span>
+                    <span className="vault-license-ribbon">
+                      <FileArchive size={13} />
+                      {item.assets.length} file{item.assets.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
                 </div>
                 <Badge tone={item.isActive ? 'success' : 'neutral'} className="shrink-0">
                   {item.isActive ? 'active' : 'inactive'}
                 </Badge>
               </div>
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                <VaultMetric label="Remaining" value={item.downloadsRemaining} />
-                <VaultMetric label="Used" value={item.downloadsUsed} />
-                <VaultMetric label="Hourly left" value={item.hourlyDownloadsRemaining} />
-              </div>
-
-              <div className="mt-3 grid gap-2 rounded border border-white/[0.1] bg-black/15 p-3 sm:grid-cols-2">
-                <VaultFact icon={ShieldCheck} label="License" value={item.license.name} />
-                <VaultFact
-                  icon={CalendarClock}
-                  label="Access"
-                  value={item.expiresAt ? `Expires ${formatDate(item.expiresAt)}` : 'No expiry shown'}
-                />
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <ActionLink
-                  href={`/products/${item.product.slug}`}
-                  icon={ExternalLink}
-                  intent="secondary"
-                  className="h-9 bg-[#fff8e8] px-3 text-xs font-black hover:bg-[#f7d17e]"
-                >
-                  Product page
-                </ActionLink>
-                <Button
-                  type="button"
-                  onClick={() => void copyLicenseReceipt(item)}
-                  icon={Copy}
-                  intent="ghost"
-                  size="sm"
-                  className="font-black"
-                >
-                  {copiedKey === item.id ? 'Copied receipt' : 'Copy license receipt'}
-                </Button>
-              </div>
-
-              {item.assets.length ? (
-                <div className="mt-3 grid gap-2">
-                  {item.assets.map((asset) => {
-                    const key = `${item.id}:${asset.id}`;
-                    const disabledReason = downloadDisabledReason(item, loadingKey === key);
-
-                    return (
-                      <div key={asset.id} className="grid gap-1">
-                        <button
-                          type="button"
-                          onClick={() => void downloadAsset(item.id, asset.id)}
-                          disabled={Boolean(disabledReason)}
-                          className="flex min-h-11 items-center justify-between gap-3 rounded border border-white/[0.12] bg-white/[0.06] px-3 py-2 text-left transition hover:border-[#f7d17e]/60 disabled:cursor-not-allowed disabled:opacity-55"
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate text-xs font-black text-white">{asset.fileName}</span>
-                            <span className="mt-0.5 block text-[0.68rem] font-bold uppercase tracking-[0.12em] text-white/42">
-                              {asset.assetType.replace('_', ' ')} / {asset.mimeType}
-                            </span>
-                          </span>
-                          <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded bg-[#fff8e8] px-2 text-xs font-black text-[#101513]">
-                            <Download size={13} />
-                            {loadingKey === key ? 'Preparing' : 'Download'}
-                          </span>
-                        </button>
-                        {disabledReason && loadingKey !== key ? <p className="text-xs font-bold text-white/42">{disabledReason}</p> : null}
-                      </div>
-                    );
-                  })}
+              <div className="grid gap-3 p-3">
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <VaultMetric label="Remaining" value={item.downloadsRemaining} />
+                  <VaultMetric label="Used" value={item.downloadsUsed} />
+                  <VaultMetric label="Hourly left" value={item.hourlyDownloadsRemaining} />
                 </div>
-              ) : (
-                <p className="mt-3 rounded border border-white/[0.1] bg-black/15 p-3 text-xs font-bold leading-5 text-white/52">
-                  No delivery asset is ready for this entitlement yet.
-                </p>
-              )}
-            </Panel>
+
+                <div className="mt-3 grid gap-2 rounded border border-white/[0.1] bg-black/15 p-3 sm:grid-cols-2">
+                  <VaultFact icon={ShieldCheck} label="License" value={item.license.name} />
+                  <VaultFact
+                    icon={CalendarClock}
+                    label="Access"
+                    value={item.expiresAt ? `Expires ${formatDate(item.expiresAt)}` : 'No expiry shown'}
+                  />
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <ActionLink
+                    href={`/products/${item.product.slug}`}
+                    icon={ExternalLink}
+                    intent="secondary"
+                    className="h-9 bg-[#fff8e8] px-3 text-xs font-black hover:bg-[#f7d17e]"
+                  >
+                    Product page
+                  </ActionLink>
+                  <Button
+                    type="button"
+                    onClick={() => void copyLicenseReceipt(item)}
+                    icon={Copy}
+                    intent="ghost"
+                    size="sm"
+                    className="font-black"
+                  >
+                    {copiedKey === item.id ? 'Copied receipt' : 'Copy license receipt'}
+                  </Button>
+                </div>
+
+                {item.assets.length ? (
+                  <div className="mt-3 grid gap-2">
+                    {item.assets.map((asset) => {
+                      const key = `${item.id}:${asset.id}`;
+                      const disabledReason = downloadDisabledReason(item, loadingKey === key);
+
+                      return (
+                        <div key={asset.id} className="grid gap-1">
+                          <button
+                            type="button"
+                            onClick={() => void downloadAsset(item.id, asset.id)}
+                            disabled={Boolean(disabledReason)}
+                            className="vault-asset-button"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate text-xs font-black text-white">{asset.fileName}</span>
+                              <span className="mt-0.5 block text-[0.68rem] font-bold uppercase tracking-[0.12em] text-white/42">
+                                {asset.assetType.replace('_', ' ')} / {asset.mimeType}
+                              </span>
+                            </span>
+                            <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded bg-[#fff8e8] px-2 text-xs font-black text-[#101513]">
+                              <Download size={13} />
+                              {loadingKey === key ? 'Preparing' : 'Download'}
+                            </span>
+                          </button>
+                          {disabledReason && loadingKey !== key ? (
+                            <p className="text-xs font-bold text-white/42">{disabledReason}</p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-3 rounded border border-white/[0.1] bg-black/15 p-3 text-xs font-bold leading-5 text-white/52">
+                    No delivery asset is ready for this entitlement yet.
+                  </p>
+                )}
+              </div>
+            </article>
           ))}
         </div>
       ) : (

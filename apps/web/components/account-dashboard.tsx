@@ -199,7 +199,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
   }
 
   return (
-    <main className="account-dashboard min-h-screen bg-[#060b0a] px-4 py-5 text-white sm:px-6 lg:px-8">
+    <main className="account-dashboard account-studio-page min-h-screen px-4 py-5 text-white sm:px-6 lg:px-8">
       <Panel tone="glass" className="mx-auto flex max-w-7xl items-center justify-between gap-4 p-3">
         <Link href="/?intro=0" className="brand-lockup" aria-label="Back to marketplace">
           <span className="brand-mark" aria-hidden="true">
@@ -226,12 +226,19 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
         <div className="space-y-4">
           <CustomerJourneyRail current="deliver" tone="dark" />
 
-          <Panel tone="glass" className="p-4 sm:p-5">
+          <Panel tone="glass" className="account-studio-hero p-4 sm:p-5">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">Signed in</p>
             <h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">Welcome, {user?.fullName?.split(' ')[0] || 'designer'}.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/66">
               Your account is now the protected place for design matching, saved intent, checkout, receipts, and future downloads.
             </p>
+
+            <div className="account-ownership-strip mt-5">
+              <OwnershipCard label="Orders" value={orders.length} />
+              <OwnershipCard label="Payments" value={payments.length} />
+              <OwnershipCard label="Vault files" value={downloads.reduce((sum, item) => sum + item.assets.length, 0)} />
+              <OwnershipCard label="Saved briefs" value={savedSearches.length} />
+            </div>
 
             <div className="mt-5 grid gap-3 md:grid-cols-3">
               <StatusCard icon={ShieldCheck} title="Secure session" text="Access and refresh tokens are stored for this device." />
@@ -456,6 +463,15 @@ function StatusCard({ icon: Icon, title, text }: { icon: LucideIcon; title: stri
       <h2 className="mt-2 text-sm font-black">{title}</h2>
       <p className="mt-1 text-xs leading-5 text-white/58">{text}</p>
     </Panel>
+  );
+}
+
+function OwnershipCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="account-ownership-card">
+      <p className="account-ownership-card__label">{label}</p>
+      <p className="account-ownership-card__value">{value}</p>
+    </div>
   );
 }
 

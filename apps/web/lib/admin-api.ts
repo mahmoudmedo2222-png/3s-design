@@ -121,6 +121,20 @@ export type AdminPaymentProviderReadiness = {
   nextAction?: string;
 };
 
+export type BetaReadinessResponse = {
+  ok: boolean;
+  service: 'api';
+  databaseConfigured: boolean;
+  providerCheckoutReady: boolean;
+  paymentProviders: AdminPaymentProviderReadiness[];
+  blockers: Array<{
+    provider: AdminPaymentProviderReadiness['provider'];
+    blocking: string[];
+    nextAction: string;
+  }>;
+  checkedAt: string;
+};
+
 export type AdminPaymentRow = {
   payment: {
     id: string;
@@ -211,6 +225,10 @@ export type AdminAnalyticsSummary = {
     cartAdds: number;
     checkoutAttempts: number;
     ordersCreated: number;
+    paymentStatusViews: number;
+    paymentStatusRefreshes: number;
+    paymentProviderOpens: number;
+    paymentRecoveryActions: number;
     downloadsRequested: number;
   };
   conversion: {
@@ -322,6 +340,10 @@ export function fetchAdminProducts(token: string) {
 
 export function fetchAdminPaymentProviderReadiness(token: string) {
   return adminRequest<{ items: AdminPaymentProviderReadiness[] }>('/payments/providers', { token });
+}
+
+export function fetchBetaReadiness() {
+  return adminRequest<BetaReadinessResponse>('/health/beta-readiness');
 }
 
 export function fetchAdminPayments(token: string) {

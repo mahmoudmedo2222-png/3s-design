@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, or } from 'drizzle-orm';
+import { and, desc, eq, or, sql } from 'drizzle-orm';
 import { entitlements, orders, payments, refundRequests, refunds, users } from '@3s-design/db/schema';
 import { AuditService } from '../audit/audit.service';
 import { DatabaseService } from '../database/database.service';
@@ -58,30 +58,36 @@ export class RefundsService {
       throw new BadRequestException('Refund requests are only available within 24 hours of payment');
     }
 
-    const [existing] = await db
-      .select({ id: refundRequests.id, status: refundRequests.status })
-      .from(refundRequests)
-      .where(
-        and(
-          eq(refundRequests.orderId, order.id),
-          or(eq(refundRequests.status, 'requested'), eq(refundRequests.status, 'under_review'), eq(refundRequests.status, 'approved')),
-        ),
-      )
-      .limit(1);
+    const created = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`refund-request:${order.id}`}))`);
 
-    if (existing) {
-      throw new BadRequestException(`Refund request already exists with status ${existing.status}`);
-    }
+      const [existing] = await tx
+        .select({ id: refundRequests.id, status: refundRequests.status })
+        .from(refundRequests)
+        .where(
+          and(
+            eq(refundRequests.orderId, order.id),
+            or(eq(refundRequests.status, 'requested'), eq(refundRequests.status, 'under_review'), eq(refundRequests.status, 'approved')),
+          ),
+        )
+        .limit(1);
 
-    const [created] = await db
-      .insert(refundRequests)
-      .values({
-        orderId: order.id,
-        userId,
-        status: 'requested',
-        reason: input.reason.trim(),
-      })
-      .returning();
+      if (existing) {
+        throw new BadRequestException(`Refund request already exists with status ${existing.status}`);
+      }
+
+      const [inserted] = await tx
+        .insert(refundRequests)
+        .values({
+          orderId: order.id,
+          userId,
+          status: 'requested',
+          reason: input.reason.trim(),
+        })
+        .returning();
+
+      return inserted;
+    });
 
     if (!created) {
       throw new BadRequestException('Refund request could not be created');
@@ -152,22 +158,34 @@ export class RefundsService {
     const now = new Date();
 
     await db.transaction(async (tx) => {
-      await tx
+      const [updatedRequest] = await tx
         .update(refundRequests)
         .set({
           status: 'approved',
           adminNote: input.adminNote,
           resolvedAt: now,
         })
-        .where(eq(refundRequests.id, request.id));
+        .where(
+          and(eq(refundRequests.id, request.id), or(eq(refundRequests.status, 'requested'), eq(refundRequests.status, 'under_review'))),
+        )
+        .returning();
 
-      await tx
+      if (!updatedRequest) {
+        throw new BadRequestException('Refund request is not open');
+      }
+
+      const [updatedPayment] = await tx
         .update(payments)
         .set({
           status: 'refunded',
           updatedAt: now,
         })
-        .where(eq(payments.id, payment.id));
+        .where(and(eq(payments.id, payment.id), eq(payments.status, 'paid')))
+        .returning();
+
+      if (!updatedPayment) {
+        throw new BadRequestException('Paid payment was not found for this order');
+      }
 
       await tx
         .update(orders)
@@ -186,11 +204,11 @@ export class RefundsService {
         .where(and(eq(entitlements.orderId, request.orderId), eq(entitlements.isActive, true)));
 
       await tx.insert(refunds).values({
-        paymentId: payment.id,
+        paymentId: updatedPayment.id,
         orderId: request.orderId,
         providerRefundId: input.providerRefundId,
-        amount: payment.amount,
-        currency: payment.currency,
+        amount: updatedPayment.amount,
+        currency: updatedPayment.currency,
         status: 'approved',
       });
     });
@@ -231,8 +249,12 @@ export class RefundsService {
         adminNote: input.adminNote,
         resolvedAt: new Date(),
       })
-      .where(eq(refundRequests.id, request.id))
+      .where(and(eq(refundRequests.id, request.id), or(eq(refundRequests.status, 'requested'), eq(refundRequests.status, 'under_review'))))
       .returning();
+
+    if (!updated) {
+      throw new BadRequestException('Refund request is not open');
+    }
 
     await this.audit.record({
       actorUserId,

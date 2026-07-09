@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BadRequestException } from '@nestjs/common';
+import { AnalyticsController } from '../src/analytics/analytics.controller';
 import { AnalyticsService, conversionRate } from '../src/analytics/analytics.service';
 
 function createService() {
@@ -84,4 +85,45 @@ void test('analytics summary: conversion rate is rounded and zero-safe', () => {
   assert.equal(conversionRate(0, 0), 0);
   assert.equal(conversionRate(1, 3), 33.3);
   assert.equal(conversionRate(2, 4), 50);
+});
+
+void test('analytics controller: public tracking is rate limited by ip and session', async () => {
+  const calls: unknown[] = [];
+  const controller = new AnalyticsController(
+    {
+      track: async () => ({ accepted: true }),
+    } as never,
+    {
+      assertAllowed: async (input: unknown) => {
+        calls.push(input);
+      },
+    } as never,
+    {
+      get: (name: string) => (name === 'ANALYTICS_TRACK_RATE_LIMIT_MAX' ? '5' : '30'),
+    } as never,
+  );
+
+  await controller.track(
+    {
+      name: 'product_viewed',
+      sessionId: 'session-test',
+      path: '/products/demo',
+    },
+    {
+      ip: '127.0.0.1',
+      headers: {
+        'x-forwarded-for': '203.0.113.7, 127.0.0.1',
+        'user-agent': 'node-test',
+      },
+    },
+  );
+
+  assert.deepEqual(calls, [
+    {
+      key: 'ip:203.0.113.7:session:session-test',
+      action: 'analytics.track',
+      limit: 5,
+      windowMs: 30_000,
+    },
+  ]);
 });

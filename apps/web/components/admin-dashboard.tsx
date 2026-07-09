@@ -30,6 +30,7 @@ import {
   AdminPaymentRow,
   AdminPaymentProviderReadiness,
   AdminAnalyticsSummary,
+  BetaReadinessResponse,
   AdminProduct,
   AdminProductAnalyticsSummary,
   AdminRefundRow,
@@ -46,6 +47,7 @@ import {
   fetchAdminAnalyticsSummary,
   fetchAdminProductAnalyticsSummary,
   fetchAdminProducts,
+  fetchBetaReadiness,
   fetchCatalog,
   fetchPublishingChecks,
   loginAdmin,
@@ -134,6 +136,7 @@ export function AdminDashboard() {
   const [checks, setChecks] = useState<PublishingChecksResponse | null>(null);
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [paymentReadiness, setPaymentReadiness] = useState<AdminPaymentProviderReadiness[]>([]);
+  const [betaReadiness, setBetaReadiness] = useState<BetaReadinessResponse | null>(null);
   const [adminPayments, setAdminPayments] = useState<AdminPaymentRow[]>([]);
   const [adminRefunds, setAdminRefunds] = useState<AdminRefundRow[]>([]);
   const [analyticsSummary, setAnalyticsSummary] = useState<AdminAnalyticsSummary | null>(null);
@@ -315,6 +318,7 @@ export function AdminDashboard() {
         adminRefundsResponse,
         analyticsResponse,
         aiResponse,
+        betaReadinessResponse,
       ] = await Promise.all([
         fetchAdminProducts(token),
         fetchCatalog(token),
@@ -323,6 +327,7 @@ export function AdminDashboard() {
         fetchAdminRefunds(token),
         fetchAdminAnalyticsSummary(token).catch(() => null),
         fetchAiDiscoveryStatus().catch(() => null),
+        fetchBetaReadiness().catch(() => null),
       ]);
 
       setProducts(productsResponse.items);
@@ -332,6 +337,7 @@ export function AdminDashboard() {
       setAdminRefunds(adminRefundsResponse.items);
       setAnalyticsSummary(analyticsResponse);
       setAiStatus(aiResponse);
+      setBetaReadiness(betaReadinessResponse);
       setCatalogCounts({
         categories: catalogResponse.categories.items.length,
         tags: catalogResponse.tags.items.length,
@@ -920,6 +926,8 @@ export function AdminDashboard() {
             <Metric icon={Sparkles} label="Featured" value={stats.featured} />
           </section>
 
+          <BetaReadinessPanel readiness={betaReadiness} fallbackProviders={paymentReadiness} />
+
           <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -1323,6 +1331,7 @@ export function AdminDashboard() {
             productSummary={productAnalytics}
             launchReadiness={launchReadiness}
           />
+          <UxExperimentsBoard summary={analyticsSummary} payments={adminPayments} productSummary={productAnalytics} />
 
           <PaymentDesk
             loading={loading}
@@ -1684,6 +1693,13 @@ function AdminAnalyticsPanel({ summary }: { summary: AdminAnalyticsSummary | nul
         <FunnelDatum label="Downloads" value={totals?.downloadsRequested ?? 0} />
       </div>
 
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <FunnelDatum label="Status views" value={totals?.paymentStatusViews ?? 0} />
+        <FunnelDatum label="Refreshes" value={totals?.paymentStatusRefreshes ?? 0} />
+        <FunnelDatum label="Provider opens" value={totals?.paymentProviderOpens ?? 0} />
+        <FunnelDatum label="Recovery clicks" value={totals?.paymentRecoveryActions ?? 0} />
+      </div>
+
       <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr_1.2fr]">
         <div className="rounded border border-line bg-paper p-3">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Conversion health</p>
@@ -1819,6 +1835,215 @@ function ExperienceActionRow({
   );
 }
 
+type UxExperiment = {
+  title: string;
+  stage: 'Discovery' | 'Product' | 'Checkout' | 'Payment' | 'Delivery';
+  hypothesis: string;
+  evidence: string;
+  metric: string;
+  impact: number;
+  confidence: number;
+  effort: number;
+  status: 'candidate' | 'next' | 'watch';
+};
+
+function UxExperimentsBoard({
+  summary,
+  payments,
+  productSummary,
+}: {
+  summary: AdminAnalyticsSummary | null;
+  payments: AdminPaymentRow[];
+  productSummary: AdminProductAnalyticsSummary | null;
+}) {
+  const experiments = buildUxExperiments(summary, payments, productSummary);
+
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-saffron/15 text-saffron">
+            <Gauge size={18} />
+          </span>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-muted">UX experiments board</p>
+            <h2 className="mt-1 text-lg font-black text-ink">Ideas worth testing next</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
+              Each idea has a hypothesis, evidence, metric, and ICE score so the interface evolves by learning, not taste alone.
+            </p>
+          </div>
+        </div>
+        <span className="rounded bg-pine/10 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-pine">
+          {experiments.length} experiments
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 xl:grid-cols-2">
+        {experiments.map((experiment) => (
+          <UxExperimentCard key={experiment.title} experiment={experiment} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function UxExperimentCard({ experiment }: { experiment: UxExperiment }) {
+  const score = experimentScore(experiment);
+
+  return (
+    <article className="rounded-lg border border-line bg-paper p-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded bg-white px-2 py-1 text-[0.65rem] font-black uppercase tracking-[0.12em] text-muted">
+              {experiment.stage}
+            </span>
+            <span
+              className={`rounded px-2 py-1 text-[0.65rem] font-black uppercase tracking-[0.12em] ${experimentStatusClass(experiment.status)}`}
+            >
+              {experiment.status}
+            </span>
+          </div>
+          <h3 className="mt-2 text-base font-black text-ink">{experiment.title}</h3>
+        </div>
+        <div className="text-right">
+          <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-muted">ICE</p>
+          <p className="text-xl font-black text-pine">{score}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 text-sm">
+        <ExperimentLine label="Hypothesis" value={experiment.hypothesis} />
+        <ExperimentLine label="Evidence" value={experiment.evidence} />
+        <ExperimentLine label="Metric" value={experiment.metric} />
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <ScoreDatum label="Impact" value={experiment.impact} />
+        <ScoreDatum label="Confidence" value={experiment.confidence} />
+        <ScoreDatum label="Effort" value={experiment.effort} invert />
+      </div>
+    </article>
+  );
+}
+
+function ExperimentLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded border border-line bg-white p-2">
+      <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-muted">{label}</p>
+      <p className="mt-1 text-xs font-bold leading-5 text-ink">{value}</p>
+    </div>
+  );
+}
+
+function ScoreDatum({ label, value, invert = false }: { label: string; value: number; invert?: boolean }) {
+  return (
+    <div className="rounded border border-line bg-white p-2 text-center">
+      <p className="text-[0.64rem] font-black uppercase tracking-[0.12em] text-muted">{label}</p>
+      <p className={`mt-1 text-sm font-black ${invert && value >= 4 ? 'text-[#8a5c16]' : 'text-pine'}`}>{value}/5</p>
+    </div>
+  );
+}
+
+function experimentScore(experiment: UxExperiment) {
+  return Math.max(1, Math.round((experiment.impact * experiment.confidence * (6 - experiment.effort)) / 5));
+}
+
+function experimentStatusClass(status: UxExperiment['status']) {
+  if (status === 'next') {
+    return 'bg-pine/10 text-pine';
+  }
+
+  if (status === 'candidate') {
+    return 'bg-saffron/15 text-[#8a5c16]';
+  }
+
+  return 'bg-white text-muted';
+}
+
+function buildUxExperiments(
+  summary: AdminAnalyticsSummary | null,
+  payments: AdminPaymentRow[],
+  productSummary: AdminProductAnalyticsSummary | null,
+): UxExperiment[] {
+  const conversion = summary?.conversion;
+  const pendingPayments = payments.filter((row) => row.payment.status === 'pending').length;
+  const paidWithoutVault = payments.filter((row) => row.order.status === 'paid' && row.delivery.activeEntitlements === 0).length;
+  const experiments: UxExperiment[] = [
+    {
+      title: 'Make product-fit proof impossible to miss',
+      stage: 'Product',
+      hypothesis: 'If match reasons, license fit, and delivery proof are visible earlier, more product views will become cart adds.',
+      evidence: `View -> cart is ${conversion?.viewToCart ?? 0}% across recent funnel events.`,
+      metric: 'Increase view -> cart conversion.',
+      impact: (conversion?.viewToCart ?? 100) < 25 ? 5 : 3,
+      confidence: summary?.totals.productViews ? 4 : 2,
+      effort: 3,
+      status: (conversion?.viewToCart ?? 100) < 25 ? 'next' : 'candidate',
+    },
+    {
+      title: 'Remove final checkout doubt',
+      stage: 'Checkout',
+      hypothesis: 'If checkout repeats why the cart matches the buyer intent, fewer customers abandon before creating the order.',
+      evidence: `Checkout -> order is ${conversion?.checkoutToOrder ?? 0}%.`,
+      metric: 'Increase checkout -> order conversion.',
+      impact: (conversion?.checkoutToOrder ?? 100) < 50 ? 5 : 3,
+      confidence: summary?.totals.checkoutAttempts ? 4 : 2,
+      effort: 2,
+      status: (conversion?.checkoutToOrder ?? 100) < 50 ? 'next' : 'watch',
+    },
+    {
+      title: 'Design payment waiting as a calm state',
+      stage: 'Payment',
+      hypothesis: 'If pending payment status explains what is happening, customers will return to account instead of abandoning support.',
+      evidence: `${pendingPayments} pending payment session${pendingPayments === 1 ? '' : 's'} in admin review.`,
+      metric: 'Reduce pending payment age and support confusion.',
+      impact: pendingPayments > 0 ? 4 : 2,
+      confidence: pendingPayments > 0 ? 4 : 2,
+      effort: 2,
+      status: pendingPayments > 0 ? 'candidate' : 'watch',
+    },
+    {
+      title: 'Protect the paid-to-vault handoff',
+      stage: 'Delivery',
+      hypothesis: 'If admins can spot paid orders without entitlements, customers will experience fewer paid-but-locked cases.',
+      evidence: `${paidWithoutVault} paid order${paidWithoutVault === 1 ? '' : 's'} without active vault evidence.`,
+      metric: 'Keep paid orders without active entitlement at zero.',
+      impact: paidWithoutVault > 0 ? 5 : 3,
+      confidence: payments.length ? 5 : 2,
+      effort: 3,
+      status: paidWithoutVault > 0 ? 'next' : 'watch',
+    },
+    {
+      title: 'Turn search intent into a guided shortlist',
+      stage: 'Discovery',
+      hypothesis: 'If top search intents become guided entry points, customers will reach product detail with less browsing fatigue.',
+      evidence: summary?.topSearches[0] ? `Top search: ${summary.topSearches[0].query}.` : 'No dominant search intent captured yet.',
+      metric: 'Increase search -> product click and product view depth.',
+      impact: summary?.topSearches.length ? 4 : 2,
+      confidence: summary?.topSearches.length ? 3 : 1,
+      effort: 3,
+      status: summary?.topSearches.length ? 'candidate' : 'watch',
+    },
+  ];
+
+  if ((productSummary?.totals.paidOrders ?? 0) > 0) {
+    experiments.push({
+      title: 'Add product-specific delivery reassurance',
+      stage: 'Delivery',
+      hypothesis: 'If a product with paid orders shows clearer vault/download state, post-purchase confidence will improve.',
+      evidence: `Selected product has ${productSummary?.totals.paidOrders ?? 0} paid order(s) and ${productSummary?.totals.downloads ?? 0} download(s).`,
+      metric: 'Improve paid -> vault conversion for the selected product.',
+      impact: (productSummary?.conversion.paidToDownload ?? 100) < 80 ? 4 : 2,
+      confidence: 3,
+      effort: 2,
+      status: (productSummary?.conversion.paidToDownload ?? 100) < 80 ? 'candidate' : 'watch',
+    });
+  }
+
+  return experiments.sort((left, right) => experimentScore(right) - experimentScore(left));
+}
+
 function buildExperienceActions(
   summary: AdminAnalyticsSummary | null,
   payments: AdminPaymentRow[],
@@ -1936,6 +2161,14 @@ function RankRow({ label, value }: { label: string; value: number }) {
 }
 
 function strongestLeak(summary: AdminAnalyticsSummary) {
+  if (summary.totals.paymentStatusViews > 0 && summary.totals.paymentRecoveryActions >= summary.totals.paymentStatusViews * 0.5) {
+    return 'Payment status is creating support pressure. Tighten provider instructions and recovery copy before scaling traffic.';
+  }
+
+  if (summary.totals.paymentStatusViews > 0 && summary.totals.paymentStatusRefreshes >= summary.totals.paymentStatusViews) {
+    return 'Customers are repeatedly refreshing payment status. Provider confirmation or pending-state copy needs attention.';
+  }
+
   const entries = [
     { label: 'Product page is not convincing enough to add to cart.', value: summary.conversion.viewToCart },
     { label: 'Cart is not confident enough to start checkout.', value: summary.conversion.cartToCheckout },
@@ -2591,6 +2824,94 @@ function LaunchReadinessRow({
       </div>
     </div>
   );
+}
+
+function BetaReadinessPanel({
+  readiness,
+  fallbackProviders,
+}: {
+  readiness: BetaReadinessResponse | null;
+  fallbackProviders: AdminPaymentProviderReadiness[];
+}) {
+  const providers = readiness?.paymentProviders.length ? readiness.paymentProviders : fallbackProviders;
+  const manualReady = providers.some((provider) => provider.provider === 'manual' && provider.configured);
+  const providerCheckoutReady =
+    readiness?.providerCheckoutReady ?? providers.some((provider) => provider.mode === 'provider_checkout' && provider.configured);
+  const databaseConfigured = readiness?.databaseConfigured ?? false;
+  const blockers =
+    readiness?.blockers ??
+    providers
+      .filter((provider) => provider.mode === 'provider_checkout' && provider.blocking?.length)
+      .map((provider) => ({
+        provider: provider.provider,
+        blocking: provider.blocking ?? [],
+        nextAction: provider.nextAction ?? 'Complete provider setup.',
+      }));
+  const mainBlocker = blockers.find((blocker) => blocker.provider === 'paymob') ?? blockers[0];
+  const score = betaReadinessScore({ databaseConfigured, manualReady, providerCheckoutReady, blockers: blockers.length });
+  const ready = readiness?.ok ?? (databaseConfigured && providerCheckoutReady);
+  const title = ready ? 'Beta payment path ready' : providerCheckoutReady ? 'Beta needs final checks' : 'Beta blocked by checkout';
+  const checkedAt = readiness?.checkedAt ? formatDate(readiness.checkedAt) : 'not checked';
+
+  return (
+    <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Beta readiness</p>
+          <h2 className="mt-1 text-sm font-semibold text-ink">{title}</h2>
+        </div>
+        <span
+          className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-sm font-black ${
+            ready ? 'bg-pine/10 text-pine' : 'bg-saffron/15 text-[#8a5c16]'
+          }`}
+          title="Beta readiness score"
+        >
+          {score}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        <BetaReadinessLine label="Database" passed={databaseConfigured} value={databaseConfigured ? 'configured' : 'missing'} />
+        <BetaReadinessLine label="Manual fallback" passed={manualReady} value={manualReady ? 'available' : 'blocked'} />
+        <BetaReadinessLine label="Provider checkout" passed={providerCheckoutReady} value={providerCheckoutReady ? 'ready' : 'not ready'} />
+      </div>
+
+      <div className="mt-3 rounded border border-line bg-paper p-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Main blocker</p>
+        <p className="mt-1 text-xs leading-5 text-muted">
+          {mainBlocker?.nextAction ??
+            (ready ? 'Run sandbox checkout and webhook verification before beta traffic.' : 'Refresh readiness after API starts.')}
+        </p>
+        <p className="mt-2 text-[0.68rem] font-black uppercase tracking-[0.1em] text-muted">Checked {checkedAt}</p>
+      </div>
+    </section>
+  );
+}
+
+function BetaReadinessLine({ label, passed, value }: { label: string; passed: boolean; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-xs">
+      <span className="inline-flex min-w-0 items-center gap-2 font-semibold text-ink">
+        {passed ? <CheckCircle2 className="shrink-0 text-pine" size={14} /> : <XCircle className="shrink-0 text-berry" size={14} />}
+        <span className="truncate">{label}</span>
+      </span>
+      <span className="shrink-0 font-black uppercase tracking-[0.08em] text-muted">{value}</span>
+    </div>
+  );
+}
+
+function betaReadinessScore(input: {
+  databaseConfigured: boolean;
+  manualReady: boolean;
+  providerCheckoutReady: boolean;
+  blockers: number;
+}) {
+  let score = 0;
+  if (input.databaseConfigured) score += 25;
+  if (input.manualReady) score += 15;
+  if (input.providerCheckoutReady) score += 45;
+  if (input.blockers === 0) score += 15;
+  return score;
 }
 
 function CatalogRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) {

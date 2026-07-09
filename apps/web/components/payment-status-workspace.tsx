@@ -1,9 +1,10 @@
 'use client';
 
-import { ArrowRight, CheckCircle2, Clock3, CreditCard, FileArchive, ShieldCheck, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Clock3, CreditCard, FileArchive, RefreshCw, ShieldCheck, XCircle } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchPayment, type PaymentSession } from '../lib/api';
+import { trackFunnelEvent } from '../lib/funnel-analytics';
 import { ActionLink, Button, Notice, Panel } from './ui';
 
 export function PaymentStatusWorkspace() {
@@ -13,6 +14,38 @@ export function PaymentStatusWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+
+  const refreshPayment = useCallback(
+    async (reason: 'auto' | 'manual') => {
+      if (!paymentId) {
+        return null;
+      }
+
+      setLoading(true);
+      try {
+        const nextPayment = await fetchPayment(paymentId);
+        setPayment(nextPayment);
+        setError(null);
+        setLastCheckedAt(new Date().toISOString());
+
+        if (reason === 'manual') {
+          trackFunnelEvent('payment_status_refreshed', {
+            provider: nextPayment.provider,
+            status: nextPayment.status,
+            mode: nextPayment.mode,
+          });
+        }
+
+        return nextPayment;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Payment status could not be loaded.');
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [paymentId],
+  );
 
   useEffect(() => {
     if (!paymentId) {
@@ -59,6 +92,21 @@ export function PaymentStatusWorkspace() {
   }, [paymentId]);
 
   const status = useMemo(() => paymentStatusCopy(payment), [payment]);
+  const paymentMode = payment?.mode;
+  const paymentProvider = payment?.provider;
+  const paymentStatus = payment?.status;
+
+  useEffect(() => {
+    if (!paymentMode || !paymentProvider || !paymentStatus) {
+      return;
+    }
+
+    trackFunnelEvent('payment_status_viewed', {
+      mode: paymentMode,
+      provider: paymentProvider,
+      status: paymentStatus,
+    });
+  }, [paymentMode, paymentProvider, paymentStatus]);
 
   if (!paymentId) {
     return (
@@ -101,7 +149,12 @@ export function PaymentStatusWorkspace() {
           </p>
         )}
 
-        <PaymentNextAction payment={payment} loading={loading} lastCheckedAt={lastCheckedAt} />
+        <PaymentNextAction
+          payment={payment}
+          loading={loading}
+          lastCheckedAt={lastCheckedAt}
+          onRefresh={() => void refreshPayment('manual')}
+        />
 
         {payment?.redirectUrl && payment.status === 'pending' ? (
           <div className="mt-5 rounded-lg border border-saffron/30 bg-saffron/10 p-4">
@@ -109,7 +162,7 @@ export function PaymentStatusWorkspace() {
             <p className="mt-1 text-xs leading-5 text-muted">
               Complete the payment on the provider page. Delivery unlocks only after the trusted webhook confirms the payment.
             </p>
-            <Button type="button" onClick={() => window.location.assign(payment.redirectUrl!)} className="mt-3 h-10 font-black">
+            <Button type="button" onClick={() => openProviderCheckout(payment)} className="mt-3 h-10 font-black">
               Open secure payment
               <ArrowRight size={16} />
             </Button>
@@ -117,7 +170,12 @@ export function PaymentStatusWorkspace() {
         ) : null}
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <ActionLink href="/account" icon={FileArchive} className="h-10">
+          <ActionLink
+            href="/account"
+            icon={FileArchive}
+            className="h-10"
+            onClick={() => trackPaymentRecoveryAction(payment, 'open_account')}
+          >
             Open account
           </ActionLink>
           <ActionLink href="/?intro=0#latest-designs" intent="secondary" className="h-10">
@@ -142,6 +200,14 @@ export function PaymentStatusWorkspace() {
           <p className="mt-2 text-sm leading-6 text-muted">
             Keep the provider reference. If confirmation is delayed, support can reconcile the payment without losing your order.
           </p>
+          <ActionLink
+            href="/account"
+            intent="secondary"
+            className="mt-3 h-9 px-3 text-xs"
+            onClick={() => trackPaymentRecoveryAction(payment, 'contact_support')}
+          >
+            Contact support
+          </ActionLink>
         </Panel>
       </aside>
     </main>
@@ -152,10 +218,12 @@ function PaymentNextAction({
   payment,
   loading,
   lastCheckedAt,
+  onRefresh,
 }: {
   payment: PaymentSession | null;
   loading: boolean;
   lastCheckedAt: string | null;
+  onRefresh: () => void;
 }) {
   const pending = !payment || payment.status === 'pending';
   const paid = payment?.status === 'paid';
@@ -184,12 +252,26 @@ function PaymentNextAction({
               : 'If a provider checkout button is available, complete it there. This page keeps checking for trusted confirmation.'}
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <ActionLink href="/account" icon={FileArchive} className="h-9 px-3 text-xs">
+        <ActionLink
+          href="/account"
+          icon={FileArchive}
+          className="h-9 px-3 text-xs"
+          onClick={() => trackPaymentRecoveryAction(payment, 'delivery_desk')}
+        >
           Delivery desk
         </ActionLink>
-        <ActionLink href="/checkout" intent="secondary" className="h-9 px-3 text-xs">
+        <ActionLink
+          href="/checkout"
+          intent="secondary"
+          className="h-9 px-3 text-xs"
+          onClick={() => trackPaymentRecoveryAction(payment, 'back_to_checkout')}
+        >
           Back to checkout
         </ActionLink>
+        <Button type="button" intent="secondary" onClick={onRefresh} disabled={loading} className="h-9 px-3 text-xs">
+          <RefreshCw size={14} />
+          Refresh
+        </Button>
         {pending ? (
           <span className="text-xs font-bold text-muted">{loading ? 'Refreshing status...' : 'Auto-refreshes while pending'}</span>
         ) : null}
@@ -285,4 +367,22 @@ function StatusDatum({ label, value }: { label: string; value: string }) {
       <p className="mt-1 truncate text-sm font-black capitalize text-ink">{value}</p>
     </div>
   );
+}
+
+function openProviderCheckout(payment: PaymentSession) {
+  trackFunnelEvent('payment_status_provider_opened', {
+    provider: payment.provider,
+    status: payment.status,
+    mode: payment.mode,
+  });
+  window.location.assign(payment.redirectUrl!);
+}
+
+function trackPaymentRecoveryAction(payment: PaymentSession | null, action: string) {
+  trackFunnelEvent('payment_recovery_action_clicked', {
+    action,
+    provider: payment?.provider ?? null,
+    status: payment?.status ?? null,
+    mode: payment?.mode ?? null,
+  });
 }

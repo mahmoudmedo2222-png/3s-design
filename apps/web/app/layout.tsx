@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { FloatingAccess } from '../components/floating-access';
+import { HotjarAnalytics } from '../components/hotjar-analytics';
 import { getLocaleDirection } from '../lib/locale';
 import { getRequestLocale } from '../lib/server-locale';
 import './globals.css';
@@ -26,6 +27,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           }}
         />
         {children}
+        <HotjarAnalytics />
         <FloatingAccess locale={locale} />
       </body>
     </html>

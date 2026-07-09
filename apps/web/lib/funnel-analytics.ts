@@ -3,6 +3,7 @@
 import { apiBaseUrl } from './api';
 import { accessTokenKey } from './auth-session';
 import { attributionPayload, captureAttributionFromLocation } from './attribution';
+import { trackHotjarEvent } from './hotjar-events';
 
 export const funnelEventsKey = '3s-design-funnel-events';
 export const funnelSessionKey = '3s-design-funnel-session';
@@ -20,6 +21,10 @@ export type FunnelEventName =
   | 'checkout_confirmation_toggled'
   | 'checkout_order_attempted'
   | 'checkout_order_created'
+  | 'payment_status_viewed'
+  | 'payment_status_refreshed'
+  | 'payment_status_provider_opened'
+  | 'payment_recovery_action_clicked'
   | 'download_receipt_copied'
   | 'download_asset_requested';
 
@@ -53,6 +58,7 @@ export function trackFunnelEvent(name: FunnelEventName, payload: Record<string, 
     const next = [event, ...readFunnelEvents()].slice(0, eventLimit);
     window.localStorage.setItem(funnelEventsKey, JSON.stringify(next));
     window.dispatchEvent(new Event(funnelChangedEvent));
+    trackHotjarEvent(name);
     void sendFunnelEvent(event);
   } catch {
     return null;
@@ -88,6 +94,10 @@ export function summarizeFunnel(events = readFunnelEvents()) {
     cartAdds: counts.get('product_add_to_cart_succeeded') ?? 0,
     checkoutAttempts: counts.get('checkout_order_attempted') ?? 0,
     ordersCreated: counts.get('checkout_order_created') ?? 0,
+    paymentStatusViews: counts.get('payment_status_viewed') ?? 0,
+    paymentStatusRefreshes: counts.get('payment_status_refreshed') ?? 0,
+    paymentProviderOpens: counts.get('payment_status_provider_opened') ?? 0,
+    paymentRecoveryActions: counts.get('payment_recovery_action_clicked') ?? 0,
     downloadsRequested: counts.get('download_asset_requested') ?? 0,
   };
 }

@@ -131,8 +131,11 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
   const formats = formatList(product.variants.flatMap((variant) => variant.fileFormats)).slice(0, 6);
   const software = formatList(product.variants.flatMap((variant) => variant.softwareCompatibility)).slice(0, 6);
 
+  const deliveryAssets = product.assets.filter((asset) => !asset.isPublicPreview);
+  const primaryLicense = product.defaultLicense ?? product.licenseOptions?.[0] ?? null;
+
   return (
-    <main className="min-h-screen bg-paper dark:bg-[#0b0f0e]">
+    <main className="product-detail-page min-h-screen bg-paper dark:bg-[#0b0f0e]">
       <ProductViewTracker product={product} />
       <header className="border-b border-line bg-paper/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -165,8 +168,8 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
         <section className="space-y-5">
           <CustomerJourneyRail current="inspect" />
 
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <div className="relative min-h-[340px] overflow-hidden rounded-lg border border-line bg-[#eef2ee] shadow-sm dark:border-white/[0.12] dark:bg-[#17211d]">
+          <div className="product-detail-hero grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div className="product-detail-preview">
               <DesignPreview product={product} variant="hero" />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_38%,rgba(6,11,10,0.72))]" />
               <div className="absolute left-4 top-4 flex flex-wrap gap-2">
@@ -188,13 +191,11 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
               </div>
             </div>
 
-            <div className="flex flex-col justify-center">
+            <div className="product-detail-copy flex flex-col justify-center">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-pine">Design with a feeling</p>
-              <h1 className="mt-2 text-3xl font-black leading-tight text-ink lg:text-4xl">{product.title}</h1>
+              <h1 className="product-detail-title mt-2">{product.title}</h1>
               {product.subtitle ? <p className="mt-3 text-base leading-7 text-muted">{product.subtitle}</p> : null}
-              <p className="mt-4 rounded-lg border border-line bg-white p-3 text-sm leading-6 text-ink shadow-sm dark:bg-[#121816]">
-                {emotionalPromise(product)}
-              </p>
+              <p className="product-detail-promise mt-4 text-sm font-bold leading-6">{emotionalPromise(product)}</p>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {[...moods, ...styles].slice(0, 6).map((item, index) => (
@@ -205,6 +206,17 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
               </div>
 
               <PurchaseSnapshot product={product} formats={formats} software={software} />
+              <ProductDecisionReadout
+                license={primaryLicense?.name ?? 'License selected before checkout'}
+                delivery={
+                  deliveryAssets.length
+                    ? `${deliveryAssets.length} vault file${deliveryAssets.length === 1 ? '' : 's'}`
+                    : formats.length
+                      ? formats.slice(0, 2).join(', ')
+                      : 'Vault delivery after payment review'
+                }
+                bestFor={[...industries, ...useCases].slice(0, 2).join(' / ')}
+              />
             </div>
           </div>
 
@@ -327,6 +339,25 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
         </aside>
       </div>
     </main>
+  );
+}
+
+function ProductDecisionReadout({ license, delivery, bestFor }: { license: string; delivery: string; bestFor: string }) {
+  return (
+    <div className="decision-readout mt-4">
+      <DecisionReadoutItem label="Best-fit moment" value={bestFor || 'Brand-ready launch'} />
+      <DecisionReadoutItem label="License confidence" value={license} />
+      <DecisionReadoutItem label="Delivery expectation" value={delivery} />
+    </div>
+  );
+}
+
+function DecisionReadoutItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="decision-readout__item">
+      <p className="decision-readout__label">{label}</p>
+      <p className="decision-readout__value">{value}</p>
+    </div>
   );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpRight, BadgeCheck, Loader2, LockKeyhole, ShoppingBag, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Download, Loader2, LockKeyhole, ShieldCheck, ShoppingBag, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useState } from 'react';
@@ -101,12 +101,8 @@ export function ProductCard({
   }
 
   return (
-    <article className="product-card group rounded-lg border border-white/[0.14] bg-[#101513]/90 text-white shadow-[0_18px_58px_rgba(0,0,0,0.18)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.45] hover:bg-[#16201c]/95">
-      <Link
-        href={detailHref}
-        className="product-card__preview relative block aspect-[4/3] overflow-hidden"
-        aria-label={`View ${product.title}`}
-      >
+    <article className="product-card group">
+      <Link href={detailHref} className="product-card__preview" aria-label={`View ${product.title}`}>
         <DesignPreview product={product} variant={compact ? 'mini' : 'card'} />
         {product.isFeatured ? (
           <Badge tone="gold" className="absolute start-2 top-2 border-transparent bg-gold text-[#101513]">
@@ -118,23 +114,23 @@ export function ProductCard({
             {product.match.score}% fit
           </Badge>
         ) : null}
-        <span className="absolute bottom-2 start-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-1 rounded border border-white/[0.18] bg-black/[0.62] px-2 py-1 text-[0.68rem] font-bold text-[#ffe09a] shadow-sm backdrop-blur-md">
+        <span className="visual-chip absolute bottom-2 start-2 max-w-[calc(100%-1rem)] border-white/[0.18] bg-black/[0.62] text-[#ffe09a] shadow-sm backdrop-blur-md">
           <Sparkles size={13} />
           <span className="truncate">{feeling}</span>
         </span>
       </Link>
 
-      <div className="flex flex-1 flex-col gap-2.5 p-3">
+      <div className="product-card__body">
         <div className="space-y-1">
-          <Link href={detailHref} className="group/title inline-flex items-start gap-1">
-            <h3 className="line-clamp-2 text-sm font-black text-white transition group-hover/title:text-[#ffe09a]">{product.title}</h3>
+          <Link href={detailHref} className="group/title inline-flex min-w-0 items-start gap-1">
+            <h3 className="product-card__title transition group-hover/title:text-[#ffe09a]">{product.title}</h3>
             <ArrowUpRight className="mt-0.5 shrink-0 text-white/[0.65] transition group-hover/title:text-[#ffe09a]" size={14} />
           </Link>
-          {!compact && product.subtitle ? <p className="line-clamp-1 text-xs leading-5 text-white/[0.62]">{product.subtitle}</p> : null}
+          {!compact && product.subtitle ? <p className="product-card__subtitle">{product.subtitle}</p> : null}
         </div>
 
         {product.match || hasPersonalSignals ? (
-          <div className="rounded border border-[#7bd8bd]/20 bg-[#7bd8bd]/[0.08] p-2">
+          <div className="product-card__decision">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-[var(--3s-pine-bright)]">
                 {product.match?.decisionTag ?? 'Matched your profile'}
@@ -149,10 +145,7 @@ export function ProductCard({
             {visibleMatchSignals.length ? (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {visibleMatchSignals.map((signal, index) => (
-                  <span
-                    key={`${signal}-${index}`}
-                    className="rounded border border-white/[0.12] bg-black/35 px-2 py-0.5 text-[0.68rem] font-bold text-white/75"
-                  >
+                  <span key={`${signal}-${index}`} className="visual-chip min-h-0 rounded px-2 py-1 text-[0.68rem]">
                     {signal}
                   </span>
                 ))}
@@ -164,26 +157,26 @@ export function ProductCard({
         {!compact ? (
           <div className="grid gap-2 text-xs font-semibold text-white/[0.62]">
             <span className="inline-flex items-center gap-1">
-              <BadgeCheck size={14} className="text-[var(--3s-pine-bright)]" />
+              <ShieldCheck size={14} className="text-[var(--3s-pine-bright)]" />
               {primaryLicense?.allowsCommercialUse ? 'Commercial, editable license' : 'Reusable license details before checkout'}
             </span>
-            <div className="grid gap-1.5 rounded border border-white/[0.1] bg-black/20 p-2">
-              <span className="flex items-center justify-between gap-2">
+            <div className="product-card__proof">
+              <span className="product-card__meta-row">
                 <span className="text-white/65">Best for</span>
-                <span className="min-w-0 truncate text-end font-black text-white/72">{bestFor || 'Brand-ready campaign'}</span>
+                <strong>{bestFor || 'Brand-ready campaign'}</strong>
               </span>
-              <span className="flex items-center justify-between gap-2">
-                <span className="text-white/65">Delivery</span>
-                <span className="min-w-0 truncate text-end font-black text-white/72">{deliveryCue}</span>
+              <span className="product-card__meta-row">
+                <span className="inline-flex items-center gap-1 text-white/65">
+                  <Download size={13} />
+                  Delivery
+                </span>
+                <strong>{deliveryCue}</strong>
               </span>
             </div>
             {quickSignals.length ? (
               <div className="flex flex-wrap gap-1.5">
                 {quickSignals.map((signal, index) => (
-                  <span
-                    key={`${signal}-${index}`}
-                    className="rounded border border-white/[0.12] bg-black/30 px-2 py-1 text-[0.68rem] font-bold text-white/75"
-                  >
+                  <span key={`${signal}-${index}`} className="visual-chip min-h-0 rounded px-2 py-1 text-[0.68rem]">
                     {signal}
                   </span>
                 ))}
@@ -192,8 +185,8 @@ export function ProductCard({
           </div>
         ) : null}
 
-        <div className="mt-auto flex items-center justify-between gap-3">
-          <span className="text-base font-black text-[#ffe09a]">
+        <div className="product-card__footer">
+          <span className="product-card__price">
             {displayCurrency} {displayPrice}
           </span>
           <div className="flex items-center gap-2">
@@ -204,7 +197,7 @@ export function ProductCard({
                 type="button"
                 onClick={() => void addToCart()}
                 disabled={isAdding}
-                className="inline-flex h-9 w-9 items-center justify-center rounded border border-white/10 bg-cream text-[#101513] transition hover:-translate-y-0.5 hover:scale-105 hover:border-gold hover:bg-gold active:translate-y-0 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                className="product-card__icon-action"
                 aria-label={`Add ${product.title} to cart`}
                 title="Add to cart"
               >
@@ -213,7 +206,7 @@ export function ProductCard({
             ) : (
               <Link
                 href={`/login?next=${encodeURIComponent(detailHref)}` as Route}
-                className="inline-flex h-9 w-9 items-center justify-center rounded border border-white/10 bg-cream text-[#101513] transition hover:-translate-y-0.5 hover:scale-105 hover:border-gold hover:bg-gold active:translate-y-0 active:scale-95"
+                className="product-card__icon-action"
                 aria-label="Sign in before adding to cart"
                 title="Sign in before adding to cart"
               >
