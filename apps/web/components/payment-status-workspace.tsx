@@ -12,6 +12,7 @@ export function PaymentStatusWorkspace() {
   const [payment, setPayment] = useState<PaymentSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!paymentId) {
@@ -31,6 +32,7 @@ export function PaymentStatusWorkspace() {
 
         setPayment(nextPayment);
         setError(null);
+        setLastCheckedAt(new Date().toISOString());
 
         if (nextPayment.status === 'pending') {
           timer = window.setTimeout(refresh, 5000);
@@ -99,6 +101,8 @@ export function PaymentStatusWorkspace() {
           </p>
         )}
 
+        <PaymentNextAction payment={payment} loading={loading} lastCheckedAt={lastCheckedAt} />
+
         {payment?.redirectUrl && payment.status === 'pending' ? (
           <div className="mt-5 rounded-lg border border-saffron/30 bg-saffron/10 p-4">
             <p className="text-sm font-black text-ink">Secure provider checkout is ready.</p>
@@ -123,6 +127,7 @@ export function PaymentStatusWorkspace() {
       </section>
 
       <aside className="space-y-3">
+        <PaymentStatusTimeline payment={payment} />
         <Panel className="p-4">
           <ShieldCheck className="text-pine" size={20} />
           <h2 className="mt-2 text-lg font-black text-ink">Why this page exists</h2>
@@ -140,6 +145,100 @@ export function PaymentStatusWorkspace() {
         </Panel>
       </aside>
     </main>
+  );
+}
+
+function PaymentNextAction({
+  payment,
+  loading,
+  lastCheckedAt,
+}: {
+  payment: PaymentSession | null;
+  loading: boolean;
+  lastCheckedAt: string | null;
+}) {
+  const pending = !payment || payment.status === 'pending';
+  const paid = payment?.status === 'paid';
+  const failed = payment?.status === 'failed' || payment?.status === 'expired';
+  const manual = payment?.mode === 'manual_review';
+
+  return (
+    <div className="mt-5 rounded-lg border border-pine/20 bg-pine/5 p-4">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-pine">What to do now</p>
+      <h2 className="mt-1 text-lg font-black text-ink">
+        {paid
+          ? 'Open your delivery desk.'
+          : failed
+            ? 'Do not retry blindly.'
+            : manual
+              ? 'Complete manual payment, then wait for review.'
+              : 'Finish provider checkout.'}
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-muted">
+        {paid
+          ? 'Payment is confirmed. Delivery files unlock from the account vault after entitlement checks.'
+          : failed
+            ? 'Keep the provider/payment reference and contact support from your account before creating duplicate payment attempts.'
+            : manual
+              ? 'Use the order/payment reference from checkout. The admin team must approve the payment before downloads unlock.'
+              : 'If a provider checkout button is available, complete it there. This page keeps checking for trusted confirmation.'}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <ActionLink href="/account" icon={FileArchive} className="h-9 px-3 text-xs">
+          Delivery desk
+        </ActionLink>
+        <ActionLink href="/checkout" intent="secondary" className="h-9 px-3 text-xs">
+          Back to checkout
+        </ActionLink>
+        {pending ? (
+          <span className="text-xs font-bold text-muted">{loading ? 'Refreshing status...' : 'Auto-refreshes while pending'}</span>
+        ) : null}
+      </div>
+      {lastCheckedAt ? (
+        <p className="mt-2 text-xs font-bold text-muted">Last checked {new Date(lastCheckedAt).toLocaleTimeString()}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function PaymentStatusTimeline({ payment }: { payment: PaymentSession | null }) {
+  const paid = payment?.status === 'paid';
+  const failed = payment?.status === 'failed' || payment?.status === 'expired';
+  const steps = [
+    { label: 'Session created', done: Boolean(payment), active: Boolean(payment) },
+    { label: 'Payment confirmation', done: paid, active: payment?.status === 'pending' },
+    { label: 'Vault unlock', done: paid, active: paid },
+  ];
+
+  return (
+    <Panel className="p-4">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-pine">Status path</p>
+      <div className="mt-4 grid gap-2">
+        {steps.map((step, index) => (
+          <div key={step.label} className="flex items-center gap-3">
+            <span
+              className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-xs font-black ${
+                step.done
+                  ? 'bg-pine text-white'
+                  : failed
+                    ? 'bg-berry/15 text-berry'
+                    : step.active
+                      ? 'bg-saffron/15 text-saffron'
+                      : 'bg-paper text-muted'
+              }`}
+            >
+              {index + 1}
+            </span>
+            <span className="text-sm font-bold text-ink">{step.label}</span>
+          </div>
+        ))}
+      </div>
+      {failed ? (
+        <Notice tone="error" className="mt-3 p-3 text-xs">
+          Payment is not confirmed. Delivery remains locked until a valid paid event is received.
+        </Notice>
+      ) : null}
+    </Panel>
   );
 }
 

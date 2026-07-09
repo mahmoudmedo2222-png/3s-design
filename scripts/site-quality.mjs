@@ -13,6 +13,7 @@ const targets = [
 ];
 
 await fs.mkdir(outputDir, { recursive: true });
+await assertServerReady(baseUrl);
 
 const chrome = await launch({ chromeFlags: ['--headless=new', '--no-sandbox'] });
 
@@ -59,7 +60,11 @@ try {
     process.exitCode = 1;
   }
 } finally {
-  await chrome.kill();
+  try {
+    await chrome.kill();
+  } catch (error) {
+    console.warn(`Could not remove temporary Chrome profile: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function score(value) {
@@ -81,4 +86,17 @@ function printSummary(summary) {
     })),
   );
   console.log(`\nReports: ${outputDir}`);
+}
+
+async function assertServerReady(url) {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (error) {
+    console.error(`Site is not reachable at ${url}. Start the web app first: corepack pnpm --filter @3s-design/web dev`);
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }
