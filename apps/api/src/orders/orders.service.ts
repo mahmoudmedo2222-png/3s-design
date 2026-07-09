@@ -26,6 +26,18 @@ type CartLine = {
   license: typeof licenses.$inferSelect;
 };
 
+type CheckoutAttributionSnapshot = {
+  source?: string | null;
+  campaign?: string | null;
+  medium?: string | null;
+  intent?: string | null;
+  brief?: string | null;
+  referrer?: string | null;
+  landingPath?: string | null;
+  firstSeenAt?: string | null;
+  lastSeenAt?: string | null;
+};
+
 const uuidV4Pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Injectable()
@@ -349,7 +361,33 @@ export class OrdersService {
       country: input.billing?.country ?? row?.profile?.country ?? null,
       city: input.billing?.city ?? row?.profile?.city ?? null,
       preferredCurrency: input.billing?.preferredCurrency ?? row?.profile?.preferredCurrency ?? 'USD',
+      attribution: this.createAttributionSnapshot(input),
     };
+  }
+
+  private createAttributionSnapshot(input: CreateCheckoutDto): CheckoutAttributionSnapshot | undefined {
+    if (!input.attribution) {
+      return undefined;
+    }
+
+    const snapshot: CheckoutAttributionSnapshot = {
+      source: this.cleanSnapshotText(input.attribution.source, 180),
+      campaign: this.cleanSnapshotText(input.attribution.campaign, 180),
+      medium: this.cleanSnapshotText(input.attribution.medium, 180),
+      intent: this.cleanSnapshotText(input.attribution.intent, 180),
+      brief: this.cleanSnapshotText(input.attribution.brief, 180),
+      referrer: this.cleanSnapshotText(input.attribution.referrer, 180),
+      landingPath: this.cleanSnapshotText(input.attribution.landingPath, 260),
+      firstSeenAt: this.cleanSnapshotText(input.attribution.firstSeenAt, 80),
+      lastSeenAt: this.cleanSnapshotText(input.attribution.lastSeenAt, 80),
+    };
+
+    return Object.values(snapshot).some(Boolean) ? snapshot : undefined;
+  }
+
+  private cleanSnapshotText(value: string | null | undefined, limit: number) {
+    const text = value?.replace(/\s+/g, ' ').trim();
+    return text ? text.slice(0, limit) : null;
   }
 
   private calculateTotals(lines: CartLine[]) {

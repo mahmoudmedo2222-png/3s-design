@@ -22,11 +22,21 @@ type LaunchProductSeed = {
   slug: string;
   subtitle: string;
   description: string;
+  status?: 'draft' | 'published';
+  isFeatured?: boolean;
   price: string;
   currency: string;
   category: { slug: string; name: string };
   tags: Array<{ slug: string; name: string }>;
   dna: Record<'industry' | 'mood' | 'style' | 'color' | 'platform' | 'format' | 'audience', string[]>;
+  story?: {
+    customerMoment: string;
+    beforeState: string;
+    afterState: string;
+    buyerPromise: string;
+    scenes: string[];
+    visualProof: string[];
+  };
   variant: {
     name: string;
     description: string;
@@ -161,37 +171,69 @@ const starterProducts: LaunchProductSeed[] = [
     },
   },
   {
-    title: 'Luxury Sale Without Noise',
-    slug: 'luxury-sale-without-noise',
-    subtitle: 'Elegant sale campaign visuals for premium ecommerce and fashion brands',
-    description: 'A restrained sale campaign kit for brands that need conversion and urgency while protecting a premium visual identity.',
-    price: '36.00',
+    title: 'Capsule Drop Sale Kit',
+    slug: 'capsule-drop-sale-kit',
+    subtitle: 'A premium campaign system for boutique drops, private edits, and limited-time fashion offers',
+    description:
+      'A story-led campaign kit for boutique and ecommerce brands that need urgency without making the sale feel cheap. It turns a discount or limited drop into a private shopping moment across posts, stories, banners, product promos, and final reminders.',
+    status: 'draft',
+    isFeatured: true,
+    price: '49.00',
     currency: 'USD',
     category: { slug: 'fashion-ecommerce', name: 'Fashion and Ecommerce' },
     tags: [
       { slug: 'fashion', name: 'Fashion' },
       { slug: 'ecommerce', name: 'Ecommerce' },
       { slug: 'sale', name: 'Sale' },
+      { slug: 'capsule-drop', name: 'Capsule Drop' },
+      { slug: 'canva', name: 'Canva' },
+      { slug: 'figma', name: 'Figma' },
       { slug: 'campaign', name: 'Campaign' },
       { slug: 'premium', name: 'Premium' },
     ],
     dna: {
       industry: ['fashion', 'ecommerce'],
-      mood: ['urgent', 'elegant', 'selective', 'commercial'],
-      style: ['minimal', 'premium', 'editorial'],
-      color: ['cream', 'black', 'saffron'],
-      platform: ['instagram', 'website', 'social'],
-      format: ['post', 'story', 'banner', 'promo card'],
-      audience: ['boutiques', 'premium stores', 'fashion sellers'],
+      mood: ['selective', 'premium', 'urgent', 'quiet luxury'],
+      style: ['editorial', 'minimal', 'luxury'],
+      color: ['black', 'ivory', 'champagne gold', 'taupe'],
+      platform: ['instagram', 'website', 'canva', 'figma'],
+      format: ['post', 'story', 'banner', 'promo card', 'reminder'],
+      audience: ['boutique owners', 'premium ecommerce sellers', 'fashion marketers'],
+    },
+    story: {
+      customerMoment:
+        'A premium boutique is launching a small curated sale or capsule drop and needs customers to feel invited, not shouted at.',
+      beforeState:
+        'The products are worth buying, but the sale announcement risks looking generic, loud, or too close to discount-store graphics.',
+      afterState:
+        'The campaign feels selective and organized, so customers understand the offer, trust the brand, and act before the window closes.',
+      buyerPromise:
+        'Turn a sale into a private shopping moment that protects the brand while still pushing customers to act.',
+      scenes: [
+        'Private announcement post introduces the drop without visual noise.',
+        'Story reveal highlights one hero product with a quiet CTA.',
+        'Website banner connects the social campaign to the shop.',
+        'Product promo card pushes the strongest item with premium restraint.',
+        'Final reminder creates urgency without cheap discount language.',
+      ],
+      visualProof: [
+        'Show the five-stage campaign journey on the product page.',
+        'Use watermarked previews that reveal real layouts without giving away final files.',
+        'Replace abstract placeholders with licensed fashion product imagery before publishing.',
+        'Keep Figma and Canva editable copy, dates, offers, and product names editable.',
+        'Label the Canva V2 banner fallback until the real detail-pass conversion is ready.',
+      ],
     },
     variant: {
-      name: 'Premium Sale Pack',
-      description: 'Post, story, website banner, and product promo card.',
+      name: 'Premium 30-Template Campaign System',
+      description:
+        'Five campaign stages with Instagram posts, stories, website banners, product promos, reminders, Figma master, Canva editable copy, and export-ready previews.',
       fileFormats: ['figma', 'canva', 'png', 'webp', 'zip'],
       dimensions: [
         { label: 'Instagram post', width: 1080, height: 1080, unit: 'px' },
-        { label: 'Story sale frame', width: 1080, height: 1920, unit: 'px' },
+        { label: 'Instagram story', width: 1080, height: 1920, unit: 'px' },
         { label: 'Website banner', width: 1600, height: 900, unit: 'px' },
+        { label: 'Website hero preview', width: 1600, height: 1200, unit: 'px' },
       ],
       softwareCompatibility: ['Figma', 'Canva'],
     },
@@ -274,11 +316,11 @@ async function main() {
         title: seed.title,
         subtitle: seed.subtitle,
         description: seed.description,
-        status: 'draft',
+        status: seed.status ?? 'draft',
         basePrice: seed.price,
         currency: seed.currency,
-        isFeatured: false,
-        publishedAt: null,
+        isFeatured: seed.isFeatured ?? false,
+        publishedAt: seed.status === 'published' ? new Date() : null,
       };
 
       const product = existing ?? (await db.insert(products).values(productValues).returning())[0];
@@ -369,6 +411,31 @@ async function main() {
               label,
             })
             .onConflictDoNothing();
+        }
+      }
+
+      if (seed.story) {
+        const storyAttributes = [
+          { key: 'story.customer_moment', value: seed.story.customerMoment, label: 'Customer moment', sortOrder: 0 },
+          { key: 'story.before_state', value: seed.story.beforeState, label: 'Before state', sortOrder: 1 },
+          { key: 'story.after_state', value: seed.story.afterState, label: 'After state', sortOrder: 2 },
+          { key: 'story.buyer_promise', value: seed.story.buyerPromise, label: 'Buyer promise', sortOrder: 3 },
+          ...seed.story.scenes.map((value, index) => ({
+            key: 'story.scene',
+            value,
+            label: 'Campaign scene',
+            sortOrder: 10 + index,
+          })),
+          ...seed.story.visualProof.map((value, index) => ({
+            key: 'story.visual_proof',
+            value,
+            label: 'Visual proof',
+            sortOrder: 30 + index,
+          })),
+        ];
+
+        for (const attribute of storyAttributes) {
+          await db.insert(productAttributes).values({ productId: product.id, ...attribute }).onConflictDoNothing();
         }
       }
     }
