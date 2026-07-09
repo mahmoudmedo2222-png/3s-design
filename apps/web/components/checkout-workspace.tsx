@@ -634,10 +634,14 @@ function PaymentReadinessPanel({ providers, error }: { providers: PaymentProvide
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-pine">Payment readiness</p>
           <h2 className="mt-1 text-lg font-black text-ink">
-            {manual?.configured ? 'Safe manual checkout is active.' : 'Payment status needs attention.'}
+            {providers.some((provider) => provider.provider === 'paymob' && provider.configured)
+              ? 'Secure provider checkout is ready.'
+              : manual?.configured
+                ? 'Safe manual checkout is active.'
+                : 'Payment status needs attention.'}
           </h2>
           <p className="mt-1 text-xs leading-5 text-muted">
-            Real provider checkout stays disabled until its redirect template and webhook secret are configured.
+            Provider checkout stays disabled until setup, webhook verification, and amount checks are ready.
           </p>
         </div>
       </div>
@@ -659,6 +663,7 @@ function PaymentReadinessPanel({ providers, error }: { providers: PaymentProvide
               <p className="mt-1 text-xs text-muted">
                 {provider.mode === 'manual_review' ? 'Manual review flow' : 'Provider checkout flow'}
               </p>
+              {provider.nextAction ? <p className="mt-1 max-w-md text-xs leading-5 text-muted">{provider.nextAction}</p> : null}
             </div>
             <span
               className={`rounded px-2 py-1 text-[0.68rem] font-black uppercase tracking-[0.12em] ${

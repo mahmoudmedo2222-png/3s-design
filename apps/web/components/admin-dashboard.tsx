@@ -930,6 +930,29 @@ export function AdminDashboard() {
             </div>
           </section>
 
+          <section className="rounded-lg border border-line bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Payment providers</p>
+            <h2 className="mt-1 text-sm font-semibold text-ink">Checkout preflight</h2>
+            <div className="mt-3 grid gap-2">
+              {paymentReadiness.map((provider) => (
+                <div key={provider.provider} className="rounded border border-line bg-paper p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-black capitalize text-ink">{provider.provider}</p>
+                    <StatusPill status={provider.configured ? 'ready' : 'blocked'} />
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-muted">
+                    {provider.nextAction ?? (provider.configured ? 'Ready for checkout verification.' : 'Missing provider setup.')}
+                  </p>
+                  {provider.blocking?.length ? (
+                    <p className="mt-1 text-[0.68rem] font-black uppercase tracking-[0.1em] text-saffron">
+                      Missing {provider.blocking.length} required setting{provider.blocking.length === 1 ? '' : 's'}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+
           {selectedProduct ? <SelectedProductAnalyticsPanel product={selectedProduct} summary={productAnalytics} /> : null}
 
           {selectedProduct ? (
@@ -2006,6 +2029,8 @@ function PaymentDesk({
                 </div>
               </div>
 
+              <PaymentReviewDecision row={row} />
+
               {row.payment.status === 'pending' ? (
                 <div className="mt-3 grid gap-2">
                   <div className="grid gap-2 lg:grid-cols-2">
@@ -2204,6 +2229,80 @@ function RefundDesk({
       </div>
     </section>
   );
+}
+
+function PaymentReviewDecision({ row }: { row: AdminPaymentRow }) {
+  const attribution = row.order.billingSnapshot?.attribution;
+  const hasAttribution = Boolean(attribution?.source || attribution?.campaign || attribution?.intent || attribution?.brief);
+  const webhookProcessed = Boolean(row.latestWebhook?.processedAt);
+  const paidOrder = row.order.status === 'paid';
+  const cues = [
+    {
+      label: 'Vault effect',
+      value: paidOrder ? 'Already unlocked' : row.payment.status === 'pending' ? 'Approval unlocks delivery' : 'Delivery stays locked',
+      tone: paidOrder ? 'success' : row.payment.status === 'pending' ? 'warning' : 'muted',
+    },
+    {
+      label: 'Webhook',
+      value: row.latestWebhook ? (webhookProcessed ? 'Processed' : 'Received, not processed') : 'No webhook yet',
+      tone: webhookProcessed ? 'success' : row.latestWebhook ? 'warning' : 'muted',
+    },
+    {
+      label: 'Attribution',
+      value: hasAttribution ? (attribution?.campaign ?? attribution?.intent ?? attribution?.source ?? 'Captured') : 'Not captured',
+      tone: hasAttribution ? 'success' : 'muted',
+    },
+  ] as const;
+
+  return (
+    <div className="mt-3 rounded border border-line bg-white p-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-muted">Review decision</p>
+          <p className="mt-1 text-sm font-bold text-ink">{paymentReviewInstruction(row)}</p>
+        </div>
+        <span className="rounded bg-paper px-2 py-1 text-[0.68rem] font-black uppercase tracking-[0.12em] text-muted">
+          {row.payment.mode.replaceAll('_', ' ')}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2 md:grid-cols-3">
+        {cues.map((cue) => (
+          <div key={cue.label} className={`rounded border p-2 ${reviewCueClass(cue.tone)}`}>
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] opacity-70">{cue.label}</p>
+            <p className="mt-1 line-clamp-2 text-xs font-black">{cue.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function paymentReviewInstruction(row: AdminPaymentRow) {
+  if (row.payment.status === 'paid') {
+    return 'Payment is already paid. Do not approve again unless you are reconciling a duplicate provider state.';
+  }
+
+  if (row.payment.status === 'failed' || row.payment.status === 'expired') {
+    return 'Payment is closed. Downloads should remain locked unless a new valid payment session is created.';
+  }
+
+  if (row.latestWebhook && !row.latestWebhook.processedAt) {
+    return 'A webhook exists but is not processed. Review provider state before manual approval.';
+  }
+
+  return 'Approve only after the external payment/reference is verified. Approval marks the order paid and opens the delivery vault.';
+}
+
+function reviewCueClass(tone: 'success' | 'warning' | 'muted') {
+  if (tone === 'success') {
+    return 'border-pine/20 bg-pine/10 text-pine';
+  }
+
+  if (tone === 'warning') {
+    return 'border-saffron/30 bg-saffron/10 text-[#8a5c16]';
+  }
+
+  return 'border-line bg-paper text-muted';
 }
 
 function PaymentAttributionLine({

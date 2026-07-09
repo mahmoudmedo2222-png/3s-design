@@ -116,6 +116,9 @@ export type AdminPaymentProviderReadiness = {
   configured: boolean;
   mode: 'manual_review' | 'provider_checkout';
   missing: string[];
+  blocking?: string[];
+  riskLevel?: 'controlled' | 'blocked' | 'ready';
+  nextAction?: string;
 };
 
 export type AdminPaymentRow = {

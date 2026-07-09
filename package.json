@@ -21,6 +21,7 @@
     "quality:local": "corepack pnpm format:check && corepack pnpm lint && corepack pnpm --filter @3s-design/web typecheck && corepack pnpm --filter @3s-design/api typecheck && corepack pnpm --filter @3s-design/db typecheck && corepack pnpm --filter @3s-design/web test && corepack pnpm --filter @3s-design/api test && corepack pnpm --filter @3s-design/api test:auth && corepack pnpm --filter @3s-design/api test:cart && corepack pnpm --filter @3s-design/api test:checkout && corepack pnpm --filter @3s-design/api test:sales-flow && corepack pnpm --filter @3s-design/api test:admin-flow",
     "quality:site": "pnpm quality:site:lighthouse && pnpm quality:site:ux",
     "quality:site:lighthouse": "node scripts/site-quality.mjs",
+    "quality:site:prod": "node scripts/site-quality-prod.mjs",
     "quality:site:ux": "playwright test",
     "test": "turbo test",
     "test:admin-flow": "pnpm --filter @3s-design/api test:admin-flow",
