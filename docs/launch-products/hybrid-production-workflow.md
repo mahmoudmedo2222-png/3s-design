@@ -34,7 +34,7 @@ Recommended page structure:
 02 Noir Dining Launch Kit
 03 Glow Clinic Launch Kit
 04 Signature Property Carousel
-05 Luxury Sale Without Noise
+05 Capsule Drop Sale Kit
 06 Elegant Wedding Invitation Suite
 07 Watermarked Previews
 08 Export QA
@@ -111,7 +111,7 @@ The draft product already exists in the local database for the starter five. Kee
 1. Noir Dining Launch Kit.
 2. Glow Clinic Launch Kit.
 3. Signature Property Carousel.
-4. Luxury Sale Without Noise.
+4. Capsule Drop Sale Kit.
 5. Elegant Wedding Invitation Suite.
 
 ## Per-Product Done Definition

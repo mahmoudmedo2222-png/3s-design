@@ -2,7 +2,7 @@
 title: 3S Design Project Context
 status: active
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-07-07
 source: codex-bmad-bootstrap
 ---
 
@@ -18,6 +18,7 @@ source: codex-bmad-bootstrap
 - Web app: Next.js in `apps/web`.
 - API: NestJS in `apps/api`.
 - Database package: Drizzle + PostgreSQL in `packages/db`.
+- CSS system: tokens and premium surface rules in `apps/web/app/globals.css` and `apps/web/tailwind.config.ts`.
 - Local database: PostgreSQL on `127.0.0.1:55432`.
 - Local API: `http://localhost:4000/api`.
 - Local web: `http://localhost:3000`.
@@ -26,6 +27,7 @@ source: codex-bmad-bootstrap
 
 - Public home and product discovery.
 - Product detail pages.
+- Client color session inside the studio preview.
 - Login and registration.
 - Customer account dashboard.
 - Admin dashboard.
@@ -58,6 +60,22 @@ source: codex-bmad-bootstrap
 - Auth, cart, checkout, payment, entitlement, downloads, and admin flows are high-risk and require negative-path testing.
 - Prefer existing project patterns over new abstractions.
 - Keep implementation changes small and story-scoped.
+
+## Advisor Working Rules
+
+- Treat the user as a decision-maker who needs accuracy, risk detection, and clear tradeoffs, not automatic agreement.
+- If the user's idea contains an error, gap, or risky assumption, state the uncomfortable truth in the first line.
+- If the idea is strong, say so briefly and move directly to execution or analysis.
+- Label major claims with confidence:
+  - `(Confirmed)` for strong evidence from code, tests, docs, or direct verification.
+  - `(Likely)` for strong inference from available evidence.
+  - `(Guess)` when filling gaps or working with incomplete information.
+- Avoid empty praise and long preambles.
+- When disagreeing, use this shape:
+  - `I disagree because ...`
+  - `What I will do instead ...`
+- If the user challenges an answer, hold the position unless the user provides new evidence or the answer was explicitly labeled `(Guess)`.
+- For coding work, identify meaningful risks or assumptions first, then proceed when the request is clear.
 
 ## BMAD Operating Mode
 

@@ -1,7 +1,7 @@
 ---
 title: Starter Five Launch Products
 status: draft
-updated: 2026-07-06
+updated: 2026-07-09
 ---
 
 # Starter Five Launch Products
@@ -105,35 +105,35 @@ Required frames:
 - Story teaser: 1080x1920.
 - Website hero preview: 1600x1200.
 
-## 4. Luxury Sale Without Noise
+## 4. Capsule Drop Sale Kit
 
 Category: Fashion and ecommerce  
 Buyer: Boutique, ecommerce store, premium fashion seller  
-Moment: The brand wants urgency without looking cheap or crowded.
+Moment: The brand is launching a capsule drop, curated sale, or limited private edit and wants urgency without looking cheap or crowded.
 
 Customer feeling:
 
-- Urgent
-- Elegant
 - Selective
-- Commercial
+- Premium
+- Urgent
+- Quiet luxury
 
 Product promise:
 
-Luxury Sale Without Noise gives a store sale graphics that convert while preserving brand value. It should make the offer feel curated and limited, not like a discount dump.
+Capsule Drop Sale Kit turns a sale into a private shopping moment that protects the brand while still pushing customers to act. It should feel like a campaign system, not a discount graphic pack.
 
 Design direction:
 
-- Cream, black, and one accent color.
-- Clear offer hierarchy.
-- Product image area must be generous.
-- No loud sticker overload.
-- Use restrained sale badges.
+- Black, ivory, champagne gold, and taupe.
+- Five-stage campaign journey, not isolated graphics.
+- Product image area must be generous and replaceable.
+- No loud sticker overload or cheap urgency language.
+- Use restrained access codes, sale windows, and proof cues.
 
 Required frames:
 
 - Instagram post: 1080x1080.
-- Story sale frame: 1080x1920.
+- Instagram story: 1080x1920.
 - Website/banner: 1600x900.
 - Product grid promo card: 1080x1080.
 - Website hero preview: 1600x1200.
@@ -188,10 +188,10 @@ Each product must later ship with:
 
 Start in this order:
 
-1. Noir Dining Launch Kit.
-2. Glow Clinic Launch Kit.
+1. Capsule Drop Sale Kit.
+2. Noir Dining Launch Kit.
 3. Signature Property Carousel.
-4. Luxury Sale Without Noise.
+4. Glow Clinic Launch Kit.
 5. Elegant Wedding Invitation Suite.
 
 This gives the homepage enough range to feel like a real premium marketplace: food, beauty, real estate, ecommerce, and events.

@@ -1,7 +1,7 @@
 ---
 title: Starter Five Production Briefs
 status: draft
-updated: 2026-07-06
+updated: 2026-07-09
 ---
 
 # Starter Five Production Briefs
@@ -25,7 +25,9 @@ Category: Restaurants and cafes
 Primary buyer: Premium restaurant owner  
 Core emotion: expensive before booking
 
-AI mood reference: `docs/launch-products/moodboards/noir-dining-launch-kit-mood-v1.png`
+AI mood reference: `docs/launch-products/moodboards/noir-dining-launch-kit-mood-v2.png`
+Previous reference: `docs/launch-products/moodboards/noir-dining-launch-kit-mood-v1.png`
+Approved direction blend: A Noir Cinematic + C Modern Minimal Fine Dining + D Art Deco Restaurant.
 
 ### Figma Frames
 
@@ -66,7 +68,7 @@ CTA options:
 ### AI Mood Prompt
 
 ```txt
-Create a cinematic mood board for a luxury restaurant launch kit called Noir Dining Launch Kit. Use an elegant fine dining atmosphere with dark editorial surfaces, black marble, warm candlelight, subtle gold accents, premium menu paper, close-up plated dish details, and a refined reservation moment. The output should feel like a high-end editorial photography mood board, not a finished template. Use deep black, soft gold, warm ivory, muted charcoal, and subtle amber highlights. Avoid cheap restaurant flyer style, busy discount graphics, stock-looking smiles, neon signage, cluttered typography, excessive decoration, fake brand names, logos, and readable text.
+Create an updated mood board for Noir Dining Launch Kit blending Noir Cinematic, Modern Minimal Fine Dining, and Art Deco Restaurant. Use a premium fine dining restaurant at night with black marble, candlelight, refined table setting, elegant menu cover, one plated dish detail, and subtle Art Deco brass geometry. The output should feel like a high-end editorial photography mood board, not a finished template. Use deep black, muted charcoal, warm ivory, champagne gold, and tiny amber highlights. Keep the composition restrained, modern, expensive, and uncluttered. Avoid cheap restaurant flyer style, busy discount graphics, royal palace styling, neon signage, fake brand names, logos, readable text, and over-decorated layouts.
 ```
 
 ### Canva Handoff
@@ -185,9 +187,9 @@ Editable fields:
 - Agent contact.
 - Amenities.
 
-## 4. Luxury Sale Without Noise
+## 4. Capsule Drop Sale Kit
 
-Slug: `luxury-sale-without-noise`  
+Slug: `capsule-drop-sale-kit`  
 Category: Fashion and ecommerce  
 Primary buyer: Premium ecommerce or boutique owner  
 Core emotion: urgency without cheapness
@@ -196,11 +198,11 @@ Core emotion: urgency without cheapness
 
 | Frame                         | Size      | Purpose                      |
 | ----------------------------- | --------- | ---------------------------- |
-| `LSWN / Post / Sale`          | 1080x1080 | Main sale post               |
-| `LSWN / Story / Sale`         | 1080x1920 | Story offer                  |
-| `LSWN / Banner / Website`     | 1600x900  | Website promo banner         |
-| `LSWN / Card / Product Promo` | 1080x1080 | Product promo card           |
-| `LSWN / Preview / Hero`       | 1600x1200 | Website product hero preview |
+| `CDSK / 01 / Post / Invite`   | 1080x1080 | Private announcement post    |
+| `CDSK / 01 / Story / Invite`  | 1080x1920 | Story access prompt          |
+| `CDSK / 01 / Banner / Invite` | 1600x900  | Website private sale banner  |
+| `CDSK / Preview / Hero`       | 1600x1200 | Website product hero preview |
+| `CDSK / Preview / Grid`       | 1600x1200 | Watermarked template grid    |
 
 ### Copy
 
@@ -208,12 +210,12 @@ Headline options:
 
 - Private Sale
 - Selected Pieces, Limited Time
-- Quiet Luxury, Sharper Price
+- The Capsule Edit Opens
 
 Support copy:
 
-- Premium sale visuals for brands that need conversion without damaging the brand feel.
-- Designed for selective offers, capsule drops, and limited campaigns.
+- A premium campaign system for boutique drops, selected edits, and limited-time offers.
+- Designed to make urgency feel private, intentional, and brand-safe.
 
 CTA options:
 
@@ -223,10 +225,10 @@ CTA options:
 
 ### Figma Direction
 
-- Cream/black base with saffron or berry accent.
+- Black, ivory, taupe, and champagne gold base.
 - No messy discount stickers.
 - Product image should own the layout.
-- Offer is clear but not loud.
+- Offer is clear, but the customer should feel invited rather than pushed.
 
 ### Canva Handoff
 

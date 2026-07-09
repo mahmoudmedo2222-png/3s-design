@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-labelledby="title desc">
+  <title id="title">CDSK / 01 / Story / Editorial Invite</title>
+  <desc id="desc">Editable Stage 01 private announcement template for Capsule Drop Sale Kit. Channel: Instagram story. Variation: A.</desc>
+  
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1080" y2="1920">
+      <stop offset="0" stop-color="#070706" />
+      <stop offset="0.55" stop-color="#11100e" />
+      <stop offset="1" stop-color="#181613" />
+    </linearGradient>
+    <linearGradient id="ivoryCard" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2eadc" />
+      <stop offset="1" stop-color="#ded1be" />
+    </linearGradient>
+    <linearGradient id="goldLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c6030" stop-opacity="0" />
+      <stop offset="0.5" stop-color="#c8a45d" />
+      <stop offset="1" stop-color="#7c6030" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="silk" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a241e" />
+      <stop offset="0.35" stop-color="#8d7864" />
+      <stop offset="0.7" stop-color="#302820" />
+      <stop offset="1" stop-color="#130f0d" />
+    </linearGradient>
+    <pattern id="marble" width="180" height="180" patternUnits="userSpaceOnUse">
+      <rect width="180" height="180" fill="#070706" />
+      <path d="M-20 130 C 40 90, 80 190, 170 35" fill="none" stroke="#3e3931" stroke-width="2" opacity="0.45" />
+      <path d="M10 20 C 70 80, 120 5, 190 80" fill="none" stroke="#cbb991" stroke-width="1" opacity="0.16" />
+    </pattern>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.42" />
+    </filter>
+  </defs>
+  
+  <rect width="1080" height="1920" fill="url(#bg)" />
+  <rect width="1080" height="1920" fill="url(#marble)" opacity="0.18" />
+  <g id="ambient-lines"><line x1="24" y1="0" x2="-56" y2="1920" stroke="#c8a45d" stroke-opacity="0.055" stroke-width="1" />
+<line x1="144" y1="0" x2="64" y2="1920" stroke="#c8a45d" stroke-opacity="0.055" stroke-width="1" />
+<line x1="264" y1="0" x2="184" y2="1920" stroke="#c8a45d" stroke-opacity="0.055" stroke-width="1" />
+<line x1="384" y1="0" x2="304" y2="1920" stroke="#c8a45d" stroke-opacity="0.055" stroke-width="1" />
+<line x1="504" y1="0" x2="424" y2="1920" stroke="#c8a45d" stroke-opacity="0.055" stroke-width="1" />
+<line x1="624" y1="0" x2="544" y2="1920" stroke="#c8a45d" stroke-opacity="0.055" stroke-width="1" />
+<line x1="744" y1="0" x2="664" y2="1920" stroke="#c8a45d" stroke-opacity="0.055" stroke-width="1" />
+<line x1="864" y1="0" x2="784" y2="1920" stroke="#c8a45d" stroke-opacity="0.055" stroke-width="1" />
+<line x1="984" y1="0" x2="904" y2="1920" stroke="#c8a45d" stroke-opacity="0.055" stroke-width="1" /></g>
+  <rect id="safe-area-guide" x="49" y="49" width="982" height="1822" fill="none" stroke="#c8a45d" stroke-width="1" stroke-dasharray="8 10" opacity="0.18" />
+  <g id="template-master" data-product="capsule-drop-sale-kit" data-stage="01-private-announcement" data-channel="Instagram story" data-variation="A">
+    
+    
+  <g id="editable-product-image" data-field="product-image" filter="url(#softShadow)">
+    <rect x="76" y="326" width="928" height="1037" rx="28" fill="url(#silk)" />
+    <path d="M243.04 1176.34 C 391.52000000000004 637.0999999999999, 651.36 1404.48, 892.64 512.66" fill="none" stroke="#f3dec1" stroke-opacity="0.2" stroke-width="5.5680000000000005" />
+    <path d="M150.24 491.92 L 929.76 1259.3000000000002" stroke="#c8a45d" stroke-width="3.712" opacity="0.42" />
+    <circle cx="781.28" cy="574.88" r="74.24" fill="#0d0c0a" opacity="0.55" />
+    <text x="540" y="844.5" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="46" fill="#f2eadc" opacity="0.78" letter-spacing="4">PRODUCT IMAGE</text>
+  </g>
+    <g id="editable-copy" data-field-group="copy">
+      <text id="brand-name" data-editable="text" x="76" y="154" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="5" fill="#c8a45d">BRAND NAME</text>
+      <line x1="76" y1="202" x2="196" y2="202" stroke="#c8a45d" stroke-width="2" />
+      <rect x="76" y="1171" width="928" height="595" rx="34" fill="#070706" opacity="0.92" stroke="#c8a45d" stroke-opacity="0.38" />
+      
+  <g id="editable-campaign-step" data-field="campaign-step">
+    <text x="124" y="1225" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#c8a45d" letter-spacing="3">01 / PRIVATE ANNOUNCEMENT</text>
+    <line x1="124" y1="1243" x2="282" y2="1243" stroke="#c8a45d" stroke-width="2" opacity="0.72" />
+  </g>
+      <text id="eyebrow" data-editable="text" x="124" y="1255" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700" letter-spacing="4" fill="#c8a45d">PRIVATE PREVIEW</text>
+      <text id="headline" data-editable="text" x="124" y="1361" text-anchor="start" font-family="Georgia, 'Times New Roman', serif" font-size="70" font-weight="500" fill="#f2eadc">THE EDIT OPENS</text>
+      <text id="subline" data-editable="text" x="128" y="1431" text-anchor="start" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="500" letter-spacing="0" fill="#ded1be">A curated capsule drop for selected pieces.</text>
+      
+  <g id="editable-cta" data-field="cta">
+    <rect x="124" y="1501" width="330" height="74" rx="37" fill="#c8a45d" />
+    <text x="289" y="1546.88" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="700" fill="#070706" letter-spacing="2">SHOP THE EDIT</text>
+  </g>
+      
+  <g class="editable-detail-pill" data-field="campaign-detail">
+    <rect x="486" y="1519" width="220" height="40" rx="20" fill="#11100e" stroke="#c8a45d" stroke-width="1" opacity="0.94" />
+    <text x="596" y="1545" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#ded1be" letter-spacing="1.4">Preview ends Sunday</text>
+  </g>
+      <g id="editable-campaign-meta" data-field-group="campaign-meta">
+      <g class="editable-meta-row" data-field="collection-name">
+        <text x="124" y="1625" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#c8a45d" letter-spacing="2.4">COLLECTION</text>
+        <text x="124" y="1653" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="600" fill="#f2eadc">The Capsule Edit</text>
+      </g>
+
+      <g class="editable-meta-row" data-field="access-code">
+        <text x="124" y="1683" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#c8a45d" letter-spacing="2.4">ACCESS CODE</text>
+        <text x="124" y="1711" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="600" fill="#f2eadc">CAPSULE15</text>
+      </g></g>
+    </g>
+  </g>
+</svg>

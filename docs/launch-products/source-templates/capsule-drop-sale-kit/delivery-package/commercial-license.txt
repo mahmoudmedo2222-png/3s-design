@@ -1,0 +1,24 @@
+3S Design Commercial License
+Product: Capsule Drop Sale Kit
+
+This is a non-exclusive commercial license.
+
+Allowed:
+- Use the edited designs for your own business.
+- Use the edited designs for a client campaign.
+- Modify text, colors, images, layout details, and exports for a real brand campaign.
+- Publish exported campaign assets commercially on social media, websites, email, ads, and print where applicable.
+
+Not allowed:
+- Resell the source files as templates.
+- Share the editable Figma or Canva files as a public freebie.
+- Claim exclusive ownership of the base design.
+- Upload the source files to another template marketplace.
+- Use the design in a way that implies 3S created or endorsed a specific third-party brand campaign.
+
+Exclusivity:
+The base design can be sold to multiple customers.
+Private exclusive customization is a separate service and is not included in this license.
+
+Asset responsibility:
+The customer is responsible for replacing placeholders with licensed images, fonts, logos, and brand assets they have the right to use.

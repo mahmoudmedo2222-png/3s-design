@@ -1,0 +1,84 @@
+{
+  "product": "Capsule Drop Sale Kit",
+  "stage": "01 Private announcement",
+  "status": "draft-master",
+  "generatedAt": "2026-07-08",
+  "purpose": "First six editable source templates for the premium 30-template package with commercial campaign details.",
+  "detailPass": "Adds sale window, access code, collection name, product count, campaign step, and proof cues.",
+  "editableFields": [
+    "brand-name",
+    "campaign-step",
+    "eyebrow",
+    "headline",
+    "subline",
+    "cta",
+    "offer",
+    "product-image",
+    "collection-name",
+    "sale-window",
+    "access-code",
+    "product-count",
+    "proof-cue"
+  ],
+  "tokens": {
+    "black": "#070706",
+    "blackSoft": "#11100e",
+    "charcoal": "#181613",
+    "ivory": "#f2eadc",
+    "ivorySoft": "#ded1be",
+    "gold": "#c8a45d",
+    "goldDark": "#7c6030",
+    "taupe": "#9b8874",
+    "burgundy": "#5a2430"
+  },
+  "templates": [
+    {
+      "id": "CDSK / 01 / Post / Editorial Invite",
+      "file": "01-post-editorial-invite.svg",
+      "channel": "Instagram post",
+      "variation": "A",
+      "size": "1080x1080",
+      "mode": "editorial"
+    },
+    {
+      "id": "CDSK / 01 / Post / Offer Invite",
+      "file": "01-post-offer-invite.svg",
+      "channel": "Instagram post",
+      "variation": "B",
+      "size": "1080x1080",
+      "mode": "offer"
+    },
+    {
+      "id": "CDSK / 01 / Story / Editorial Invite",
+      "file": "01-story-editorial-invite.svg",
+      "channel": "Instagram story",
+      "variation": "A",
+      "size": "1080x1920",
+      "mode": "editorial"
+    },
+    {
+      "id": "CDSK / 01 / Story / Offer Invite",
+      "file": "01-story-offer-invite.svg",
+      "channel": "Instagram story",
+      "variation": "B",
+      "size": "1080x1920",
+      "mode": "offer"
+    },
+    {
+      "id": "CDSK / 01 / Banner / Editorial Invite",
+      "file": "01-banner-editorial-invite.svg",
+      "channel": "Website/banner",
+      "variation": "A",
+      "size": "1600x900",
+      "mode": "editorial"
+    },
+    {
+      "id": "CDSK / 01 / Banner / Offer Invite",
+      "file": "01-banner-offer-invite.svg",
+      "channel": "Website/banner",
+      "variation": "B",
+      "size": "1600x900",
+      "mode": "offer"
+    }
+  ]
+}

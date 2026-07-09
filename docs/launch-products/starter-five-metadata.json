@@ -61,24 +61,30 @@
       "frames": ["Carousel cover 1080x1080", "Property details slide 1080x1080", "Amenities slide 1080x1080", "Story teaser 1080x1920"]
     },
     {
-      "title": "Luxury Sale Without Noise",
-      "slug": "luxury-sale-without-noise",
-      "subtitle": "Elegant sale campaign visuals for premium ecommerce and fashion brands",
-      "description": "A restrained sale campaign kit for brands that need conversion and urgency while protecting a premium visual identity.",
-      "price": "36.00",
+      "title": "Capsule Drop Sale Kit",
+      "slug": "capsule-drop-sale-kit",
+      "subtitle": "A premium campaign system for boutique drops, private edits, and limited-time fashion offers",
+      "description": "A story-led campaign kit for boutique and ecommerce brands that need urgency without making the sale feel cheap. It turns a discount or limited drop into a private shopping moment across posts, stories, banners, product promos, and final reminders.",
+      "price": "49.00",
       "currency": "USD",
       "category": "Fashion and Ecommerce",
-      "tags": ["fashion", "ecommerce", "sale", "premium", "campaign"],
+      "tags": ["fashion", "ecommerce", "sale", "capsule drop", "canva", "figma", "premium", "campaign"],
       "dna": {
         "industry": ["fashion", "ecommerce"],
-        "mood": ["urgent", "elegant", "selective", "commercial"],
-        "style": ["minimal", "premium", "editorial"],
-        "color": ["cream", "black", "saffron"],
-        "platform": ["instagram", "website", "social"],
-        "format": ["post", "story", "banner", "promo card"],
-        "audience": ["boutiques", "premium stores", "fashion sellers"]
+        "mood": ["selective", "premium", "urgent", "quiet luxury"],
+        "style": ["editorial", "minimal", "luxury"],
+        "color": ["black", "ivory", "champagne gold", "taupe"],
+        "platform": ["instagram", "website", "canva", "figma"],
+        "format": ["post", "story", "banner", "promo card", "reminder"],
+        "audience": ["boutique owners", "premium ecommerce sellers", "fashion marketers"]
       },
-      "frames": ["Instagram post 1080x1080", "Story sale frame 1080x1920", "Website banner 1600x900", "Product promo card 1080x1080"]
+      "frames": [
+        "Instagram post 1080x1080",
+        "Instagram story 1080x1920",
+        "Website banner 1600x900",
+        "Product promo card 1080x1080",
+        "Final reminder 1080x1920"
+      ]
     },
     {
       "title": "Elegant Wedding Invitation Suite",
