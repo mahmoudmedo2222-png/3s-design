@@ -170,13 +170,13 @@ export function StorefrontDiscovery({ products }: { products: ProductSummary[] }
       </Panel>
 
       <Panel tone="glass" className="p-3">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
-          <div>
+        <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
+          <div className="min-w-0">
             <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-gold">
               <SlidersHorizontal size={15} />
               Buyer-intent filters
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 thin-scrollbar">
+            <div className="flex max-w-full gap-2 overflow-x-auto pb-1 thin-scrollbar">
               {buyerNiches.map((niche) => {
                 const active = activeNiche === niche.id;
                 const count = nicheCount(products, niche.terms);
@@ -198,7 +198,7 @@ export function StorefrontDiscovery({ products }: { products: ProductSummary[] }
             </div>
           </div>
 
-          <label className="relative block">
+          <label className="relative block min-w-0">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={17} />
             <Input
               value={query}
