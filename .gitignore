@@ -16,3 +16,4 @@ coverage
 _bmad
 _bmad-output
 tools/*.exe
+tmp-visual-audit/

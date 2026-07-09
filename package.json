@@ -16,9 +16,11 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "lint:md": "markdownlint-cli2 \"**/*.md\"",
     "quality": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
-    "quality:local": "corepack pnpm format:check && corepack pnpm lint && corepack pnpm --filter @3s-design/web typecheck && corepack pnpm --filter @3s-design/api typecheck && corepack pnpm --filter @3s-design/db typecheck && corepack pnpm --filter @3s-design/web test && corepack pnpm --filter @3s-design/api test && corepack pnpm --filter @3s-design/api test:auth && corepack pnpm --filter @3s-design/api test:cart && corepack pnpm --filter @3s-design/api test:checkout && corepack pnpm --filter @3s-design/api test:sales-flow",
+    "quality:local": "corepack pnpm format:check && corepack pnpm lint && corepack pnpm --filter @3s-design/web typecheck && corepack pnpm --filter @3s-design/api typecheck && corepack pnpm --filter @3s-design/db typecheck && corepack pnpm --filter @3s-design/web test && corepack pnpm --filter @3s-design/api test && corepack pnpm --filter @3s-design/api test:auth && corepack pnpm --filter @3s-design/api test:cart && corepack pnpm --filter @3s-design/api test:checkout && corepack pnpm --filter @3s-design/api test:sales-flow && corepack pnpm --filter @3s-design/api test:admin-flow",
     "test": "turbo test",
+    "test:admin-flow": "pnpm --filter @3s-design/api test:admin-flow",
     "test:auth": "pnpm --filter @3s-design/api test:auth",
     "test:cart": "pnpm --filter @3s-design/api test:cart",
     "test:checkout": "pnpm --filter @3s-design/api test:checkout",
@@ -31,6 +33,7 @@
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.7.0",
+    "markdownlint-cli2": "^0.23.0",
     "prettier": "^3.3.3",
     "prettier-plugin-packagejson": "^2.5.8",
     "tsx": "^4.19.2",
@@ -38,5 +41,14 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.62.1"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "esbuild": "^0.25.12",
+      "fastify": "^5.10.0",
+      "glob": "^10.5.0",
+      "picomatch": "^4.0.4",
+      "postcss": "^8.5.16"
+    }
+  }
 }

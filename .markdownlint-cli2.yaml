@@ -1,0 +1,31 @@
+# markdownlint-cli2 configuration
+# https://github.com/DavidAnson/markdownlint-cli2
+
+ignores:
+  - "**/node_modules/**"
+  - "**/.next/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/coverage/**"
+  - "**/.turbo/**"
+  - ".git/**"
+  - ".agents/**"
+  - "_bmad/**"
+  - "_bmad-output/**"
+  - ".postgres-data/**"
+  - "packages/db/drizzle/meta/**"
+
+config:
+  default: false
+
+  MD001: true
+
+  MD024:
+    siblings_only: true
+
+  MD026:
+    punctuation: ","
+
+  MD034: true
+
+  MD037: true
