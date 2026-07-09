@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import {
   BadRequestException,
   ForbiddenException,
@@ -86,6 +86,14 @@ export class PaymentsService {
       billingSnapshot: order.billingSnapshot,
       hasIdempotencyKey: Boolean(input.idempotencyKey),
     });
+    const providerSession = await this.createProviderCheckoutSession({
+      provider: input.provider,
+      providerPaymentId,
+      order,
+      successUrl: input.successUrl,
+      cancelUrl: input.cancelUrl,
+    });
+
     const [createdPayment] = await db
       .insert(payments)
       .values({
@@ -102,6 +110,7 @@ export class PaymentsService {
           idempotencyKey: input.idempotencyKey ?? null,
           mode: input.provider === 'manual' ? 'manual_review' : 'provider_checkout',
           providerReadiness,
+          providerSession,
           fraudRisk,
         },
       })
@@ -166,7 +175,15 @@ export class PaymentsService {
       .orderBy(desc(payments.createdAt))
       .limit(50);
 
-    return { items: rows.map((row) => ({ ...row, payment: this.serializePaymentSession(row.payment) })) };
+    const items = await Promise.all(
+      rows.map(async (row) => ({
+        ...row,
+        payment: this.serializePaymentSession(row.payment),
+        latestWebhook: await this.findLatestWebhookForPayment(row.payment),
+      })),
+    );
+
+    return { items };
   }
 
   async reconcileStalePendingPayments(actorUserId: string, now = new Date()) {
@@ -321,23 +338,29 @@ export class PaymentsService {
     return this.failPayment(payment.id);
   }
 
-  async handleProviderWebhook(providerValue: string, input: PaymentWebhookEventDto, secret: string | undefined) {
+  async handleProviderWebhook(
+    providerValue: string,
+    input: PaymentWebhookEventDto | Record<string, unknown>,
+    secret: string | undefined,
+    hmac?: string,
+  ) {
     if (!isPaymentProvider(providerValue)) {
       throw new BadRequestException('Unsupported payment provider');
     }
 
-    this.assertWebhookSecret(providerValue, secret);
+    this.assertWebhookAuthenticity(providerValue, input, secret, hmac);
+    const event = this.normalizeProviderWebhook(providerValue, input);
 
     const db = this.database.requireDb();
     const [existing] = await db
       .select({ id: paymentWebhookEvents.id, processedAt: paymentWebhookEvents.processedAt })
       .from(paymentWebhookEvents)
-      .where(and(eq(paymentWebhookEvents.provider, providerValue), eq(paymentWebhookEvents.eventId, input.eventId)))
+      .where(and(eq(paymentWebhookEvents.provider, providerValue), eq(paymentWebhookEvents.eventId, event.eventId)))
       .limit(1);
 
     if (existing) {
       if (!existing.processedAt) {
-        await this.processProviderWebhook(providerValue, input);
+        await this.processProviderWebhook(providerValue, event);
         const [updatedDuplicate] = await db
           .update(paymentWebhookEvents)
           .set({ processedAt: new Date() })
@@ -362,11 +385,11 @@ export class PaymentsService {
       .insert(paymentWebhookEvents)
       .values({
         provider: providerValue,
-        eventId: input.eventId,
-        eventType: input.eventType,
-        payload: input.payload ?? {
-          providerPaymentId: input.providerPaymentId,
-          status: input.status,
+        eventId: event.eventId,
+        eventType: event.eventType,
+        payload: event.payload ?? {
+          providerPaymentId: event.providerPaymentId,
+          status: event.status,
         },
       })
       .onConflictDoNothing({
@@ -378,11 +401,11 @@ export class PaymentsService {
       const [duplicate] = await db
         .select({ id: paymentWebhookEvents.id, processedAt: paymentWebhookEvents.processedAt })
         .from(paymentWebhookEvents)
-        .where(and(eq(paymentWebhookEvents.provider, providerValue), eq(paymentWebhookEvents.eventId, input.eventId)))
+        .where(and(eq(paymentWebhookEvents.provider, providerValue), eq(paymentWebhookEvents.eventId, event.eventId)))
         .limit(1);
 
       if (duplicate && !duplicate.processedAt) {
-        await this.processProviderWebhook(providerValue, input);
+        await this.processProviderWebhook(providerValue, event);
         const [updatedDuplicate] = await db
           .update(paymentWebhookEvents)
           .set({ processedAt: new Date() })
@@ -403,7 +426,7 @@ export class PaymentsService {
       };
     }
 
-    await this.processProviderWebhook(providerValue, input);
+    await this.processProviderWebhook(providerValue, event);
 
     const [updatedEvent] = await db
       .update(paymentWebhookEvents)
@@ -419,12 +442,17 @@ export class PaymentsService {
   }
 
   private async processProviderWebhook(provider: PaymentProvider, input: PaymentWebhookEventDto) {
+    const payment = await this.findPaymentByProvider(provider, input.providerPaymentId);
+    this.assertProviderWebhookMatchesPayment(provider, input, payment);
+
     if (input.status === 'paid') {
-      await this.markProviderPaymentPaid(provider, input.providerPaymentId);
+      await this.markPaymentPaid(payment.id, input.providerPaymentId);
       return;
     }
 
-    await this.failProviderPayment(provider, input.providerPaymentId);
+    if (payment.status === 'pending') {
+      await this.failPayment(payment.id);
+    }
   }
 
   async assertUserOwnsPayment(userId: string, paymentId: string) {
@@ -468,6 +496,61 @@ export class PaymentsService {
     return payment;
   }
 
+  private async findLatestWebhookForPayment(payment: typeof payments.$inferSelect) {
+    if (!payment.providerPaymentId) {
+      return null;
+    }
+
+    const event = await this.database
+      .requireDb()
+      .select({
+        eventId: paymentWebhookEvents.eventId,
+        eventType: paymentWebhookEvents.eventType,
+        payload: paymentWebhookEvents.payload,
+        processedAt: paymentWebhookEvents.processedAt,
+        createdAt: paymentWebhookEvents.createdAt,
+      })
+      .from(paymentWebhookEvents)
+      .where(eq(paymentWebhookEvents.provider, payment.provider))
+      .orderBy(desc(paymentWebhookEvents.createdAt))
+      .limit(100)
+      .then((events) =>
+        events.find((event) => {
+          const payload = this.getRawObject(event.payload);
+          const providerPaymentId =
+            this.safeOptionalString(payload.providerPaymentId) ??
+            this.extractPaymobProviderPaymentId(this.getPaymobTransactionObject(payload));
+
+          return providerPaymentId === payment.providerPaymentId;
+        }),
+      );
+
+    if (!event) {
+      return null;
+    }
+
+    return {
+      eventId: event.eventId,
+      eventType: event.eventType,
+      processedAt: event.processedAt,
+      createdAt: event.createdAt,
+    };
+  }
+
+  private assertWebhookAuthenticity(
+    provider: PaymentProvider,
+    input: PaymentWebhookEventDto | Record<string, unknown>,
+    secret: string | undefined,
+    hmac?: string,
+  ) {
+    if (provider === 'paymob') {
+      this.assertPaymobHmac(input, hmac);
+      return;
+    }
+
+    this.assertWebhookSecret(provider, secret);
+  }
+
   private assertWebhookSecret(provider: PaymentProvider, secret: string | undefined) {
     const envName = `PAYMENT_WEBHOOK_SECRET_${provider.toUpperCase()}`;
     const expected = this.config.get<string>(envName);
@@ -496,13 +579,26 @@ export class PaymentsService {
       providerPaymentId: payment.providerPaymentId,
       amount: payment.amount,
       currency: payment.currency,
-      redirectUrl: this.getRedirectUrl(provider, payment.providerPaymentId),
+      redirectUrl: this.getPaymentRedirectUrl(provider, payment),
       mode: provider === 'manual' ? 'manual_review' : 'provider_checkout',
     };
   }
 
+  private getPaymentRedirectUrl(provider: PaymentProvider, payment: typeof payments.$inferSelect) {
+    if (provider === 'paymob') {
+      const providerSession = this.getRawObject(payment.rawResponse.providerSession);
+      return typeof providerSession.iframeUrl === 'string' ? providerSession.iframeUrl : null;
+    }
+
+    return this.getRedirectUrl(provider, payment.providerPaymentId);
+  }
+
   private getRedirectUrl(provider: PaymentProvider, providerPaymentId: string | null) {
     if (provider === 'manual') {
+      return null;
+    }
+
+    if (provider === 'paymob') {
       return null;
     }
 
@@ -516,6 +612,264 @@ export class PaymentsService {
 
   private createProviderPaymentId(provider: PaymentProvider) {
     return `${provider}_${randomUUID()}`;
+  }
+
+  private normalizeProviderWebhook(
+    provider: PaymentProvider,
+    input: PaymentWebhookEventDto | Record<string, unknown>,
+  ): PaymentWebhookEventDto {
+    if (provider !== 'paymob') {
+      const event = input as Partial<PaymentWebhookEventDto>;
+      if (
+        typeof event.eventId !== 'string' ||
+        typeof event.eventType !== 'string' ||
+        typeof event.providerPaymentId !== 'string' ||
+        (event.status !== 'paid' && event.status !== 'failed')
+      ) {
+        throw new BadRequestException('Invalid payment webhook payload');
+      }
+
+      return {
+        eventId: event.eventId,
+        eventType: event.eventType,
+        providerPaymentId: event.providerPaymentId,
+        status: event.status,
+        payload: this.getRawObject(event.payload),
+      };
+    }
+
+    const object = this.getPaymobTransactionObject(input);
+    const providerPaymentId = this.extractPaymobProviderPaymentId(object);
+    const success = object.success === true || object.success === 'true';
+    const pending = object.pending === true || object.pending === 'true';
+    const status: PaymentWebhookEventDto['status'] = success && !pending ? 'paid' : 'failed';
+
+    if (!providerPaymentId) {
+      throw new BadRequestException('Paymob webhook is missing merchant order id');
+    }
+
+    const transactionId = this.safeString(object.id, providerPaymentId);
+
+    return {
+      eventId: `paymob-${transactionId}-${status}`,
+      eventType: success ? 'payment.paid' : 'payment.failed',
+      providerPaymentId,
+      status,
+      payload: this.getRawObject(input),
+    };
+  }
+
+  private assertPaymobHmac(input: PaymentWebhookEventDto | Record<string, unknown>, hmac?: string) {
+    const secret = this.config.get<string>('PAYMOB_HMAC_SECRET');
+
+    if (!secret) {
+      if (this.config.get<string>('NODE_ENV') === 'production') {
+        throw new ServiceUnavailableException('Paymob HMAC secret is not configured');
+      }
+
+      return;
+    }
+
+    if (!hmac) {
+      throw new UnauthorizedException('Missing Paymob HMAC');
+    }
+
+    const object = this.getPaymobTransactionObject(input);
+    const calculated = createHmac('sha512', secret).update(this.buildPaymobHmacSource(object)).digest('hex');
+
+    if (!this.timingSafeStringEqual(calculated, hmac)) {
+      throw new UnauthorizedException('Invalid Paymob HMAC');
+    }
+  }
+
+  private buildPaymobHmacSource(object: Record<string, unknown>) {
+    const order = this.getRawObject(object.order);
+    const sourceData = this.getRawObject(object.source_data);
+    const fields = [
+      object.amount_cents,
+      object.created_at,
+      object.currency,
+      object.error_occured,
+      object.has_parent_transaction,
+      object.id,
+      object.integration_id,
+      object.is_3d_secure,
+      object.is_auth,
+      object.is_capture,
+      object.is_refunded,
+      object.is_standalone_payment,
+      object.is_voided,
+      order.id,
+      object.owner,
+      object.pending,
+      sourceData.pan,
+      sourceData.sub_type,
+      sourceData.type,
+      object.success,
+    ];
+
+    return fields.map((value) => (value === undefined || value === null ? '' : String(value))).join('');
+  }
+
+  private extractPaymobProviderPaymentId(object: Record<string, unknown>) {
+    const order = this.getRawObject(object.order);
+    return this.safeOptionalString(object.merchant_order_id) ?? this.safeOptionalString(order.merchant_order_id);
+  }
+
+  private assertProviderWebhookMatchesPayment(
+    provider: PaymentProvider,
+    input: PaymentWebhookEventDto,
+    payment: typeof payments.$inferSelect,
+  ) {
+    if (provider !== 'paymob') {
+      return;
+    }
+
+    const object = this.getPaymobTransactionObject(input.payload ?? {});
+    const amountCents = Number(object.amount_cents);
+    const currency = this.safeOptionalString(object.currency);
+
+    if (!Number.isFinite(amountCents) || amountCents !== this.toAmountCents(payment.amount)) {
+      throw new BadRequestException('Paymob amount mismatch');
+    }
+
+    if (!currency || currency !== payment.currency) {
+      throw new BadRequestException('Paymob currency mismatch');
+    }
+  }
+
+  private getPaymobTransactionObject(input: PaymentWebhookEventDto | Record<string, unknown>) {
+    const root = this.getRawObject(input);
+    const object = this.getRawObject(root.obj) ?? root;
+    return Object.keys(object).length ? object : root;
+  }
+
+  private getRawObject(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  }
+
+  private timingSafeStringEqual(left: string, right: string) {
+    const leftBuffer = Buffer.from(left);
+    const rightBuffer = Buffer.from(right);
+
+    return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+  }
+
+  private async createProviderCheckoutSession(input: {
+    provider: PaymentProvider;
+    providerPaymentId: string;
+    order: typeof orders.$inferSelect;
+    successUrl?: string;
+    cancelUrl?: string;
+  }) {
+    if (input.provider !== 'paymob') {
+      return null;
+    }
+
+    return this.createPaymobCheckoutSession(input);
+  }
+
+  private async createPaymobCheckoutSession(input: {
+    providerPaymentId: string;
+    order: typeof orders.$inferSelect;
+    successUrl?: string;
+    cancelUrl?: string;
+  }) {
+    const apiKey = this.config.get<string>('PAYMOB_API_KEY');
+    const integrationId = this.config.get<string>('PAYMOB_INTEGRATION_ID_CARD') ?? this.config.get<string>('PAYMOB_INTEGRATION_ID');
+    const iframeId = this.config.get<string>('PAYMOB_IFRAME_ID');
+    const apiBaseUrl = this.config.get<string>('PAYMOB_API_BASE_URL') ?? 'https://accept.paymob.com/api';
+
+    if (!apiKey || !integrationId || !iframeId) {
+      throw new ServiceUnavailableException('Paymob checkout is not configured');
+    }
+
+    const auth = await this.postPaymob<{ token: string }>(`${apiBaseUrl}/auth/tokens`, {
+      api_key: apiKey,
+    });
+
+    const amountCents = this.toAmountCents(input.order.total);
+    const paymobOrder = await this.postPaymob<{ id: number | string }>(`${apiBaseUrl}/ecommerce/orders`, {
+      auth_token: auth.token,
+      delivery_needed: false,
+      amount_cents: amountCents,
+      currency: input.order.currency,
+      merchant_order_id: input.providerPaymentId,
+      items: [],
+    });
+
+    const billing = this.buildPaymobBillingData(input.order.billingSnapshot);
+    const paymentKey = await this.postPaymob<{ token: string }>(`${apiBaseUrl}/acceptance/payment_keys`, {
+      auth_token: auth.token,
+      amount_cents: amountCents,
+      expiration: Number(this.config.get<string>('PAYMOB_PAYMENT_KEY_TTL_SECONDS') ?? 3600),
+      order_id: paymobOrder.id,
+      billing_data: billing,
+      currency: input.order.currency,
+      integration_id: Number(integrationId),
+      lock_order_when_paid: true,
+    });
+
+    return {
+      provider: 'paymob',
+      paymobOrderId: String(paymobOrder.id),
+      merchantOrderId: input.providerPaymentId,
+      amountCents,
+      iframeUrl: `https://accept.paymob.com/api/acceptance/iframes/${encodeURIComponent(iframeId)}?payment_token=${encodeURIComponent(
+        paymentKey.token,
+      )}`,
+      successUrl: input.successUrl ?? null,
+      cancelUrl: input.cancelUrl ?? null,
+    };
+  }
+
+  private async postPaymob<T>(url: string, body: Record<string, unknown>) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new ServiceUnavailableException(`Paymob request failed: ${message || response.status}`);
+    }
+
+    return (await response.json()) as T;
+  }
+
+  private buildPaymobBillingData(billingSnapshot: Record<string, unknown>) {
+    const email = this.safeString(billingSnapshot.email, 'customer@example.com');
+    const city = this.safeString(billingSnapshot.city, 'NA');
+    const country = this.safeString(billingSnapshot.country, 'EG');
+
+    return {
+      apartment: 'NA',
+      email,
+      floor: 'NA',
+      first_name: this.safeString(billingSnapshot.firstName, '3S'),
+      street: this.safeString(billingSnapshot.street, 'NA'),
+      building: 'NA',
+      phone_number: this.safeString(billingSnapshot.phone, '+201000000000'),
+      shipping_method: 'NA',
+      postal_code: this.safeString(billingSnapshot.postalCode, 'NA'),
+      city,
+      country,
+      last_name: this.safeString(billingSnapshot.lastName, 'Design'),
+      state: this.safeString(billingSnapshot.state, city),
+    };
+  }
+
+  private toAmountCents(amount: string) {
+    return Math.round(Number(amount) * 100);
+  }
+
+  private safeString(value: unknown, fallback: string) {
+    return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+  }
+
+  private safeOptionalString(value: unknown) {
+    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
   }
 
   private getPendingExpiryRules(now: Date) {
@@ -608,6 +962,10 @@ export class PaymentsService {
   private providerRequiredEnv(provider: PaymentProvider) {
     if (provider === 'manual') {
       return [];
+    }
+
+    if (provider === 'paymob') {
+      return ['PAYMOB_API_KEY', 'PAYMOB_INTEGRATION_ID_CARD', 'PAYMOB_IFRAME_ID', 'PAYMOB_HMAC_SECRET'];
     }
 
     return [`${provider.toUpperCase()}_CHECKOUT_URL_TEMPLATE`, `PAYMENT_WEBHOOK_SECRET_${provider.toUpperCase()}`];

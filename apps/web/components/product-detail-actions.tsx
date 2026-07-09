@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, BadgeCheck, Crown, LockKeyhole, ShoppingBag } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Crown, LockKeyhole, ShoppingBag, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { useState } from 'react';
@@ -12,7 +12,12 @@ import { CompareButton } from './compare-button';
 import { MoodboardButton } from './moodboard-button';
 import { ActionLink, Button, Notice, Panel } from './ui';
 
-export function ProductDetailActions({ product }: { product: ProductDetail }) {
+type ProductFitContext = {
+  brief: string;
+  signals: string[];
+};
+
+export function ProductDetailActions({ product, fitContext }: { product: ProductDetail; fitContext?: ProductFitContext | null }) {
   const add = useCartStore((state) => state.add);
   const { isSignedIn } = useAuthSession();
   const [authNotice, setAuthNotice] = useState(false);
@@ -79,6 +84,24 @@ export function ProductDetailActions({ product }: { product: ProductDetail }) {
 
   return (
     <Panel className="p-3">
+      {fitContext?.brief ? (
+        <Panel className="mb-3 border-saffron/25 bg-saffron/10 p-3 shadow-none">
+          <div className="flex items-start gap-2">
+            <Sparkles className="mt-0.5 shrink-0 text-saffron" size={16} />
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-saffron">Personal fit before cart</p>
+              <p className="mt-1 line-clamp-2 text-xs font-bold leading-5 text-ink">&quot;{fitContext.brief}&quot;</p>
+              {fitContext.signals.length ? (
+                <p className="mt-2 text-xs leading-5 text-muted">
+                  Matched on <strong>{fitContext.signals.slice(0, 3).join(', ')}</strong>. Choose the license only if these signals match
+                  the buyer moment.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </Panel>
+      ) : null}
+
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Starting from</p>

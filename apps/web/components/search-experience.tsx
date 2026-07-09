@@ -145,7 +145,7 @@ export function SearchExperience() {
   }
 
   return (
-    <main className="showcase-page min-h-screen px-4 py-6 text-white sm:px-6 lg:px-8">
+    <main className="showcase-page search-experience min-h-screen px-4 py-6 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <Link href="/?intro=0" className="brand-lockup text-white" aria-label="Back home">

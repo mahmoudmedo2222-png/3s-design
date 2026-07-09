@@ -34,6 +34,8 @@ type CheckoutResult = {
   payment: PaymentSession;
 };
 
+type CheckoutProvider = 'manual' | 'paypal' | 'paymob' | 'fawry';
+
 type CartState = {
   items: CartItem[];
   totals: CartTotals;
@@ -47,7 +49,7 @@ type CartState = {
   remove: (itemId: string) => Promise<void>;
   clear: () => Promise<void>;
   clearLocal: () => void;
-  checkout: () => Promise<CheckoutResult>;
+  checkout: (provider?: CheckoutProvider) => Promise<CheckoutResult>;
 };
 
 const emptyTotals: CartTotals = {
@@ -146,7 +148,7 @@ export const useCartStore = create<CartState>()((set, get) => ({
     set({ items: [], totals: emptyTotals, error: null, notice: null, lastCheckout: null });
   },
 
-  checkout: async () => {
+  checkout: async (provider: CheckoutProvider = 'manual') => {
     if (!get().items.length) {
       throw new Error('Your cart is empty.');
     }
@@ -160,9 +162,9 @@ export const useCartStore = create<CartState>()((set, get) => ({
       });
       const payment = await createPaymentSession({
         orderId: order.id,
-        provider: 'manual',
+        provider,
         idempotencyKey: `pay_${idempotencyKey}`,
-        successUrl: typeof window !== 'undefined' ? `${window.location.origin}/account` : undefined,
+        successUrl: typeof window !== 'undefined' ? `${window.location.origin}/checkout/status` : undefined,
         cancelUrl: typeof window !== 'undefined' ? `${window.location.origin}/?intro=0` : undefined,
       });
       const result = { order, payment };

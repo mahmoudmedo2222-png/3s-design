@@ -1,5 +1,4 @@
-import { Body, Controller, Headers, Inject, Param, Post } from '@nestjs/common';
-import { PaymentWebhookEventDto } from './dto/payment-webhook-event.dto';
+import { Body, Controller, Headers, Inject, Param, Post, Query } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 
 @Controller('webhooks/payments')
@@ -10,8 +9,9 @@ export class PaymentWebhooksController {
   handleWebhook(
     @Param('provider') provider: string,
     @Headers('x-webhook-secret') secret: string | undefined,
-    @Body() input: PaymentWebhookEventDto,
+    @Query('hmac') hmac: string | undefined,
+    @Body() input: Record<string, unknown>,
   ) {
-    return this.payments.handleProviderWebhook(provider, input, secret);
+    return this.payments.handleProviderWebhook(provider, input, secret, hmac);
   }
 }

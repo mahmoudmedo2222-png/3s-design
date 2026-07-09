@@ -95,7 +95,7 @@ export function TasteMemoryPanel() {
 
   function openTasteSearch() {
     queueAiSearch(taste.prompt);
-    router.push('/?intro=0#ai-finder');
+    router.push(`/search?q=${encodeURIComponent(taste.prompt)}`);
   }
 
   return (

@@ -11,17 +11,22 @@ import {
   MessageCircle,
   PlugZap,
   ShieldCheck,
+  Sparkles,
   ShoppingBag,
   Trash2,
   UserPlus,
 } from 'lucide-react';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuthSession } from '../lib/auth-session';
 import { fetchPaymentProviderReadiness, type PaymentProviderReadiness } from '../lib/api';
-import { useCartStore } from '../lib/cart-store';
+import { captureAttributionFromLocation, readAttribution, type AttributionSnapshot } from '../lib/attribution';
+import { useCartStore, type CartItem } from '../lib/cart-store';
 import { trackFunnelEvent } from '../lib/funnel-analytics';
+import { buildCustomerDecisionProfile, tasteMemoryChangedEvent, type CustomerDecisionProfile } from '../lib/taste-memory';
 import { CustomerEmptyState, CustomerJourneyRail, CustomerTrustStrip } from './customer-experience';
+import { PostOrderGuidance } from './post-order-guidance';
 import { ActionLink, Badge, Button, Notice, Panel } from './ui';
 
 export function CheckoutWorkspace() {
@@ -44,10 +49,32 @@ export function CheckoutWorkspace() {
   const [providers, setProviders] = useState<PaymentProviderReadiness[]>([]);
   const [providersError, setProvidersError] = useState<string | null>(null);
   const [licenseConfirmed, setLicenseConfirmed] = useState(false);
+  const [decisionProfile, setDecisionProfile] = useState<CustomerDecisionProfile | null>(null);
+  const [attribution, setAttribution] = useState<AttributionSnapshot | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    const refreshDecisionContext = () => {
+      setDecisionProfile(buildCustomerDecisionProfile());
+      setAttribution(captureAttributionFromLocation() ?? readAttribution());
+    };
+
+    refreshDecisionContext();
+    window.addEventListener('storage', refreshDecisionContext);
+    window.addEventListener(tasteMemoryChangedEvent, refreshDecisionContext);
+
+    return () => {
+      window.removeEventListener('storage', refreshDecisionContext);
+      window.removeEventListener(tasteMemoryChangedEvent, refreshDecisionContext);
+    };
+  }, [mounted]);
 
   useEffect(() => {
     if (!mounted) {
@@ -95,18 +122,25 @@ export function CheckoutWorkspace() {
     }
 
     try {
+      const selectedProvider = selectCheckoutProvider(providers);
       trackFunnelEvent('checkout_order_attempted', {
         itemCount: items.length,
         total: totals.total,
         currency: totals.currency,
+        provider: selectedProvider,
+        buyerStage: decisionProfile?.stage ?? null,
+        buyerConfidence: decisionProfile?.confidence ?? null,
+        attributionSource: attribution?.source ?? null,
       });
-      const result = await checkout();
+      const result = await checkout(selectedProvider);
       trackFunnelEvent('checkout_order_created', {
         orderId: result.order.id,
         orderNumber: result.order.orderNumber,
         total: result.order.total,
         currency: result.order.currency,
+        provider: result.payment.provider,
       });
+      router.push(`/checkout/status?paymentId=${encodeURIComponent(result.payment.id)}` as Route);
     } catch {
       return;
     }
@@ -129,7 +163,7 @@ export function CheckoutWorkspace() {
 
   if (!isSignedIn) {
     return (
-      <section className="mx-auto grid max-w-7xl gap-5 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
+      <section className="checkout-workspace mx-auto grid max-w-7xl gap-5 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
         <div className="space-y-4">
           <CustomerJourneyRail current="checkout" />
           <div className="premium-panel p-5">
@@ -172,7 +206,8 @@ export function CheckoutWorkspace() {
             <div>
               <h1 className="text-3xl font-black text-ink">Private checkout</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-                Confirm the license lines before creating the order. Payment is still manual review until a real provider is selected.
+                Confirm the license lines before creating the order. We use the strongest available payment route and unlock delivery only
+                after trusted confirmation.
               </p>
             </div>
             {items.length ? (
@@ -237,14 +272,17 @@ export function CheckoutWorkspace() {
         </div>
 
         {items.length ? (
-          <Panel className="grid gap-3 p-3 md:grid-cols-3">
-            <CheckoutPromise title="1. Private order" text="The order is created inside the signed-in customer account." />
-            <CheckoutPromise
-              title="2. Payment review"
-              text="Manual review keeps early sales controlled until live payments are connected."
-            />
-            <CheckoutPromise title="3. Vault delivery" text="Approved purchases unlock download access from the account dashboard." />
-          </Panel>
+          <>
+            <CheckoutDecisionConfidence items={items} profile={decisionProfile} attribution={attribution} />
+            <Panel className="grid gap-3 p-3 md:grid-cols-3">
+              <CheckoutPromise title="1. Private order" text="The order is created inside the signed-in customer account." />
+              <CheckoutPromise
+                title="2. Payment review"
+                text="Provider checkout is used when ready; manual review remains the controlled fallback."
+              />
+              <CheckoutPromise title="3. Vault delivery" text="Approved purchases unlock download access from the account dashboard." />
+            </Panel>
+          </>
         ) : null}
 
         {error ? <Notice tone="error">{error}</Notice> : null}
@@ -261,7 +299,7 @@ export function CheckoutWorkspace() {
             </span>
             <div>
               <h2 className="text-lg font-black text-ink">Order summary</h2>
-              <p className="text-xs text-muted">Manual review mode</p>
+              <p className="text-xs text-muted">{paymentModeLabel(providers)}</p>
             </div>
           </div>
 
@@ -280,9 +318,15 @@ export function CheckoutWorkspace() {
           <div className="mt-4 rounded border border-saffron/30 bg-saffron/10 p-3">
             <p className="text-sm font-black text-ink">Before you create the order</p>
             <div className="mt-3 grid gap-2">
-              <SummaryCheck text="This does not charge a card automatically." />
-              <SummaryCheck text="The order number becomes your manual payment reference." />
-              <SummaryCheck text="Downloads open only after payment approval." />
+              <SummaryCheck
+                text={
+                  selectCheckoutProvider(providers) === 'manual'
+                    ? 'This does not charge a card automatically.'
+                    : 'You will be sent to secure provider checkout.'
+                }
+              />
+              <SummaryCheck text="The order is saved before payment starts." />
+              <SummaryCheck text="Downloads open only after trusted payment confirmation." />
             </div>
           </div>
 
@@ -309,7 +353,11 @@ export function CheckoutWorkspace() {
             disabled={!items.length || isLoading || isCheckingOut || !licenseConfirmed}
             className="mt-4 h-11 w-full font-black"
           >
-            {isCheckingOut ? 'Creating order...' : 'Create private order'}
+            {isCheckingOut
+              ? 'Creating order...'
+              : selectCheckoutProvider(providers) === 'manual'
+                ? 'Create private order'
+                : 'Continue to secure payment'}
             <ArrowRight size={17} />
           </Button>
           {!items.length ? (
@@ -378,6 +426,10 @@ function OrderCreatedPanel({ copied, onCopy }: { copied: boolean; onCopy: () => 
         </ol>
       </div>
 
+      <div className="mt-4">
+        <PostOrderGuidance order={order} payment={payment} />
+      </div>
+
       <div className="mt-4 flex flex-wrap gap-2">
         <Button type="button" onClick={onCopy} className="h-10 font-black">
           <Copy size={16} />
@@ -444,11 +496,96 @@ function CheckoutProgress({ orderCreated }: { orderCreated: boolean }) {
   );
 }
 
+function selectCheckoutProvider(providers: PaymentProviderReadiness[]) {
+  if (providers.some((provider) => provider.provider === 'paymob' && provider.configured)) {
+    return 'paymob';
+  }
+
+  return 'manual';
+}
+
+function paymentModeLabel(providers: PaymentProviderReadiness[]) {
+  return selectCheckoutProvider(providers) === 'paymob' ? 'Paymob secure checkout' : 'Manual review mode';
+}
+
 function CheckoutPromise({ title, text }: { title: string; text: string }) {
   return (
     <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
       <p className="text-sm font-black text-ink">{title}</p>
       <p className="mt-2 text-xs leading-5 text-muted">{text}</p>
+    </div>
+  );
+}
+
+function CheckoutDecisionConfidence({
+  items,
+  profile,
+  attribution,
+}: {
+  items: CartItem[];
+  profile: CustomerDecisionProfile | null;
+  attribution: AttributionSnapshot | null;
+}) {
+  const primaryItem = items[0];
+  const itemTitles = items.map((item) => item.title).slice(0, 3);
+  const licenseNames = [...new Set(items.map((item) => item.licenseName).filter(Boolean))].slice(0, 3);
+  const source = attribution?.campaign ?? attribution?.intent ?? attribution?.brief ?? profile?.prompt;
+  const reasons = profile?.reasons.length ? profile.reasons : (profile?.terms.slice(0, 4).map((term) => `Signal: ${term}`) ?? []);
+
+  return (
+    <Panel className="overflow-hidden border-pine/20 p-0">
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="p-4">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-pine/10 text-pine">
+              <Sparkles size={18} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-pine">Checkout decision confidence</p>
+              <h2 className="mt-1 text-xl font-black text-ink">
+                {primaryItem ? `You are about to order ${primaryItem.title}.` : 'Review the buying decision before checkout.'}
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+                {profile
+                  ? `${profile.signature}. ${profile.nextAction}`
+                  : 'Confirm that the selected products, license, and delivery flow still match the customer moment.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 md:grid-cols-3">
+            <DecisionFact label="Cart focus" value={itemTitles.join(' / ')} fallback="No cart focus yet" />
+            <DecisionFact label="License" value={licenseNames.join(' / ')} fallback="License not selected" />
+            <DecisionFact label="Intent source" value={source ?? ''} fallback="Direct checkout" />
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(reasons.length ? reasons : ['Account-owned license', 'Manual payment review', 'Vault delivery']).slice(0, 5).map((reason) => (
+              <span key={reason} className="rounded border border-pine/20 bg-pine/10 px-2.5 py-1 text-xs font-bold text-pine">
+                {reason}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-line bg-paper p-4 dark:bg-[#0f1513] lg:border-l lg:border-t-0">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-muted">Do not create the order if</p>
+          <div className="mt-3 grid gap-2">
+            <SummaryCheck text="The license does not match the intended commercial use." />
+            <SummaryCheck text="The buyer moment no longer matches the selected design." />
+            <SummaryCheck text="You are not ready for manual payment review and vault delivery." />
+          </div>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function DecisionFact({ label, value, fallback }: { label: string; value: string; fallback: string }) {
+  return (
+    <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+      <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-muted">{label}</p>
+      <p className="mt-1 line-clamp-2 text-sm font-black text-ink">{value || fallback}</p>
     </div>
   );
 }

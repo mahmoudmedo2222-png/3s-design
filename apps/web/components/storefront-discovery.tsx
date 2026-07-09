@@ -56,6 +56,10 @@ function nicheCount(products: ProductSummary[], terms: readonly string[]) {
   return products.filter((product) => terms.some((term) => productText(product).includes(term))).length;
 }
 
+function uniqueSignals(values: Array<string | null | undefined>) {
+  return [...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)))];
+}
+
 const emptyDecisionProfile: CustomerDecisionProfile = {
   signature: 'quiet luxury direction',
   colors: [],
@@ -270,7 +274,12 @@ export function StorefrontDiscovery({ products }: { products: ProductSummary[] }
       {filtered.length ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              sourcePrompt={decisionProfile.prompt}
+              sourceSignals={productMemorySignals(product, decisionProfile.terms)}
+            />
           ))}
         </div>
       ) : (
@@ -286,12 +295,16 @@ export function StorefrontDiscovery({ products }: { products: ProductSummary[] }
 }
 
 function productMemoryScore(product: ProductSummary, terms: string[]) {
+  return productMemorySignals(product, terms).length;
+}
+
+function productMemorySignals(product: ProductSummary, terms: string[]) {
   if (!terms.length) {
-    return 0;
+    return [];
   }
 
   const text = productText(product);
-  return terms.reduce((score, term) => score + (text.includes(term.toLowerCase()) ? 1 : 0), 0);
+  return uniqueSignals(terms.filter((term) => text.includes(term.toLowerCase()))).slice(0, 6);
 }
 
 function DiscoveryRule({ title, text }: { title: string; text: string }) {

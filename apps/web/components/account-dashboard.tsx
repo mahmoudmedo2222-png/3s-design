@@ -40,6 +40,7 @@ import { DeliveryVault } from './delivery-vault';
 import { FunnelInsightsPanel } from './funnel-insights-panel';
 import { LanguageToggle } from './language-toggle';
 import { PrivateShowroom } from './private-showroom';
+import { PostOrderGuidance } from './post-order-guidance';
 import { TasteMemoryPanel } from './taste-memory-panel';
 import { ThemeToggle } from './theme-toggle';
 import { ActionLink, Badge, Button, Notice, Panel } from './ui';
@@ -151,7 +152,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
 
   if (!isSignedIn) {
     return (
-      <main className="min-h-screen bg-[#060b0a] px-4 py-5 text-white sm:px-6 lg:px-8">
+      <main className="account-dashboard min-h-screen bg-[#060b0a] px-4 py-5 text-white sm:px-6 lg:px-8">
         <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center justify-center">
           <Panel tone="glass" className="w-full max-w-2xl p-5 sm:p-6">
             <Link href="/" className="brand-lockup" aria-label="Back to 3S Design home">
@@ -198,7 +199,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#060b0a] px-4 py-5 text-white sm:px-6 lg:px-8">
+    <main className="account-dashboard min-h-screen bg-[#060b0a] px-4 py-5 text-white sm:px-6 lg:px-8">
       <Panel tone="glass" className="mx-auto flex max-w-7xl items-center justify-between gap-4 p-3">
         <Link href="/?intro=0" className="brand-lockup" aria-label="Back to marketplace">
           <span className="brand-mark" aria-hidden="true">
@@ -408,6 +409,15 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
                     <p className="mt-1 text-xs text-white/55">
                       {order.currency} {order.total}
                     </p>
+                    <div className="mt-3">
+                      <PostOrderGuidance
+                        order={order}
+                        payment={payments.find((item) => item.order.id === order.id)?.payment}
+                        downloads={downloads}
+                        tone="dark"
+                        onRefresh={() => void refreshWorkspace()}
+                      />
+                    </div>
                     <RefundRequestInline
                       order={order}
                       refunds={refunds}
@@ -502,6 +512,9 @@ function RefundRequestInline({
       <Button type="button" onClick={onSubmit} disabled={reason.trim().length < 20} intent="secondary" className="mt-2 rounded-full">
         Request refund review
       </Button>
+      {reason.trim().length < 20 ? (
+        <p className="mt-2 text-xs font-bold leading-5 text-white/45">Write at least 20 characters so support has enough context.</p>
+      ) : null}
     </div>
   );
 }

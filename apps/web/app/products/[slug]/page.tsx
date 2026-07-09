@@ -291,7 +291,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
         </section>
 
         <aside className="space-y-3 lg:sticky lg:top-5 lg:self-start">
-          <ProductDetailActions product={product} />
+          <ProductDetailActions product={product} fitContext={searchFit.brief ? searchFit : null} />
 
           <section className="rounded-lg border border-line bg-white p-3 shadow-sm dark:bg-[#121816]">
             <h2 className="text-sm font-black text-ink">License clarity</h2>
@@ -437,16 +437,21 @@ function SearchBriefFit({ product, brief, signals }: { product: ProductDetail; b
     ...(product.designDna?.platforms ?? []),
   ].slice(0, 8);
   const visibleSignals = signals.length ? signals : dnaSignals;
+  const license = product.defaultLicense ?? product.licenseOptions?.[0];
+  const nextDecision = license?.allowsCommercialUse
+    ? `If these signals match the customer moment, ${license.name} is the cleanest next step before checkout.`
+    : 'Confirm the license terms before checkout because this fit may need a stronger commercial option.';
 
   return (
     <section className="overflow-hidden rounded-lg border border-saffron/35 bg-[#fff7e6] p-4 shadow-sm dark:bg-[#17130c]">
       <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-saffron">Why this fits your brief</p>
-          <h2 className="mt-2 text-xl font-black text-ink">This page remembers what the buyer was looking for.</h2>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-saffron">Personal decision layer</p>
+          <h2 className="mt-2 text-xl font-black text-ink">Why this product is worth inspecting before cart.</h2>
           <p className="mt-3 rounded border border-saffron/30 bg-white/60 p-3 text-sm font-bold leading-6 text-ink dark:bg-black/20">
             &quot;{brief}&quot;
           </p>
+          <p className="mt-3 text-sm font-bold leading-6 text-muted">{nextDecision}</p>
         </div>
         <div className="grid gap-3">
           <div className="rounded border border-saffron/30 bg-white/55 p-3 dark:bg-black/20">
@@ -467,9 +472,9 @@ function SearchBriefFit({ product, brief, signals }: { product: ProductDetail; b
             </div>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
-            <FitStep title="Intent" text="The customer searched by outcome, not only category." />
-            <FitStep title="Evidence" text="Signals are carried into the product page before checkout." />
-            <FitStep title="Action" text="Add the license only when the fit is clear." />
+            <FitStep title="Intent" text="The buyer arrived with a specific outcome, not a generic browse." />
+            <FitStep title="Evidence" text="Matched signals stay visible while reviewing price, files, and license." />
+            <FitStep title="Action" text={nextDecision} />
           </div>
         </div>
       </div>

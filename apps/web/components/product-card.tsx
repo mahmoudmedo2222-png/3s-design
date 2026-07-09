@@ -58,7 +58,8 @@ export function ProductCard({
   ]);
   const bestFor = uniqueSignals([product.designDna?.industries?.[0], product.designDna?.platforms?.[0]]).join(' + ');
   const deliveryCue = product.designDna?.formats?.[0] ?? 'Vault delivery';
-  const visibleMatchSignals = uniqueSignals(product.match?.matchedSignals ?? []).slice(0, compact ? 2 : 4);
+  const visibleMatchSignals = uniqueSignals([...(product.match?.matchedSignals ?? []), ...(sourceSignals ?? [])]).slice(0, compact ? 2 : 4);
+  const hasPersonalSignals = Boolean(!product.match && visibleMatchSignals.length);
 
   async function addToCart() {
     trackFunnelEvent('product_add_to_cart_attempted', {
@@ -132,15 +133,19 @@ export function ProductCard({
           {!compact && product.subtitle ? <p className="line-clamp-1 text-xs leading-5 text-white/[0.62]">{product.subtitle}</p> : null}
         </div>
 
-        {product.match ? (
+        {product.match || hasPersonalSignals ? (
           <div className="rounded border border-[#7bd8bd]/20 bg-[#7bd8bd]/[0.08] p-2">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-[var(--3s-pine-bright)]">
-                {product.match.decisionTag}
+                {product.match?.decisionTag ?? 'Matched your profile'}
               </span>
-              <span className="text-[0.68rem] font-black text-white/55">{product.match.confidenceLabel}</span>
+              <span className="text-[0.68rem] font-black text-white/55">{product.match?.confidenceLabel ?? 'Personalized'}</span>
             </div>
-            {!compact ? <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/62">{product.match.reason}</p> : null}
+            {!compact ? (
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/62">
+                {product.match?.reason ?? `This design shares ${visibleMatchSignals.slice(0, 3).join(', ')} with your buying memory.`}
+              </p>
+            ) : null}
             {visibleMatchSignals.length ? (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {visibleMatchSignals.map((signal, index) => (

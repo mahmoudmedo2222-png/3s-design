@@ -24,7 +24,7 @@ export function SiteFooter({ products, locale }: { products: ProductSummary[]; l
     }
 
     queueAiSearch(text);
-    router.push('/?intro=0#ai-finder');
+    router.push(`/search?q=${encodeURIComponent(text)}`);
   }
 
   function submitPrompt(event: FormEvent<HTMLFormElement>) {

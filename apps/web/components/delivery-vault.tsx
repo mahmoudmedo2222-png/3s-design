@@ -131,28 +131,29 @@ export function DeliveryVault({ downloads }: { downloads: DownloadEntitlement[] 
                 <div className="mt-3 grid gap-2">
                   {item.assets.map((asset) => {
                     const key = `${item.id}:${asset.id}`;
+                    const disabledReason = downloadDisabledReason(item, loadingKey === key);
 
                     return (
-                      <button
-                        key={asset.id}
-                        type="button"
-                        onClick={() => void downloadAsset(item.id, asset.id)}
-                        disabled={
-                          !item.isActive || loadingKey === key || item.downloadsRemaining <= 0 || item.hourlyDownloadsRemaining <= 0
-                        }
-                        className="flex min-h-11 items-center justify-between gap-3 rounded border border-white/[0.12] bg-white/[0.06] px-3 py-2 text-left transition hover:border-[#f7d17e]/60 disabled:cursor-not-allowed disabled:opacity-55"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate text-xs font-black text-white">{asset.fileName}</span>
-                          <span className="mt-0.5 block text-[0.68rem] font-bold uppercase tracking-[0.12em] text-white/42">
-                            {asset.assetType.replace('_', ' ')} / {asset.mimeType}
+                      <div key={asset.id} className="grid gap-1">
+                        <button
+                          type="button"
+                          onClick={() => void downloadAsset(item.id, asset.id)}
+                          disabled={Boolean(disabledReason)}
+                          className="flex min-h-11 items-center justify-between gap-3 rounded border border-white/[0.12] bg-white/[0.06] px-3 py-2 text-left transition hover:border-[#f7d17e]/60 disabled:cursor-not-allowed disabled:opacity-55"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-xs font-black text-white">{asset.fileName}</span>
+                            <span className="mt-0.5 block text-[0.68rem] font-bold uppercase tracking-[0.12em] text-white/42">
+                              {asset.assetType.replace('_', ' ')} / {asset.mimeType}
+                            </span>
                           </span>
-                        </span>
-                        <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded bg-[#fff8e8] px-2 text-xs font-black text-[#101513]">
-                          <Download size={13} />
-                          {loadingKey === key ? 'Preparing' : 'Download'}
-                        </span>
-                      </button>
+                          <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded bg-[#fff8e8] px-2 text-xs font-black text-[#101513]">
+                            <Download size={13} />
+                            {loadingKey === key ? 'Preparing' : 'Download'}
+                          </span>
+                        </button>
+                        {disabledReason && loadingKey !== key ? <p className="text-xs font-bold text-white/42">{disabledReason}</p> : null}
+                      </div>
                     );
                   })}
                 </div>
@@ -187,6 +188,14 @@ function VaultMetric({ label, value }: { label: string; value: number }) {
       <p className="mt-1 text-sm font-black text-[#f7d17e]">{value}</p>
     </div>
   );
+}
+
+function downloadDisabledReason(item: DownloadEntitlement, preparing: boolean) {
+  if (preparing) return 'Preparing secure download link.';
+  if (!item.isActive) return 'This entitlement is inactive until payment or support review is complete.';
+  if (item.downloadsRemaining <= 0) return 'Download limit reached for this license.';
+  if (item.hourlyDownloadsRemaining <= 0) return 'Hourly download limit reached. Try again later.';
+  return null;
 }
 
 function VaultFact({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {

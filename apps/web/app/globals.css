@@ -447,6 +447,30 @@ textarea:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.search-experience,
+.search-experience :where(section, div, form, label, span, input, button, h1, h2, p) {
+  min-width: 0;
+}
+
+.search-experience :where(h1, h2, p, span, button) {
+  overflow-wrap: anywhere;
+}
+
+.checkout-workspace,
+.account-dashboard,
+.admin-dashboard,
+.checkout-workspace :where(section, article, div, form, label, span, input, button, h1, h2, h3, p),
+.account-dashboard :where(section, article, div, form, label, span, input, button, h1, h2, h3, p),
+.admin-dashboard :where(section, article, div, form, label, span, input, button, h1, h2, h3, p) {
+  min-width: 0;
+}
+
+.checkout-workspace :where(h1, h2, h3, p, span, button),
+.account-dashboard :where(h1, h2, h3, p, span, button),
+.admin-dashboard :where(h1, h2, h3, p, span, button) {
+  overflow-wrap: anywhere;
+}
+
 .hero-price-card {
   position: relative;
   overflow: hidden;
@@ -1699,6 +1723,31 @@ textarea:focus-visible {
 }
 
 @media (max-width: 640px) {
+  .search-experience,
+  .checkout-workspace,
+  .account-dashboard,
+  .admin-dashboard {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .search-experience > div,
+  .checkout-workspace,
+  .account-dashboard > div,
+  .account-dashboard > section,
+  .admin-dashboard > section,
+  .admin-dashboard > header > div {
+    max-width: calc(100vw - 2rem);
+  }
+
+  .search-experience h1,
+  .checkout-workspace h1,
+  .account-dashboard h1,
+  .admin-dashboard h1 {
+    font-size: clamp(1.65rem, 8vw, 2.2rem);
+    line-height: 1.08;
+  }
+
   .floating-access {
     bottom: 0.75rem;
     left: 0.75rem;

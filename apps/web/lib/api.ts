@@ -641,6 +641,10 @@ export function fetchPayments() {
   return sendCustomerRequest<{ items: UserPayment[] }>('/payments');
 }
 
+export function fetchPayment(paymentId: string) {
+  return sendCustomerRequest<PaymentSession>(`/payments/${paymentId}`);
+}
+
 export function fetchRefunds() {
   return sendCustomerRequest<{ items: UserRefundRequest[] }>('/refunds');
 }

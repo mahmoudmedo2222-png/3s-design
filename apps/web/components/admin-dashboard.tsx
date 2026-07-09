@@ -791,7 +791,7 @@ export function AdminDashboard() {
 
   if (!session) {
     return (
-      <main className="min-h-screen bg-[#f5f7f5] dark:bg-[#0b0f0e]">
+      <main className="admin-dashboard min-h-screen bg-[#f5f7f5] dark:bg-[#0b0f0e]">
         <section className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
           <div className="premium-panel overflow-hidden">
             <div className="border-b border-white/10 bg-ink p-5 text-white">
@@ -856,7 +856,7 @@ export function AdminDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7f5] dark:bg-[#0b0f0e]">
+    <main className="admin-dashboard min-h-screen bg-[#f5f7f5] dark:bg-[#0b0f0e]">
       <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur dark:bg-[#0b0f0e]/95">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
@@ -1989,6 +1989,12 @@ function PaymentDesk({
                   </p>
                   <p className="text-xs text-muted">
                     Created {formatDate(row.order.createdAt)} / Payment ref {row.payment.providerPaymentId ?? 'not supplied'}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    Latest webhook:{' '}
+                    {row.latestWebhook
+                      ? `${row.latestWebhook.eventType} / ${row.latestWebhook.processedAt ? 'processed' : 'not processed'}`
+                      : 'not received'}
                   </p>
                   <PaymentAttributionLine attribution={row.order.billingSnapshot?.attribution ?? null} />
                 </div>

@@ -157,6 +157,12 @@ export type AdminPaymentRow = {
     email: string;
     fullName: string;
   };
+  latestWebhook: {
+    eventId: string;
+    eventType: string;
+    processedAt: string | null;
+    createdAt: string;
+  } | null;
 };
 
 export type AdminRefundRow = {

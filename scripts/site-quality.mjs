@@ -1,0 +1,84 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import lighthouse from 'lighthouse';
+import { launch } from 'chrome-launcher';
+
+const baseUrl = process.env.SITE_AUDIT_BASE_URL ?? 'http://localhost:3000';
+const outputDir = path.resolve('reports/site-quality/lighthouse');
+const targets = [
+  { name: 'home', path: '/?intro=0' },
+  { name: 'search', path: '/search' },
+  { name: 'product', path: '/products/premium-burger-offer-kit' },
+  { name: 'checkout', path: '/checkout' },
+];
+
+await fs.mkdir(outputDir, { recursive: true });
+
+const chrome = await launch({ chromeFlags: ['--headless=new', '--no-sandbox'] });
+
+try {
+  const rows = [];
+
+  for (const target of targets) {
+    const url = new URL(target.path, baseUrl).toString();
+    const result = await lighthouse(url, {
+      port: chrome.port,
+      output: 'json',
+      logLevel: 'error',
+      onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
+    });
+
+    if (!result?.lhr) {
+      throw new Error(`Lighthouse did not return a report for ${target.name}`);
+    }
+
+    const categories = result.lhr.categories;
+    const scores = {
+      performance: score(categories.performance.score),
+      accessibility: score(categories.accessibility.score),
+      bestPractices: score(categories['best-practices'].score),
+      seo: score(categories.seo.score),
+    };
+    const average = Math.round((scores.performance + scores.accessibility + scores.bestPractices + scores.seo) / 4);
+
+    await fs.writeFile(path.join(outputDir, `${target.name}.json`), JSON.stringify(result.lhr, null, 2));
+    rows.push({ page: target.name, url, average, ...scores });
+  }
+
+  const summary = {
+    generatedAt: new Date().toISOString(),
+    baseUrl,
+    pages: rows,
+    average: Math.round(rows.reduce((sum, row) => sum + row.average, 0) / rows.length),
+  };
+
+  await fs.writeFile(path.join(outputDir, 'summary.json'), JSON.stringify(summary, null, 2));
+  printSummary(summary);
+
+  if (summary.average < 80 || rows.some((row) => row.accessibility < 90 || row.seo < 85)) {
+    process.exitCode = 1;
+  }
+} finally {
+  await chrome.kill();
+}
+
+function score(value) {
+  return Math.round((value ?? 0) * 100);
+}
+
+function printSummary(summary) {
+  console.log('\nSite quality score');
+  console.log(`Base URL: ${summary.baseUrl}`);
+  console.log(`Overall: ${summary.average}/100\n`);
+  console.table(
+    summary.pages.map(({ page, average, performance, accessibility, bestPractices, seo }) => ({
+      page,
+      average,
+      performance,
+      accessibility,
+      bestPractices,
+      seo,
+    })),
+  );
+  console.log(`\nReports: ${outputDir}`);
+}

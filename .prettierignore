@@ -4,6 +4,8 @@ dist
 build
 coverage
 .turbo
+reports
+test-results
 
 .git
 .agents
@@ -13,6 +15,7 @@ _bmad-output
 .postgres-data
 .postgres-log
 packages/db/drizzle/meta
+apps/web/next-env.d.ts
 
 *.log
 *.tsbuildinfo
