@@ -302,11 +302,6 @@ Verification:
 - Web typecheck passed.
 - Web build passed.
 
-Next migration target:
-
-- Product detail page sections in `apps/web/app/products/[slug]/page.tsx`.
-- `product-card.tsx` notice states.
-
 ## Token Migration Pass 3-34
 
 Completed product detail page migration:
@@ -330,12 +325,56 @@ Updated counts after this pass:
 Verification:
 
 - Web typecheck passed.
-- Production build did not complete in this pass: Next.js build process repeatedly exited/crashed during the production build phase and left stale `.next` build state. A webpack fallback reached compile and TypeScript successfully but did not finish page-data collection reliably.
+- Direct `next typegen` and `tsc` checks passed.
+- Production build still needs a separate stability pass; local `next build` attempts can leave an active `.next/lock` worker.
 
 Next migration target:
 
-- Diagnose the Next.js production build crash separately from visual-token migration.
-- Continue token migration on checkout/account/search surfaces once build stability is restored.
+- Continue token migration on checkout/account/search surfaces.
+
+## Build Stability Investigation 3-35
+
+Build work attempted:
+
+- Diagnosed production build failure as static generation conflicting with request cookie usage in `RootLayout`.
+- Added `export const dynamic = 'force-dynamic'` to `apps/web/app/layout.tsx`.
+- Removed the temporary `webpackBuildWorker` override from `apps/web/next.config.ts` so the config returns to the standard Next.js path.
+
+Verification:
+
+- Direct `next typegen` passed.
+- Direct `tsc -p tsconfig.json --noEmit` passed.
+- `@3s-design/web` tests passed.
+- Official `next build` is not yet reliable on this Windows workspace; it can exit after reporting an active build lock/worker. Keep this open until a clean production build completes from a fresh workspace state.
+
+## Token Migration Pass 3-36
+
+Checkout token migration is complete:
+
+- Migrated checkout repeated dark panel colors to `paper`/`surface` tokens.
+- Removed checkout-specific hardcoded dark backgrounds where the global theme tokens already carry light/dark behavior.
+- Kept typography arbitrary sizes unchanged because those are compact UI scale decisions, not color-token debt.
+
+Updated counts after this pass:
+
+| Pattern                          | Before 3-36 | After 3-36 |
+| -------------------------------- | ----------: | ---------: |
+| Hex colors                       |         329 |        319 |
+| `rgba(...)` usage                |         252 |        252 |
+| `bg-[...]` arbitrary classes     |          87 |         77 |
+| `text-[...]` arbitrary classes   |         127 |        127 |
+| `border-[...]` arbitrary classes |          13 |         13 |
+| `shadow-[...]` arbitrary classes |          12 |         12 |
+
+Verification:
+
+- Web typecheck passed.
+- Tailwind CSS generation passed through the production build.
+- Web build passed.
+
+Next migration target:
+
+- Account/search surfaces still carrying hardcoded visual debt.
 
 ## Screenshots Captured
 

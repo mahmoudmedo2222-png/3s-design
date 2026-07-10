@@ -1,7 +1,6 @@
 'use client';
 
 import { Bookmark, ChevronLeft, ChevronRight, LockKeyhole, Loader2, Search, Sparkles } from 'lucide-react';
-import dynamic from 'next/dynamic';
 import type { Route } from 'next';
 import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
@@ -12,15 +11,10 @@ import { updateAttribution } from '../lib/attribution';
 import { trackFunnelEvent } from '../lib/funnel-analytics';
 import { saveSearch } from '../lib/saved-searches';
 import { rememberSearchTaste } from '../lib/taste-memory';
+import { BuyerProfileRecovery } from './buyer-profile-recovery';
 import { CustomerEmptyState, CustomerJourneyRail } from './customer-experience';
+import { ProductCard } from './product-card';
 import { ActionLink, Button, Notice, Panel } from './ui';
-
-const BuyerProfileRecovery = dynamic(() => import('./buyer-profile-recovery').then((module) => module.BuyerProfileRecovery), {
-  ssr: false,
-});
-const ProductCard = dynamic(() => import('./product-card').then((module) => module.ProductCard), {
-  ssr: false,
-});
 
 const guestSearchUsedKey = '3s-design-search-preview-used';
 const guestLimit = 3;

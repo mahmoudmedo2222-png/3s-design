@@ -301,7 +301,7 @@ export function CheckoutWorkspace() {
             </div>
           </div>
 
-          <label className="checkout-confirm-label mt-3 flex cursor-pointer items-start gap-3 border border-line bg-paper p-3 text-sm font-bold leading-6 text-ink dark:bg-[#0f1513]">
+          <label className="checkout-confirm-label mt-3 flex cursor-pointer items-start gap-3 border border-line bg-paper p-3 text-sm font-bold leading-6 text-ink">
             <input
               type="checkbox"
               checked={licenseConfirmed}
@@ -471,7 +471,7 @@ function OrderCreatedPanel({ copied, onCopy }: { copied: boolean; onCopy: () => 
 function PostOrderPaymentInstructions({ order, payment }: { order: OrderResponse; payment: PaymentSession }) {
   if (payment.mode === 'provider_checkout') {
     return (
-      <div className="mt-4 rounded border border-pine/20 bg-white/70 p-3 dark:bg-[#101816]">
+      <div className="mt-4 rounded border border-pine/20 bg-surface p-3">
         <p className="text-sm font-black text-ink">Secure provider checkout</p>
         <ol className="mt-2 grid gap-2 text-sm leading-6 text-muted">
           <li>1. Continue to the provider checkout from the payment status page.</li>
@@ -484,7 +484,7 @@ function PostOrderPaymentInstructions({ order, payment }: { order: OrderResponse
   }
 
   return (
-    <div className="mt-4 rounded border border-pine/20 bg-white/70 p-3 dark:bg-[#101816]">
+    <div className="mt-4 rounded border border-pine/20 bg-surface p-3">
       <p className="text-sm font-black text-ink">Manual payment instructions</p>
       <ol className="mt-2 grid gap-2 text-sm leading-6 text-muted">
         <li>1. Pay the exact amount shown above using the approved manual payment method.</li>
@@ -507,7 +507,7 @@ function trackCheckoutRecoveryAction(payment: PaymentSession, action: string) {
 
 function SuccessDatum({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-pine/20 bg-white/70 p-3 dark:bg-[#101816]">
+    <div className="rounded border border-pine/20 bg-surface p-3">
       <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-muted">{label}</p>
       <p className="mt-1 truncate text-sm font-black text-ink">{value}</p>
     </div>
@@ -539,7 +539,7 @@ function CheckoutProgress({ orderCreated }: { orderCreated: boolean }) {
           <div key={step.label} className="flex items-center gap-3">
             <span
               className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-xs font-black ${
-                step.done ? 'bg-pine text-white' : 'bg-paper text-muted dark:bg-[#0f1513]'
+                step.done ? 'bg-pine text-white' : 'bg-paper text-muted'
               }`}
             >
               {step.done ? <CheckCircle2 size={14} /> : index + 1}
@@ -566,7 +566,7 @@ function paymentModeLabel(providers: PaymentProviderReadiness[]) {
 
 function CheckoutPromise({ title, text }: { title: string; text: string }) {
   return (
-    <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+    <div className="rounded border border-line bg-paper p-3">
       <p className="text-sm font-black text-ink">{title}</p>
       <p className="mt-2 text-xs leading-5 text-muted">{text}</p>
     </div>
@@ -661,7 +661,7 @@ function CheckoutDecisionConfidence({
           </div>
         </div>
 
-        <div className="border-t border-line bg-paper p-4 dark:bg-[#0f1513] lg:border-l lg:border-t-0">
+        <div className="border-t border-line bg-paper p-4 lg:border-l lg:border-t-0">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-muted">Do not create the order if</p>
           <div className="mt-3 grid gap-2">
             <SummaryCheck text="The license does not match the intended commercial use." />
@@ -676,7 +676,7 @@ function CheckoutDecisionConfidence({
 
 function DecisionFact({ label, value, fallback }: { label: string; value: string; fallback: string }) {
   return (
-    <div className="rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+    <div className="rounded border border-line bg-paper p-3">
       <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-muted">{label}</p>
       <p className="mt-1 line-clamp-2 text-sm font-black text-ink">{value || fallback}</p>
     </div>
@@ -699,7 +699,7 @@ function CheckoutTrustPanel() {
       <p className="text-xs font-black uppercase tracking-[0.18em] text-pine">Buyer confidence</p>
       <div className="mt-4 grid gap-3">
         {steps.map(({ icon: Icon, title, text }) => (
-          <div key={title} className="flex gap-3 rounded border border-line bg-paper p-3 dark:bg-[#0f1513]">
+          <div key={title} className="flex gap-3 rounded border border-line bg-paper p-3">
             <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded bg-saffron/15 text-saffron">
               <Icon size={15} />
             </span>
@@ -747,10 +747,7 @@ function PaymentReadinessPanel({ providers, error }: { providers: PaymentProvide
 
       <div className="mt-4 grid gap-2">
         {(providers.length ? providers : placeholderProviders()).map((provider) => (
-          <div
-            key={provider.provider}
-            className="flex items-center justify-between gap-3 rounded border border-line bg-paper p-3 dark:bg-[#0f1513]"
-          >
+          <div key={provider.provider} className="flex items-center justify-between gap-3 rounded border border-line bg-paper p-3">
             <div>
               <p className="text-sm font-black capitalize text-ink">{provider.provider}</p>
               <p className="mt-1 text-xs text-muted">
