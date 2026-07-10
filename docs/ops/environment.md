@@ -20,6 +20,13 @@ Never commit real secrets. Templates should contain placeholders only.
 
 ## Runtime Groups
 
+### Toolchain
+
+| Tool | Required | Notes |
+| ---- | -------- | ----- |
+| Node.js | `22.x` | Pinned by `.nvmrc`, `.node-version`, and `package.json` engines. Node 24 is not approved for production gates until the local Next/Windows build instability is cleared. |
+| pnpm | `9.15.0` | Pinned by `packageManager` and checked by release process. |
+
 ### Core
 
 | Variable               | Used by                 | Required      | Notes                                       |

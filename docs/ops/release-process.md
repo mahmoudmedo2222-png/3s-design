@@ -35,6 +35,12 @@ Use `.github/pull_request_template.md` as the minimum structure.
 
 ## Required Checks
 
+Release checks must run on the pinned project runtime:
+
+```bash
+pnpm runtime:check:strict
+```
+
 The GitHub quality workflow must pass:
 
 ```bash

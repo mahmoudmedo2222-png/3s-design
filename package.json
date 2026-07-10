@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22 <23",
+    "pnpm": "9.15.0"
+  },
   "scripts": {
     "build": "turbo build",
     "db:dev:start": "powershell -ExecutionPolicy Bypass -File ./scripts/start-dev-db.ps1",
@@ -34,6 +38,8 @@
     "quality:site:lighthouse": "node scripts/site-quality.mjs",
     "quality:site:prod": "node scripts/site-quality-prod.mjs",
     "quality:site:ux": "playwright test",
+    "runtime:check": "node scripts/verify-runtime.mjs",
+    "runtime:check:strict": "node scripts/verify-runtime.mjs --strict",
     "test": "turbo test",
     "test:admin-flow": "pnpm --filter @3s-design/api test:admin-flow",
     "test:auth": "pnpm --filter @3s-design/api test:auth",
