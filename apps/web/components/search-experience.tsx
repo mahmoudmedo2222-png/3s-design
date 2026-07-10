@@ -174,7 +174,7 @@ export function SearchExperience() {
           <div className="grid gap-4 p-4 lg:grid-cols-[0.82fr_1.18fr] lg:p-5">
             <Panel tone="glass" className="search-hero-panel flex flex-col justify-between p-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">Find by feeling</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">Find by feeling</p>
                 <h1 className="mt-3 text-3xl font-black leading-tight text-white sm:text-4xl">
                   Describe what the customer should feel. We bring the closest designs.
                 </h1>
@@ -191,7 +191,7 @@ export function SearchExperience() {
                     <input
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
-                      className="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-[#101513]/50"
+                      className="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-cream-ink/50"
                       placeholder="Luxury black and gold restaurant launch..."
                     />
                   </span>
@@ -200,7 +200,7 @@ export function SearchExperience() {
                   type="submit"
                   disabled={loading}
                   intent="secondary"
-                  className="h-11 border-transparent bg-[#f7d17e] font-black text-[#101513] hover:bg-[#fff8e8]"
+                  className="h-11 border-transparent bg-gold font-black text-cream-ink hover:bg-cream"
                 >
                   {loading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
                   Find matched designs
@@ -237,7 +237,7 @@ export function SearchExperience() {
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">Matched designs</p>
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">Matched designs</p>
                       <h2 className="mt-1 text-xl font-black text-white">
                         Page {page} / {response.pagination.returned} shown
                       </h2>
@@ -271,7 +271,7 @@ export function SearchExperience() {
 
                   <SearchMatchSummary response={response} lastQuery={lastQuery} signedIn={isSignedIn} />
 
-                  {notice ? <Notice className="border-[#f7d17e]/30 bg-[#f7d17e]/10 text-[#f7d17e]">{notice}</Notice> : null}
+                  {notice ? <Notice className="border-gold/30 bg-gold/10 text-gold">{notice}</Notice> : null}
                   {error ? <Notice tone="error">{error}</Notice> : null}
 
                   {response.items.length ? (
@@ -334,7 +334,7 @@ export function SearchExperience() {
                       </Button>
                     </div>
                     {!isSignedIn ? (
-                      <p className="basis-full text-xs font-bold leading-5 text-[#f7d17e]">
+                      <p className="basis-full text-xs font-bold leading-5 text-gold">
                         Result paging is locked for signed-in customers so searches, carts, and downloads stay attached to one account.
                       </p>
                     ) : response.pagination.hasMore ? null : (

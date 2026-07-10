@@ -407,6 +407,18 @@ Next migration target:
 
 - Search surface token migration.
 
+## Token Migration Pass 3-38
+
+Completed search surface token migration:
+
+- Migrated search hero, matched-design labels, notices, and CTA colors from raw gold/cream hex values to semantic tokens.
+- Kept layout and AI search behavior unchanged.
+
+Verification:
+
+- Web typecheck passed.
+- Web tests passed.
+
 ## Screenshots Captured
 
 Stored in `outputs/`:
