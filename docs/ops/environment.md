@@ -11,6 +11,7 @@ This document defines the environment variables required to run 3S Design locall
 ## Source Files
 
 - Local template: `.env.example`
+- Staging template: `.env.staging.example`
 - Production template: `.env.production.example`
 - Docker production wiring: `docker-compose.prod.yml`
 - Deploy script: `scripts/deploy-prod.sh`
@@ -23,6 +24,7 @@ Never commit real secrets. Templates should contain placeholders only.
 
 | Variable               | Used by                 | Required      | Notes                                       |
 | ---------------------- | ----------------------- | ------------- | ------------------------------------------- |
+| `APP_ENV`              | API, scripts            | staging/prod  | Must be `staging` or `production`.          |
 | `DATABASE_URL`         | API, DB scripts         | yes           | PostgreSQL connection string.               |
 | `REDIS_URL`            | API, production compose | production    | Reserved for cache/session infrastructure.  |
 | `JWT_ACCESS_SECRET`    | API                     | yes           | Use a long random production secret.        |
@@ -110,8 +112,9 @@ When adding or renaming an environment variable, update all relevant places in t
 Before merging environment changes:
 
 ```bash
-pnpm quality
-pnpm build
+pnpm phase2:env:staging-template
+pnpm --filter @3s-design/api test
+pnpm --filter @3s-design/web typecheck
 ```
 
 For production-like Docker checks:
@@ -119,3 +122,12 @@ For production-like Docker checks:
 ```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml config
 ```
+
+Before staging or production deploys, run the relevant secret contract check against the real, uncommitted env file:
+
+```powershell
+pnpm phase2:env:staging
+pnpm phase2:env:production
+```
+
+These checks print variable names only. They must not print secret values.

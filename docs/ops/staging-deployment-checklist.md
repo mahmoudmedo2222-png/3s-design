@@ -37,6 +37,14 @@ Recommended first staging shape:
 
 Create staging secrets from `.env.production.example`, never from production values.
 
+Use `.env.staging.example` as the staging shape, then run:
+
+```powershell
+pnpm phase2:env:staging
+```
+
+This fails on missing Paymob, R2, OpenAI, weak JWT, or placeholder values before the API is deployed.
+
 Required before API deploy:
 
 - `DATABASE_URL`
@@ -63,10 +71,11 @@ PAYMOB_PAYMENT_KEY_TTL_SECONDS="3600"
 Before deploying API code:
 
 1. Backup staging database if it already has useful data.
-2. Apply pending migrations.
-3. Confirm the `0009`, `0010`, and `0011` migration preflights pass.
-4. Confirm cart, asset, refund, and status constraints exist.
-5. Confirm API starts cleanly after migration.
+2. Run `pnpm phase2:env:staging`.
+3. Apply pending migrations.
+4. Confirm the `0009`, `0010`, and `0011` migration preflights pass.
+5. Confirm cart, asset, refund, and status constraints exist.
+6. Confirm API starts cleanly after migration.
 
 Current migration:
 
