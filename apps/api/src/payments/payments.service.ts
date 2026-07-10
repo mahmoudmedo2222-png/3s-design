@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { downloadEvents, entitlements, orders, payments, paymentWebhookEvents, users } from '@3s-design/db/schema';
-import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
 import { DatabaseService } from '../database/database.service';
 import { DownloadsService } from '../downloads/downloads.service';
@@ -242,102 +242,44 @@ export class PaymentsService {
 
   async markPaymentPaid(paymentId: string, providerPaymentId?: string, actorUserId?: string) {
     const db = this.database.requireDb();
-    const [payment] = await db.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
+    return db.transaction(async (tx) => {
+      const [payment] = await tx.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
 
-    if (!payment) {
-      throw new NotFoundException('Payment not found');
-    }
-
-    if (payment.status === 'paid') {
-      return this.finishPaidOrder(payment.orderId);
-    }
-
-    if (payment.status !== 'pending' && payment.status !== 'failed' && payment.status !== 'expired') {
-      throw new BadRequestException('Payment is not pending');
-    }
-
-    const now = new Date();
-    const [updatedPayment] = await db.transaction(async (tx) => {
-      const [updated] = await tx
-        .update(payments)
-        .set({
-          status: 'paid',
-          providerPaymentId: providerPaymentId ?? payment.providerPaymentId,
-          paidAt: now,
-          updatedAt: now,
-        })
-        .where(and(eq(payments.id, payment.id), inArray(payments.status, ['pending', 'failed', 'expired'])))
-        .returning();
-
-      if (!updated) {
-        return [];
+      if (!payment) {
+        throw new NotFoundException('Payment not found');
       }
 
-      await tx
-        .update(orders)
-        .set({
-          status: 'paid',
-          paidAt: now,
-          updatedAt: now,
-        })
-        .where(eq(orders.id, payment.orderId));
+      if (payment.status === 'paid') {
+        const entitlementsResult = await this.downloads.grantEntitlementsForPaidOrder(payment.orderId, tx);
+        const [order] = await tx.select().from(orders).where(eq(orders.id, payment.orderId)).limit(1);
 
-      return [updated];
-    });
-
-    if (!updatedPayment) {
-      const [current] = await db.select().from(payments).where(eq(payments.id, payment.id)).limit(1);
-      if (current?.status === 'paid') {
-        return this.finishPaidOrder(payment.orderId);
+        return {
+          order,
+          entitlements: entitlementsResult,
+        };
       }
 
-      throw new BadRequestException('Payment is not pending');
-    }
+      const result = await this.markPaymentPaidRow(payment, providerPaymentId, actorUserId, tx);
+      const [order] = await tx.select().from(orders).where(eq(orders.id, payment.orderId)).limit(1);
 
-    await this.audit.record({
-      actorUserId,
-      action: actorUserId ? 'admin.payments.mark_paid' : 'payments.mark_paid',
-      entityType: 'payment',
-      entityId: payment.id,
-      before: this.toAuditObject(payment),
-      after: this.toAuditObject(updatedPayment),
+      return {
+        order,
+        entitlements: result.entitlements,
+      };
     });
-
-    return this.finishPaidOrder(payment.orderId);
   }
 
   async failPayment(paymentId: string, actorUserId?: string) {
     const db = this.database.requireDb();
-    const [payment] = await db.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
+    return db.transaction(async (tx) => {
+      const [payment] = await tx.select().from(payments).where(eq(payments.id, paymentId)).limit(1);
 
-    if (!payment) {
-      throw new NotFoundException('Payment not found');
-    }
+      if (!payment) {
+        throw new NotFoundException('Payment not found');
+      }
 
-    if (payment.status !== 'pending') {
-      throw new BadRequestException('Payment is not pending');
-    }
-
-    const [updated] = await db
-      .update(payments)
-      .set({ status: 'failed', updatedAt: new Date() })
-      .where(and(eq(payments.id, payment.id), eq(payments.status, 'pending')))
-      .returning();
-
-    if (!updated) {
-      throw new BadRequestException('Payment is not pending');
-    }
-
-    await this.audit.record({
-      actorUserId,
-      action: actorUserId ? 'admin.payments.mark_failed' : 'payments.mark_failed',
-      entityType: 'payment',
-      entityId: payment.id,
-      before: this.toAuditObject(payment),
-      after: this.toAuditObject(updated),
+      return this.failPaymentRow(payment, actorUserId, tx);
     });
-
-    return updated;
   }
 
   async markProviderPaymentPaid(provider: PaymentProvider, providerPaymentId: string) {
@@ -369,110 +311,229 @@ export class PaymentsService {
     const event = this.normalizeProviderWebhook(provider, input);
 
     const db = this.database.requireDb();
-    const [existing] = await db
-      .select({ id: paymentWebhookEvents.id, processedAt: paymentWebhookEvents.processedAt })
-      .from(paymentWebhookEvents)
-      .where(and(eq(paymentWebhookEvents.provider, providerValue), eq(paymentWebhookEvents.eventId, event.eventId)))
-      .limit(1);
+    return db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`payment-webhook:${provider}:${event.eventId}`}))`);
 
-    if (existing) {
-      if (!existing.processedAt) {
-        await this.processProviderWebhook(providerValue, event);
-        const [updatedDuplicate] = await db
-          .update(paymentWebhookEvents)
-          .set({ processedAt: new Date() })
-          .where(eq(paymentWebhookEvents.id, existing.id))
-          .returning();
-
-        return {
-          accepted: true,
-          duplicate: true,
-          processed: Boolean(updatedDuplicate?.processedAt),
-        };
-      }
-
-      return {
-        accepted: true,
-        duplicate: true,
-        processed: Boolean(existing.processedAt),
-      };
-    }
-
-    const [createdEvent] = await db
-      .insert(paymentWebhookEvents)
-      .values({
-        provider: providerValue,
-        eventId: event.eventId,
-        eventType: event.eventType,
-        payload: this.sanitizeWebhookPayload(
-          provider,
-          event.payload ?? {
-            providerPaymentId: event.providerPaymentId,
-            status: event.status,
-          },
-        ),
-      })
-      .onConflictDoNothing({
-        target: [paymentWebhookEvents.provider, paymentWebhookEvents.eventId],
-      })
-      .returning();
-
-    if (!createdEvent) {
-      const [duplicate] = await db
+      const [existing] = await tx
         .select({ id: paymentWebhookEvents.id, processedAt: paymentWebhookEvents.processedAt })
         .from(paymentWebhookEvents)
-        .where(and(eq(paymentWebhookEvents.provider, providerValue), eq(paymentWebhookEvents.eventId, event.eventId)))
+        .where(and(eq(paymentWebhookEvents.provider, provider), eq(paymentWebhookEvents.eventId, event.eventId)))
         .limit(1);
 
-      if (duplicate && !duplicate.processedAt) {
-        await this.processProviderWebhook(providerValue, event);
-        const [updatedDuplicate] = await db
-          .update(paymentWebhookEvents)
-          .set({ processedAt: new Date() })
-          .where(eq(paymentWebhookEvents.id, duplicate.id))
-          .returning();
+      if (existing) {
+        if (!existing.processedAt) {
+          await this.processProviderWebhook(provider, event, tx);
+          const [updatedDuplicate] = await tx
+            .update(paymentWebhookEvents)
+            .set({ processedAt: new Date() })
+            .where(and(eq(paymentWebhookEvents.id, existing.id), isNull(paymentWebhookEvents.processedAt)))
+            .returning();
+
+          return {
+            accepted: true,
+            duplicate: true,
+            processed: Boolean(updatedDuplicate?.processedAt),
+          };
+        }
 
         return {
           accepted: true,
           duplicate: true,
-          processed: Boolean(updatedDuplicate?.processedAt),
+          processed: Boolean(existing.processedAt),
         };
       }
 
+      const [createdEvent] = await tx
+        .insert(paymentWebhookEvents)
+        .values({
+          provider,
+          eventId: event.eventId,
+          eventType: event.eventType,
+          payload: this.sanitizeWebhookPayload(
+            provider,
+            event.payload ?? {
+              providerPaymentId: event.providerPaymentId,
+              status: event.status,
+            },
+          ),
+        })
+        .onConflictDoNothing({
+          target: [paymentWebhookEvents.provider, paymentWebhookEvents.eventId],
+        })
+        .returning();
+
+      if (!createdEvent) {
+        const [duplicate] = await tx
+          .select({ id: paymentWebhookEvents.id, processedAt: paymentWebhookEvents.processedAt })
+          .from(paymentWebhookEvents)
+          .where(and(eq(paymentWebhookEvents.provider, provider), eq(paymentWebhookEvents.eventId, event.eventId)))
+          .limit(1);
+
+        if (duplicate && !duplicate.processedAt) {
+          await this.processProviderWebhook(provider, event, tx);
+          const [updatedDuplicate] = await tx
+            .update(paymentWebhookEvents)
+            .set({ processedAt: new Date() })
+            .where(and(eq(paymentWebhookEvents.id, duplicate.id), isNull(paymentWebhookEvents.processedAt)))
+            .returning();
+
+          return {
+            accepted: true,
+            duplicate: true,
+            processed: Boolean(updatedDuplicate?.processedAt),
+          };
+        }
+
+        return {
+          accepted: true,
+          duplicate: true,
+          processed: Boolean(duplicate?.processedAt),
+        };
+      }
+
+      await this.processProviderWebhook(provider, event, tx);
+
+      const [updatedEvent] = await tx
+        .update(paymentWebhookEvents)
+        .set({ processedAt: new Date() })
+        .where(and(eq(paymentWebhookEvents.id, createdEvent.id), isNull(paymentWebhookEvents.processedAt)))
+        .returning();
+
       return {
         accepted: true,
-        duplicate: true,
-        processed: Boolean(duplicate?.processedAt),
+        duplicate: false,
+        processed: Boolean(updatedEvent?.processedAt),
       };
-    }
-
-    await this.processProviderWebhook(providerValue, event);
-
-    const [updatedEvent] = await db
-      .update(paymentWebhookEvents)
-      .set({ processedAt: new Date() })
-      .where(eq(paymentWebhookEvents.id, createdEvent.id))
-      .returning();
-
-    return {
-      accepted: true,
-      duplicate: false,
-      processed: Boolean(updatedEvent?.processedAt),
-    };
+    });
   }
 
-  private async processProviderWebhook(provider: PaymentProvider, input: PaymentWebhookEventDto) {
-    const payment = await this.findPaymentByProvider(provider, input.providerPaymentId);
+  private async processProviderWebhook(
+    provider: PaymentProvider,
+    input: PaymentWebhookEventDto,
+    executor: ReturnType<DatabaseService['requireDb']>,
+  ) {
+    const payment = await this.findPaymentByProvider(provider, input.providerPaymentId, executor);
     this.assertProviderWebhookMatchesPayment(provider, input, payment);
 
     if (input.status === 'paid') {
-      await this.markPaymentPaid(payment.id, input.providerPaymentId);
+      await this.markPaymentPaidRow(payment, input.providerPaymentId, undefined, executor);
       return;
     }
 
     if (payment.status === 'pending') {
-      await this.failPayment(payment.id);
+      await this.failPaymentRow(payment, undefined, executor);
     }
+  }
+
+  private async markPaymentPaidRow(
+    payment: typeof payments.$inferSelect,
+    providerPaymentId: string | undefined,
+    actorUserId: string | undefined,
+    executor: ReturnType<DatabaseService['requireDb']>,
+  ): Promise<{
+    payment: typeof payments.$inferSelect;
+    entitlements: Awaited<ReturnType<DownloadsService['grantEntitlementsForPaidOrder']>>;
+  }> {
+    if (payment.status === 'paid') {
+      const entitlementsResult = await this.downloads.grantEntitlementsForPaidOrder(payment.orderId, executor);
+
+      return {
+        payment,
+        entitlements: entitlementsResult,
+      };
+    }
+
+    if (payment.status !== 'pending' && payment.status !== 'failed' && payment.status !== 'expired') {
+      throw new BadRequestException('Payment is not pending');
+    }
+
+    const now = new Date();
+    const [updatedPayment] = await executor
+      .update(payments)
+      .set({
+        status: 'paid',
+        providerPaymentId: providerPaymentId ?? payment.providerPaymentId,
+        paidAt: now,
+        updatedAt: now,
+      })
+      .where(and(eq(payments.id, payment.id), inArray(payments.status, ['pending', 'failed', 'expired'])))
+      .returning();
+
+    if (!updatedPayment) {
+      const [current] = await executor.select().from(payments).where(eq(payments.id, payment.id)).limit(1);
+      if (current?.status === 'paid') {
+        const entitlementsResult = await this.downloads.grantEntitlementsForPaidOrder(payment.orderId, executor);
+
+        return {
+          payment: current,
+          entitlements: entitlementsResult,
+        };
+      }
+
+      throw new BadRequestException('Payment is not pending');
+    }
+
+    await executor
+      .update(orders)
+      .set({
+        status: 'paid',
+        paidAt: now,
+        updatedAt: now,
+      })
+      .where(eq(orders.id, payment.orderId));
+
+    const entitlementsResult = await this.downloads.grantEntitlementsForPaidOrder(payment.orderId, executor);
+
+    await this.audit.record(
+      {
+        actorUserId,
+        action: actorUserId ? 'admin.payments.mark_paid' : 'payments.mark_paid',
+        entityType: 'payment',
+        entityId: payment.id,
+        before: this.toAuditObject(payment),
+        after: this.toAuditObject(updatedPayment),
+      },
+      executor,
+    );
+
+    return {
+      payment: updatedPayment,
+      entitlements: entitlementsResult,
+    };
+  }
+
+  private async failPaymentRow(
+    payment: typeof payments.$inferSelect,
+    actorUserId: string | undefined,
+    executor: ReturnType<DatabaseService['requireDb']>,
+  ) {
+    if (payment.status !== 'pending') {
+      throw new BadRequestException('Payment is not pending');
+    }
+
+    const [updated] = await executor
+      .update(payments)
+      .set({ status: 'failed', updatedAt: new Date() })
+      .where(and(eq(payments.id, payment.id), eq(payments.status, 'pending')))
+      .returning();
+
+    if (!updated) {
+      throw new BadRequestException('Payment is not pending');
+    }
+
+    await this.audit.record(
+      {
+        actorUserId,
+        action: actorUserId ? 'admin.payments.mark_failed' : 'payments.mark_failed',
+        entityType: 'payment',
+        entityId: payment.id,
+        before: this.toAuditObject(payment),
+        after: this.toAuditObject(updated),
+      },
+      executor,
+    );
+
+    return updated;
   }
 
   async assertUserOwnsPayment(userId: string, paymentId: string) {
@@ -501,9 +562,8 @@ export class PaymentsService {
     };
   }
 
-  private async findPaymentByProvider(provider: PaymentProvider, providerPaymentId: string) {
-    const [payment] = await this.database
-      .requireDb()
+  private async findPaymentByProvider(provider: PaymentProvider, providerPaymentId: string, executor = this.database.requireDb()) {
+    const [payment] = await executor
       .select()
       .from(payments)
       .where(and(eq(payments.provider, provider), eq(payments.providerPaymentId, providerPaymentId)))

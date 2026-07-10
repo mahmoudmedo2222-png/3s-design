@@ -187,51 +187,48 @@ export class DownloadsService {
     };
   }
 
-  async grantEntitlementsForPaidOrder(orderId: string) {
-    const db = this.database.requireDb();
-    const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  async grantEntitlementsForPaidOrder(orderId: string, executor = this.database.requireDb()) {
+    const [order] = await executor.select().from(orders).where(eq(orders.id, orderId)).limit(1);
 
     if (!order || order.status !== 'paid') {
       throw new BadRequestException('Order must be paid before granting entitlements');
     }
 
-    const items = await db.select().from(orderItems).where(eq(orderItems.orderId, order.id));
+    const items = await executor.select().from(orderItems).where(eq(orderItems.orderId, order.id));
 
     let granted = 0;
 
-    await db.transaction(async (tx) => {
-      for (const item of items) {
-        const [existing] = await tx
-          .select({ id: entitlements.id })
-          .from(entitlements)
-          .where(eq(entitlements.orderItemId, item.id))
-          .limit(1);
+    for (const item of items) {
+      const [existing] = await executor
+        .select({ id: entitlements.id })
+        .from(entitlements)
+        .where(eq(entitlements.orderItemId, item.id))
+        .limit(1);
 
-        if (existing) {
-          continue;
-        }
-
-        const [created] = await tx
-          .insert(entitlements)
-          .values({
-            userId: order.userId,
-            orderId: order.id,
-            orderItemId: item.id,
-            productId: item.productId,
-            variantId: item.variantId,
-            licenseId: item.licenseId,
-            maxDownloads: 5,
-          })
-          .onConflictDoNothing({
-            target: entitlements.orderItemId,
-          })
-          .returning({ id: entitlements.id });
-
-        if (created) {
-          granted += 1;
-        }
+      if (existing) {
+        continue;
       }
-    });
+
+      const [created] = await executor
+        .insert(entitlements)
+        .values({
+          userId: order.userId,
+          orderId: order.id,
+          orderItemId: item.id,
+          productId: item.productId,
+          variantId: item.variantId,
+          licenseId: item.licenseId,
+          maxDownloads: 5,
+        })
+        .onConflictDoNothing({
+          target: entitlements.orderItemId,
+        })
+        .returning({ id: entitlements.id });
+
+      if (created) {
+        granted += 1;
+      }
+    }
 
     return { granted };
   }

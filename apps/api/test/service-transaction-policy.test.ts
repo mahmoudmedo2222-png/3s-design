@@ -39,3 +39,32 @@ void test('service transaction policy: payment state transitions are conditional
     'Mark-failed must only transition from pending inside the update predicate.',
   );
 });
+
+void test('service transaction policy: payment webhooks serialize event processing', async () => {
+  const paymentSource = await readFile(path.join(srcDir, 'payments/payments.service.ts'), 'utf8');
+  const downloadsSource = await readFile(path.join(srcDir, 'downloads/downloads.service.ts'), 'utf8');
+  const auditSource = await readFile(path.join(srcDir, 'audit/audit.service.ts'), 'utf8');
+
+  const webhookLock = paymentSource.indexOf('pg_advisory_xact_lock(hashtext(${`payment-webhook:${provider}:${event.eventId}`}))');
+  const eventInsert = paymentSource.indexOf('.insert(paymentWebhookEvents)');
+  const processWithTx = paymentSource.indexOf('await this.processProviderWebhook(provider, event, tx)');
+  const markProcessed = paymentSource.indexOf('isNull(paymentWebhookEvents.processedAt)');
+  const grantWithExecutor = paymentSource.indexOf('grantEntitlementsForPaidOrder(payment.orderId, executor)');
+  const auditCall = paymentSource.indexOf('await this.audit.record(', grantWithExecutor);
+  const auditWithExecutor = paymentSource.indexOf('executor,', auditCall);
+
+  assert.ok(webhookLock >= 0, 'Webhook processing must take a per-provider/event transaction lock.');
+  assert.ok(eventInsert > webhookLock, 'Webhook event persistence must happen after the event lock.');
+  assert.ok(processWithTx > webhookLock, 'Webhook payment processing must use the same transaction executor.');
+  assert.ok(markProcessed > webhookLock, 'Webhook processedAt must be set conditionally inside the locked transaction.');
+  assert.ok(grantWithExecutor > processWithTx, 'Paid webhook delivery unlock must use the webhook transaction executor.');
+  assert.ok(auditWithExecutor > auditCall, 'Webhook-triggered payment audit writes must use the webhook transaction executor.');
+  assert.ok(
+    downloadsSource.includes('async grantEntitlementsForPaidOrder(orderId: string, executor = this.database.requireDb())'),
+    'Entitlement grants must accept a caller transaction executor.',
+  );
+  assert.ok(
+    auditSource.includes('async record(input: AuditPayload, executor = this.database.requireDb())'),
+    'Audit records must accept a caller transaction executor.',
+  );
+});

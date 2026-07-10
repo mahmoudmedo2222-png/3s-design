@@ -15,17 +15,14 @@ type AuditPayload = {
 export class AuditService {
   constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
 
-  async record(input: AuditPayload) {
-    await this.database
-      .requireDb()
-      .insert(auditLogs)
-      .values({
-        actorUserId: input.actorUserId,
-        action: input.action,
-        entityType: input.entityType,
-        entityId: input.entityId,
-        before: input.before ?? undefined,
-        after: input.after ?? undefined,
-      });
+  async record(input: AuditPayload, executor = this.database.requireDb()) {
+    await executor.insert(auditLogs).values({
+      actorUserId: input.actorUserId,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      before: input.before ?? undefined,
+      after: input.after ?? undefined,
+    });
   }
 }

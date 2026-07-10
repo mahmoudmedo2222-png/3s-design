@@ -104,7 +104,7 @@ Exit criteria:
 
 ## Phase 3: Full Purchase Flow
 
-Status: not complete.
+Status: active.
 
 Goal:
 
@@ -127,6 +127,13 @@ Exit criteria:
 - Manual regression passes.
 - Paymob sandbox regression evidence is recorded.
 - Download stays locked before payment and after refund.
+- `pnpm phase3:payment-correctness` passes on Node `22.x`.
+- `pnpm phase3:payment-correctness:running` passes when the local API and database are running.
+
+Current implementation note:
+
+- Payment webhook policy, Paymob HMAC, Paymob amount/currency matching, webhook payload redaction, conditional payment transitions, and duplicate webhook handling are covered by API policy tests.
+- Local Node 24 shells should run `pnpm phase3:payment-correctness:node22` until the active system runtime is switched to Node 22.
 
 ## Phase 4: Security Hardening
 
