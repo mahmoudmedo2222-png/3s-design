@@ -378,6 +378,35 @@ Next migration target:
 - Account/search surfaces still carrying hardcoded visual debt.
 - Local Node runtime drift should be cleaned up before heavier release verification.
 
+## Token Migration Pass 3-37
+
+Completed account token migration:
+
+- Migrated account-dashboard repeated gold/cream accents to semantic tokens.
+- Migrated email-verification notice and account action hover states away from raw hex colors.
+- Kept the unauthenticated account dark backdrop as a one-off art-direction layer.
+
+Updated counts after this pass:
+
+| Pattern                          | Before 3-37 | After 3-37 |
+| -------------------------------- | ----------: | ---------: |
+| Hex colors                       |         319 |        307 |
+| `rgba(...)` usage                |         252 |        252 |
+| `bg-[...]` arbitrary classes     |          77 |         70 |
+| `text-[...]` arbitrary classes   |         127 |        120 |
+| `border-[...]` arbitrary classes |          13 |         11 |
+| `shadow-[...]` arbitrary classes |          12 |         12 |
+
+Verification:
+
+- Direct web typegen and TypeScript checks passed.
+- Web tests passed.
+- Production build remains gated on pinned Node `22.x`; local Node `24.18.0` emits the project engine warning and is not accepted for release verification.
+
+Next migration target:
+
+- Search surface token migration.
+
 ## Screenshots Captured
 
 Stored in `outputs/`:
