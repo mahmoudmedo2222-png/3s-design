@@ -81,7 +81,7 @@ Result:
 - Drizzle reports no schema changes after the migration.
 - `pnpm --filter @3s-design/api test:auth` was attempted but could not reach the local API (`ECONNREFUSED`), so endpoint-level auth regression remains pending until the API server is running.
 
-Note: local verification currently shows a Node engine warning because the machine is running Node `v24.18.0`, while the project declares `>=22 <23`.
+Note: local verification currently shows a Node engine warning because the available local runtimes are Node 24.x, while the project declares `>=22 <23`.
 
 ## Remaining Follow-Ups
 
