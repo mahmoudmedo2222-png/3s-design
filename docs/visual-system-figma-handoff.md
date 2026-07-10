@@ -369,8 +369,7 @@ Updated counts after this pass:
 Verification:
 
 - Web typecheck passed.
-- Web tests passed.
-- Production build is not accepted as verified until it passes under pinned Node `22.x`.
+- Production build is not accepted as release-verified until it passes under pinned Node `22.x`.
 - Local Node emitted an environment warning: project engines expect Node `>=22 <23`, while local Node is `24.18.0`.
 
 Next migration target:
@@ -399,9 +398,9 @@ Updated counts after this pass:
 
 Verification:
 
-- Direct web typegen and TypeScript checks passed.
-- Web tests passed.
-- Production build remains gated on pinned Node `22.x`; local Node `24.18.0` emits the project engine warning and is not accepted for release verification.
+- Web typecheck passed.
+- Production build is not accepted as release-verified until it passes under pinned Node `22.x`.
+- Local Node emitted the existing environment warning: project engines expect Node `>=22 <23`, while local Node is `24.18.0`.
 
 Next migration target:
 
@@ -409,15 +408,32 @@ Next migration target:
 
 ## Token Migration Pass 3-38
 
-Completed search surface token migration:
+Completed search token migration:
 
-- Migrated search hero, matched-design labels, notices, and CTA colors from raw gold/cream hex values to semantic tokens.
-- Kept layout and AI search behavior unchanged.
+- Migrated AI search gold headings, notices, paging lock text, and submit action to semantic tokens.
+- Migrated search input placeholder color from raw hex to `cream-ink`.
+- Kept compact typography arbitrary sizes unchanged because they are UI scale decisions, not color-token debt.
+
+Updated counts after this pass:
+
+| Pattern                          | Before 3-38 | After 3-38 |
+| -------------------------------- | ----------: | ---------: |
+| Hex colors                       |         307 |        301 |
+| `rgba(...)` usage                |         252 |        252 |
+| `bg-[...]` arbitrary classes     |          70 |         68 |
+| `text-[...]` arbitrary classes   |         120 |        114 |
+| `border-[...]` arbitrary classes |          11 |         10 |
+| `shadow-[...]` arbitrary classes |          12 |         12 |
 
 Verification:
 
 - Web typecheck passed.
-- Web tests passed.
+- A Node `22.23.1` production build produced `.next/BUILD_ID` and route manifests, but the release gate should rerun the build in a clean Node 22 shell or CI before shipping.
+
+Next migration target:
+
+- Align local Node runtime to Node 22 before heavier release verification.
+- Continue deeper visual debt reduction in shared glass/dark account surfaces.
 
 ## Screenshots Captured
 
