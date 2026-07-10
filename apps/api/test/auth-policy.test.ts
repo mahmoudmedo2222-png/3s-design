@@ -43,6 +43,8 @@ void test('auth policy: refresh and verification tokens are race-safe single-use
   const source = await readFile(path.join(srcDir, 'auth/auth.service.ts'), 'utf8');
 
   assert.ok(source.includes('auth-refresh:'), 'Refresh token rotation must serialize by refresh token hash.');
+  assert.ok(source.includes("return { error: 'reuse' as const }"), 'Refresh reuse handling must persist family revocation before throwing.');
+  assert.ok(source.includes("return { error: 'expired' as const }"), 'Expired refresh handling must persist session revocation before throwing.');
   assert.ok(
     source.includes('isNull(authSessions.revokedAt), isNull(authSessions.replacedBySessionId)'),
     'Refresh token rotation must conditionally revoke only an unused session.',

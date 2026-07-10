@@ -129,23 +129,23 @@ export class AuthService {
   async refresh(input: RefreshTokenDto, context: AuthContext = {}) {
     const db = this.database.requireDb();
     const tokenHash = this.hashToken(input.refreshToken);
-    const { user, next } = await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`auth-refresh:${tokenHash}`}))`);
 
       const [session] = await tx.select().from(authSessions).where(eq(authSessions.refreshTokenHash, tokenHash)).limit(1);
 
       if (!session) {
-        throw new UnauthorizedException('Invalid refresh token');
+        return { error: 'invalid' as const };
       }
 
       if (session.revokedAt || session.replacedBySessionId) {
         await this.revokeSessionFamily(session.familyId, 'auth.refresh_reuse_detected', tx);
-        throw new UnauthorizedException('Refresh token was already used');
+        return { error: 'reuse' as const };
       }
 
       if (session.expiresAt <= new Date()) {
         await this.revokeSession(session.id, tx);
-        throw new UnauthorizedException('Refresh token expired');
+        return { error: 'expired' as const };
       }
 
       const [user] = await tx
@@ -163,7 +163,7 @@ export class AuthService {
 
       if (!user || user.deletedAt) {
         await this.revokeSessionFamily(session.familyId, 'auth.refresh_user_invalid', tx);
-        throw new UnauthorizedException('Invalid refresh token');
+        return { error: 'invalid' as const };
       }
 
       const next = await this.createSession(user.id, context, session.familyId, tx);
@@ -179,11 +179,26 @@ export class AuthService {
         .returning({ id: authSessions.id });
 
       if (!rotated) {
-        throw new UnauthorizedException('Refresh token was already used');
+        await this.revokeSessionFamily(session.familyId, 'auth.refresh_reuse_detected', tx);
+        return { error: 'reuse' as const };
       }
 
       return { user, next };
     });
+
+    if ('error' in result) {
+      if (result.error === 'reuse') {
+        throw new UnauthorizedException('Refresh token was already used');
+      }
+
+      if (result.error === 'expired') {
+        throw new UnauthorizedException('Refresh token expired');
+      }
+
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const { user, next } = result;
 
     return {
       user: this.serializeUser(user),
