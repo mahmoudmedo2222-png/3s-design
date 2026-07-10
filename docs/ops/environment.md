@@ -27,6 +27,15 @@ Never commit real secrets. Templates should contain placeholders only.
 | Node.js | `22.x` | Pinned by `.nvmrc`, `.node-version`, and `package.json` engines. Node 24 is not approved for production gates until the local Next/Windows build instability is cleared. |
 | pnpm | `9.15.0` | Pinned by `packageManager` and checked by release process. |
 
+Local Windows fallback:
+
+```powershell
+pnpm with:node22 "corepack pnpm runtime:check:strict"
+pnpm with:node22 "corepack pnpm --filter @3s-design/web build"
+```
+
+Use this only as a local bridge when the system shell still points to Node 24. CI and release shells should use Node 22 directly.
+
 ### Core
 
 | Variable               | Used by                 | Required      | Notes                                       |

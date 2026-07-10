@@ -41,19 +41,34 @@ Release checks must run on the pinned project runtime:
 pnpm runtime:check:strict
 ```
 
-The GitHub quality workflow must pass:
+The combined release gate is:
+
+```bash
+pnpm release:check
+```
+
+It runs the strict runtime check, full quality gate, and production build in order.
+
+The GitHub quality workflow must pass the same runtime check before quality/build:
 
 ```bash
 pnpm quality
 pnpm build
 ```
 
-Local verification before pushing:
+Local verification before pushing can use the combined gate:
 
 ```bash
-pnpm quality
-pnpm build
+pnpm release:check
 ```
+
+On a Windows machine where the active system Node is not 22.x but cached Node 22 is available, use the local wrapper:
+
+```powershell
+pnpm with:node22 "corepack pnpm release:check"
+```
+
+This prepends Node 22 to `PATH` for the command. You may still see pnpm's outer engine warning if pnpm itself was launched from Node 24, but the strict runtime check inside the wrapper must pass.
 
 High-risk domains require extra regression tests when the API and database are running:
 

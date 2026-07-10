@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify pinned runtime
+        run: pnpm runtime:check:strict
+
       - name: Run quality gate
         run: pnpm quality
 
