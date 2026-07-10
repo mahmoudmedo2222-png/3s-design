@@ -979,6 +979,9 @@ article.product-card .product-card__preview {
   --showcase-border: rgba(23, 32, 28, 0.12);
   --showcase-panel: rgba(255, 255, 255, 0.62);
   --showcase-shadow: rgba(34, 89, 75, 0.16);
+  --showcase-accent: #6f4700;
+  --showcase-dark: #101513;
+  --showcase-dark-hover: #16201c;
   --showcase-gold: #9d6a20;
   --showcase-cream: #fff8e8;
   --showcase-red: #c84632;
@@ -998,6 +1001,9 @@ article.product-card .product-card__preview {
   --showcase-border: rgba(255, 255, 255, 0.12);
   --showcase-panel: rgba(255, 255, 255, 0.06);
   --showcase-shadow: rgba(0, 0, 0, 0.42);
+  --showcase-accent: #f7d17e;
+  --showcase-dark: #101513;
+  --showcase-dark-hover: #16201c;
   --showcase-gold: #f7d17e;
   --showcase-cream: #fff8e8;
   --showcase-red: #ff4b32;

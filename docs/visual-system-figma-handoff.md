@@ -435,6 +435,129 @@ Next migration target:
 - Align local Node runtime to Node 22 before heavier release verification.
 - Continue deeper visual debt reduction in shared glass/dark account surfaces.
 
+## Release Runtime Gate 3-39
+
+Completed release runtime guard:
+
+- Added `pnpm release:check` as the combined release gate.
+- Added `pnpm runtime:check:strict` to the GitHub quality workflow before quality/build.
+- Updated release documentation to use the combined gate.
+
+Verification:
+
+- Local `pnpm runtime:check` warns on Node `24.18.0` as expected.
+- Local `pnpm runtime:check:strict` fails on Node `24.18.0` as expected.
+- CI is configured to run on Node `22`.
+
+Next migration target:
+
+- Switch the local shell to Node 22, then run `pnpm release:check`.
+- Continue deeper visual debt reduction in shared glass/dark account surfaces.
+
+## Local Node 22 Wrapper 3-40
+
+Completed local runtime wrapper:
+
+- Added `scripts/with-node22.ps1`.
+- Added `pnpm with:node22 "<command>"`.
+- Added `pnpm release:check:node22`.
+- Documented the wrapper in release and environment docs.
+
+Verification:
+
+- `pnpm with:node22 "corepack pnpm runtime:check:strict"` passed.
+- `pnpm with:node22 "corepack pnpm --filter @3s-design/web typecheck"` passed.
+- `pnpm with:node22 "corepack pnpm --filter @3s-design/web build"` still exits locally after compile with `4294967295`; keep release build verification on CI or a clean Node 22 shell.
+
+Next migration target:
+
+- Continue deeper visual debt reduction in shared glass/dark account surfaces.
+
+## Token Migration Pass 3-41
+
+Completed shared customer surface token migration:
+
+- Migrated shared customer journey, trust, decision, badge, and empty-state surfaces to semantic tokens.
+- Removed repeated hardcoded dark panel backgrounds from `customer-experience.tsx`.
+- Fixed a React ref typing issue in `related-products-loader.tsx`.
+
+Updated counts after this pass:
+
+| Pattern                          | Before 3-41 | After 3-41 |
+| -------------------------------- | ----------: | ---------: |
+| Hex colors                       |         301 |        288 |
+| `rgba(...)` usage                |         252 |        252 |
+| `bg-[...]` arbitrary classes     |          68 |         58 |
+| `text-[...]` arbitrary classes   |         114 |        108 |
+| `border-[...]` arbitrary classes |          10 |          8 |
+| `shadow-[...]` arbitrary classes |          12 |         12 |
+
+Verification:
+
+- Web typecheck passed.
+- Web build remains a local Windows/Next blocker after compile; do not mark this pass release-verified until CI or a clean Node 22 shell passes.
+
+Next migration target:
+
+- Delivery vault, private showroom, taste-memory, and funnel panels.
+
+## Token Migration Pass 3-42
+
+Completed account-side glass surface token migration:
+
+- Migrated delivery vault, private showroom, taste-memory, and funnel insight accents to semantic tokens.
+- Replaced repeated gold, cream, cream-ink, and berry hex utilities.
+- Kept one-off shadow utilities unchanged for a later elevation-token pass.
+
+Updated counts after this pass:
+
+| Pattern                          | Before 3-42 | After 3-42 |
+| -------------------------------- | ----------: | ---------: |
+| Hex colors                       |         288 |        269 |
+| `rgba(...)` usage                |         252 |        252 |
+| `bg-[...]` arbitrary classes     |          58 |         49 |
+| `text-[...]` arbitrary classes   |         108 |         92 |
+| `border-[...]` arbitrary classes |           8 |          6 |
+| `shadow-[...]` arbitrary classes |          12 |         12 |
+
+Verification:
+
+- Web typecheck passed.
+- Web build remains a local Windows/Next blocker after compile; do not mark this pass release-verified until CI or a clean Node 22 shell passes.
+
+Next migration target:
+
+- Typography utility audit for repeated `text-[...]` sizes, then elevation tokens for repeated `shadow-[...]` values.
+
+## Micro Type and Elevation Tokens 3-43
+
+Completed micro typography and elevation token migration:
+
+- Added Tailwind font-size tokens for `micro`, `nano`, and `brand`.
+- Added uppercase tracking tokens for repeated caps labels.
+- Replaced near-equivalent account glass arbitrary shadows with `shadow-premium`.
+- Migrated `Badge` to the shared micro type token.
+
+Updated counts after this pass:
+
+| Pattern                          | Before 3-43 | After 3-43 |
+| -------------------------------- | ----------: | ---------: |
+| Hex colors                       |         269 |        269 |
+| `rgba(...)` usage                |         252 |        250 |
+| `bg-[...]` arbitrary classes     |          49 |         49 |
+| `text-[...]` arbitrary classes   |          92 |         84 |
+| `border-[...]` arbitrary classes |           6 |          6 |
+| `shadow-[...]` arbitrary classes |          12 |         10 |
+
+Verification:
+
+- Web typecheck passed.
+- Web build remains behind the local Windows/Next static-generation gate; do not mark this pass release-verified until the production build completes cleanly.
+
+Next migration target:
+
+- Home/showcase visual token cleanup, especially remaining gold/ink hex usage and showcase-specific surfaces.
+
 ## Screenshots Captured
 
 Stored in `outputs/`:

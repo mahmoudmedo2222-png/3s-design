@@ -37,11 +37,11 @@ export function PrivateShowroom() {
   }
 
   return (
-    <section className="mt-4 overflow-hidden rounded-lg border border-white/[0.12] bg-white/[0.055] shadow-[0_22px_74px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+    <section className="mt-4 overflow-hidden rounded-lg border border-white/[0.12] bg-white/[0.055] shadow-premium backdrop-blur-xl">
       <div className="border-b border-white/[0.08] p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#f7d17e]">Private showroom</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-gold">Private showroom</p>
             <h2 className="mt-2 text-xl font-black text-white">A room built from your taste.</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-white/62">
               Save designs and 3S turns them into a private direction: mood, palette, audience signal, and the next best brief.
@@ -50,7 +50,7 @@ export function PrivateShowroom() {
           <button
             type="button"
             onClick={openConciergeBrief}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#fff8e8] px-4 text-sm font-black text-[#101513] transition hover:-translate-y-0.5 hover:bg-[#f7d17e]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-cream px-4 text-sm font-black text-cream-ink transition hover:-translate-y-0.5 hover:bg-gold"
           >
             Ask concierge
             <ArrowUpRight size={16} />
@@ -74,21 +74,21 @@ export function PrivateShowroom() {
                 aria-label={`Open ${product.title}`}
               >
                 <DesignPreview product={product} variant="mini" />
-                <span className="absolute inset-x-2 bottom-2 truncate rounded bg-black/[0.46] px-2 py-1 text-[0.65rem] font-black text-white/82 backdrop-blur">
+                <span className="absolute inset-x-2 bottom-2 truncate rounded bg-black/[0.46] px-2 py-1 text-nano font-black text-white/82 backdrop-blur">
                   {product.title}
                 </span>
               </Link>
               <div className="flex items-center justify-between gap-3 p-3">
                 <div className="min-w-0">
                   <p className="truncate text-xs font-black text-white">{product.defaultLicense?.name ?? 'Commercial license'}</p>
-                  <p className="mt-0.5 text-[0.68rem] font-bold text-[#f7d17e]">
+                  <p className="mt-0.5 text-micro font-bold text-gold">
                     {product.defaultLicense?.currency ?? product.currency} {product.defaultLicense?.price ?? product.basePrice}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => remove(product.id)}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-white/[0.1] bg-white/[0.06] text-white/56 transition hover:border-[#f08bb0]/50 hover:text-[#f08bb0]"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-white/[0.1] bg-white/[0.06] text-white/56 transition hover:border-berry/50 hover:text-berry"
                   aria-label={`Remove ${product.title}`}
                   title="Remove"
                 >
@@ -101,7 +101,7 @@ export function PrivateShowroom() {
       ) : (
         <div className="grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center">
           <div className="flex items-start gap-3">
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded bg-gold/15 text-gold">
               <Heart size={18} />
             </span>
             <div>
@@ -113,7 +113,7 @@ export function PrivateShowroom() {
           </div>
           <Link
             href="/?intro=0#latest-designs"
-            className="inline-flex h-10 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.08] px-4 text-sm font-bold text-white transition hover:border-[#f7d17e] hover:text-[#f7d17e]"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.08] px-4 text-sm font-bold text-white transition hover:border-gold hover:text-gold"
           >
             Curate now
           </Link>
@@ -126,8 +126,8 @@ export function PrivateShowroom() {
 function TasteSignal({ icon: Icon, label, value }: { icon: typeof Gem; label: string; value: string }) {
   return (
     <div className="rounded-lg border border-white/[0.1] bg-black/[0.18] p-3">
-      <Icon className="text-[#f7d17e]" size={17} />
-      <p className="mt-2 text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/42">{label}</p>
+      <Icon className="text-gold" size={17} />
+      <p className="mt-2 text-micro font-black uppercase tracking-caps-wide text-white/42">{label}</p>
       <p className="mt-1 line-clamp-2 text-sm font-black text-white">{value}</p>
     </div>
   );

@@ -11,7 +11,7 @@ export function Badge({
   return (
     <span
       className={cx(
-        'inline-flex items-center rounded border px-2 py-1 text-[0.68rem] font-black uppercase tracking-[0.1em]',
+        'inline-flex items-center rounded border px-2 py-1 text-micro font-black uppercase tracking-caps-tight',
         tone === 'gold'
           ? 'border-gold/35 bg-gold/12 text-gold'
           : tone === 'success'

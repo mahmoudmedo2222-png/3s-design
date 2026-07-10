@@ -21,7 +21,7 @@ export function FunnelInsightsPanel() {
   return (
     <section className="rounded-lg border border-white/[0.12] bg-white/[0.06] p-4 backdrop-blur-xl">
       <div className="mb-4 flex items-center gap-2">
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-gold/15 text-gold">
           <Activity size={17} />
         </span>
         <div>
@@ -49,10 +49,10 @@ function FunnelMetric({ icon: Icon, label, value }: { icon: LucideIcon; label: s
   return (
     <div className="flex items-center justify-between gap-3 rounded border border-white/[0.1] bg-white/[0.05] px-3 py-2">
       <span className="inline-flex items-center gap-2 text-xs font-bold text-white/58">
-        <Icon className="text-[#f7d17e]" size={14} />
+        <Icon className="text-gold" size={14} />
         {label}
       </span>
-      <span className="text-sm font-black text-[#f7d17e]">{value}</span>
+      <span className="text-sm font-black text-gold">{value}</span>
     </div>
   );
 }

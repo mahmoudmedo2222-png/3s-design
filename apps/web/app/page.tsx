@@ -49,7 +49,7 @@ export default async function HomePage() {
 
         <div className="relative z-10 mx-auto grid max-w-7xl gap-4 lg:grid-cols-[minmax(0,1fr)_310px] xl:grid-cols-[minmax(0,1fr)_330px]">
           <div className="min-w-0">
-            <div className="mb-4 hidden gap-4 overflow-auto pb-2 text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/[0.72] thin-scrollbar md:flex">
+            <div className="mb-4 hidden gap-4 overflow-auto pb-2 text-micro font-black uppercase tracking-caps-wide text-white/[0.72] thin-scrollbar md:flex">
               {intentPaths.map((item, index) => (
                 <IntentLink key={item.id} href={`#${item.id}` as Route} label={item.label} prompt={item.prompt} active={index === 0} />
               ))}
@@ -65,10 +65,10 @@ export default async function HomePage() {
           </div>
 
           <aside className="hero-side hidden space-y-3 lg:block lg:pt-8">
-            <Panel tone="glass" className="showcase-side-panel bg-[#101513]/82 p-3 shadow-[0_18px_70px_rgba(0,0,0,0.28)]">
+            <Panel tone="glass" className="showcase-side-panel bg-showcase-dark/82 p-3 shadow-premium">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#6f4700]">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-showcase-gold/15 text-showcase-accent">
                     <Flame size={17} />
                   </span>
                   <div>
@@ -85,8 +85,8 @@ export default async function HomePage() {
               </div>
             </Panel>
 
-            <Panel tone="glass" className="showcase-side-panel bg-[#101513]/82 p-3">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#ffe09a]">{copy.newRule}</p>
+            <Panel tone="glass" className="showcase-side-panel bg-showcase-dark/82 p-3">
+              <p className="text-xs font-black uppercase tracking-caps-wider text-gold-strong">{copy.newRule}</p>
               <p className="mt-2 text-sm leading-6 text-white/[0.74]">{copy.newRuleText}</p>
             </Panel>
           </aside>
@@ -106,21 +106,21 @@ export default async function HomePage() {
       <section id="ai-finder" className="ai-concierge relative mx-auto max-w-7xl scroll-mt-24 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6f4700]">{copy.aiKicker}</p>
+            <p className="text-xs font-black uppercase tracking-caps-wider text-showcase-accent">{copy.aiKicker}</p>
             <h2 className="mt-2 max-w-3xl text-xl font-black text-white sm:text-2xl">{copy.aiTitle}</h2>
           </div>
           <ActionLink href="/login" intent="ghost" className="h-10">
             {copy.saveSearch}
           </ActionLink>
         </div>
-        <Panel tone="glass" className="ai-concierge__panel p-2 shadow-[0_18px_70px_rgba(0,0,0,0.18)]">
+        <Panel tone="glass" className="ai-concierge__panel p-2 shadow-premium">
           <DeferredAiDiscoveryPanel />
         </Panel>
       </section>
 
       <section id="shop-by-emotion" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-4">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6f4700]">{copy.momentsKicker}</p>
+          <p className="text-xs font-black uppercase tracking-caps-wider text-showcase-accent">{copy.momentsKicker}</p>
           <h2 className="mt-2 text-2xl font-black text-white">{copy.momentsTitle}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/[0.75]">{copy.momentsText}</p>
         </div>
@@ -142,7 +142,7 @@ export default async function HomePage() {
       <section id="latest-designs" className="mx-auto max-w-7xl scroll-mt-24 px-4 pb-10 pt-6 sm:px-6 lg:px-8">
         <div className="mb-4 flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6f4700]">{copy.latestKicker}</p>
+            <p className="text-xs font-black uppercase tracking-caps-wider text-showcase-accent">{copy.latestKicker}</p>
             <h2 className="mt-2 text-2xl font-black text-white">{copy.latestTitle}</h2>
           </div>
         </div>
@@ -166,20 +166,20 @@ function HeroShowcase({ product, locale = 'en' }: { product: ProductSummary; loc
   const copy = homeCopy[locale];
 
   return (
-    <Panel tone="glass" className="hero-showcase relative overflow-hidden bg-[#101513]/86 shadow-[0_28px_90px_rgba(0,0,0,0.34)]">
+    <Panel tone="glass" className="hero-showcase relative overflow-hidden bg-showcase-dark/86 shadow-premium">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_22%,rgba(247,209,126,0.14),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.01))]" />
 
       <div className="hero-showcase__grid relative grid min-h-[380px] gap-4 p-4 lg:grid-cols-[0.9fr_1.1fr] xl:min-h-[420px]">
         <div className="hero-showcase__copy flex flex-col justify-start gap-4">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded border border-white/[0.12] bg-black/30 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-[#ffe09a]">
+            <div className="mb-4 inline-flex items-center gap-2 rounded border border-white/[0.12] bg-black/30 px-3 py-1.5 text-xs font-black uppercase tracking-caps-wide text-gold-strong">
               <Sparkles size={14} />
               {copy.featuredDesign}
             </div>
             <h1 className="hero-showcase__title max-w-xl text-3xl font-black leading-[1.02] text-white sm:text-4xl lg:text-[2.65rem]">
               {product.title}
             </h1>
-            <p className="mt-3 max-w-md text-xs font-black uppercase tracking-[0.16em] text-[#ffe09a]">{copy.readyVisuals}</p>
+            <p className="mt-3 max-w-md text-xs font-black uppercase tracking-caps-wide text-gold-strong">{copy.readyVisuals}</p>
             <p className="mt-3 max-w-lg text-sm leading-6 text-white/[0.70]">{product.subtitle ?? copy.fallbackSubtitle}</p>
           </div>
 
@@ -201,13 +201,13 @@ function HeroShowcase({ product, locale = 'en' }: { product: ProductSummary; loc
 
             <Panel tone="glass" className="hero-price-card grid gap-3 bg-black/30 p-3 shadow-none sm:grid-cols-[1fr_auto] sm:items-end">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-white/[0.72]">{copy.startsAt}</p>
-                <p className="mt-1 text-2xl font-black text-[#ffe09a]">
+                <p className="text-xs font-black uppercase tracking-caps-wide text-white/[0.72]">{copy.startsAt}</p>
+                <p className="mt-1 text-2xl font-black text-gold-strong">
                   {product.currency} {product.basePrice}
                 </p>
                 <p className="mt-1 text-xs font-semibold text-white/[0.76]">{copy.license}</p>
               </div>
-              <ActionLink href={href} icon={ArrowUpRight} intent="secondary" className="h-10 bg-[#fff8e8] font-black hover:bg-[#f7d17e]">
+              <ActionLink href={href} icon={ArrowUpRight} intent="secondary" className="h-10 bg-showcase-cream font-black hover:bg-showcase-gold">
                 {copy.viewDesign}
               </ActionLink>
             </Panel>
@@ -238,7 +238,7 @@ function BestSellerRow({ product, index }: { product: ProductSummary; index: num
   return (
     <Link
       href={href}
-      className="group grid grid-cols-[46px_1fr_auto] items-center gap-2 rounded border border-white/10 bg-black/35 p-2 transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.35] hover:bg-black/45"
+      className="group grid grid-cols-[46px_1fr_auto] items-center gap-2 rounded border border-white/10 bg-black/35 p-2 transition hover:-translate-y-0.5 hover:border-showcase-gold/35 hover:bg-black/45"
     >
       <div className="h-12 overflow-hidden rounded bg-black/20">
         <DesignPreview product={product} variant="mini" />
@@ -277,9 +277,9 @@ function MoodCollection({
     <Panel
       tone="glass"
       id={id}
-      className="group scroll-mt-24 overflow-hidden bg-[#101513]/82 p-3 shadow-[0_18px_64px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:border-[#f7d17e]/[0.35] hover:bg-[#16201c]/90"
+      className="group scroll-mt-24 overflow-hidden bg-showcase-dark/82 p-3 shadow-premium transition hover:-translate-y-0.5 hover:border-showcase-gold/35 hover:bg-showcase-dark-hover/90"
     >
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#6f4700] transition group-hover:scale-105">
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-showcase-gold/15 text-showcase-accent transition group-hover:scale-105">
         <Icon size={18} />
       </span>
       <h3 className="mt-3 text-base font-black text-white">{title}</h3>

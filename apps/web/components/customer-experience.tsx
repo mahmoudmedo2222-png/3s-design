@@ -14,7 +14,7 @@ export function SectionHeading({
 }) {
   return (
     <div className={align === 'center' ? 'mx-auto max-w-3xl text-center' : 'max-w-3xl'}>
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-pine dark:text-[#f7d17e]">{kicker}</p>
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-pine dark:text-gold">{kicker}</p>
       <h2 className="mt-2 text-2xl font-black leading-tight text-ink sm:text-3xl">{title}</h2>
       {text ? <p className="mt-3 text-sm leading-6 text-muted">{text}</p> : null}
     </div>
@@ -46,7 +46,7 @@ export function CustomerTrustStrip({ tone = 'light' }: { tone?: 'light' | 'dark'
       className={
         dark
           ? 'grid gap-3 rounded-lg border border-white/[0.12] bg-white/[0.06] p-3 backdrop-blur-xl md:grid-cols-3'
-          : 'grid gap-3 rounded-lg border border-line bg-white p-3 shadow-sm dark:border-white/[0.12] dark:bg-[#121816] md:grid-cols-3'
+          : 'grid gap-3 rounded-lg border border-line bg-surface p-3 shadow-sm dark:border-white/[0.12] md:grid-cols-3'
       }
     >
       {items.map((item) => (
@@ -60,15 +60,13 @@ function TrustItem({ icon: Icon, title, text, dark }: { icon: LucideIcon; title:
   return (
     <div
       className={
-        dark
-          ? 'flex gap-3 rounded border border-white/[0.1] bg-white/[0.05] p-3'
-          : 'flex gap-3 rounded border border-line bg-paper p-3 dark:bg-[#0f1513]'
+        dark ? 'flex gap-3 rounded border border-white/[0.1] bg-white/[0.05] p-3' : 'flex gap-3 rounded border border-line bg-paper p-3'
       }
     >
       <span
         className={
           dark
-            ? 'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]'
+            ? 'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded bg-gold/15 text-gold'
             : 'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded bg-pine/10 text-pine'
         }
       >
@@ -84,8 +82,8 @@ function TrustItem({ icon: Icon, title, text, dark }: { icon: LucideIcon; title:
 
 export function BuyerDecisionCard({ icon: Icon = Sparkles, title, text }: { icon?: LucideIcon; title: string; text: string }) {
   return (
-    <div className="rounded-lg border border-line bg-white p-3 shadow-sm dark:border-white/[0.12] dark:bg-[#121816]">
-      <Icon className="text-pine dark:text-[#f7d17e]" size={18} />
+    <div className="rounded-lg border border-line bg-surface p-3 shadow-sm dark:border-white/[0.12]">
+      <Icon className="text-pine dark:text-gold" size={18} />
       <p className="mt-3 text-sm font-black text-ink">{title}</p>
       <p className="mt-2 text-xs leading-5 text-muted">{text}</p>
     </div>
@@ -94,7 +92,7 @@ export function BuyerDecisionCard({ icon: Icon = Sparkles, title, text }: { icon
 
 export function ConfidenceBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded border border-pine/20 bg-pine/10 px-2.5 py-1 text-xs font-bold text-pine dark:border-[#f7d17e]/25 dark:bg-[#f7d17e]/10 dark:text-[#f7d17e]">
+    <span className="inline-flex items-center gap-1.5 rounded border border-pine/20 bg-pine/10 px-2.5 py-1 text-xs font-bold text-pine dark:border-gold/25 dark:bg-gold/10 dark:text-gold">
       <BadgeCheck size={13} />
       {children}
     </span>
@@ -122,7 +120,7 @@ export function CustomerJourneyRail({
       className={
         dark
           ? 'grid gap-2 rounded-lg border border-white/[0.12] bg-white/[0.06] p-2 backdrop-blur-xl md:grid-cols-4'
-          : 'grid gap-2 rounded-lg border border-line bg-white p-2 shadow-sm dark:border-white/[0.12] dark:bg-[#121816] md:grid-cols-4'
+          : 'grid gap-2 rounded-lg border border-line bg-surface p-2 shadow-sm dark:border-white/[0.12] md:grid-cols-4'
       }
       aria-label="Customer journey"
     >
@@ -136,11 +134,11 @@ export function CustomerJourneyRail({
             className={
               active
                 ? dark
-                  ? 'rounded border border-[#f7d17e]/55 bg-black/35 p-3'
+                  ? 'rounded border border-gold/55 bg-black/35 p-3'
                   : 'rounded border border-pine/30 bg-pine/10 p-3'
                 : dark
                   ? 'rounded border border-white/[0.08] bg-white/[0.04] p-3'
-                  : 'rounded border border-line bg-paper p-3 dark:bg-[#0f1513]'
+                  : 'rounded border border-line bg-paper p-3'
             }
           >
             <div className="flex items-center gap-2">
@@ -148,7 +146,7 @@ export function CustomerJourneyRail({
                 className={
                   active || done
                     ? dark
-                      ? 'inline-flex h-6 w-6 items-center justify-center rounded bg-[#f7d17e] text-xs font-black text-[#101513]'
+                      ? 'inline-flex h-6 w-6 items-center justify-center rounded bg-gold text-xs font-black text-cream-ink'
                       : 'inline-flex h-6 w-6 items-center justify-center rounded bg-pine text-xs font-black text-white'
                     : dark
                       ? 'inline-flex h-6 w-6 items-center justify-center rounded bg-white/[0.08] text-xs font-black text-white/58'
@@ -187,13 +185,13 @@ export function CustomerEmptyState({
       className={
         dark
           ? 'rounded-lg border border-dashed border-white/[0.14] bg-white/[0.04] p-8 text-center'
-          : 'rounded-lg border border-dashed border-line bg-white p-8 text-center shadow-sm dark:border-white/[0.14] dark:bg-[#121816]'
+          : 'rounded-lg border border-dashed border-line bg-surface p-8 text-center shadow-sm dark:border-white/[0.14]'
       }
     >
       <span
         className={
           dark
-            ? 'mx-auto inline-flex h-11 w-11 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]'
+            ? 'mx-auto inline-flex h-11 w-11 items-center justify-center rounded bg-gold/15 text-gold'
             : 'mx-auto inline-flex h-11 w-11 items-center justify-center rounded bg-pine/10 text-pine'
         }
       >

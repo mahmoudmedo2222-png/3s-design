@@ -54,10 +54,10 @@ export function DeliveryVault({ downloads }: { downloads: DownloadEntitlement[] 
   }
 
   return (
-    <Panel tone="glass" className="vault-shell p-4 shadow-[0_22px_82px_rgba(0,0,0,0.22)]">
+    <Panel tone="glass" className="vault-shell p-4 shadow-premium">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-gold/15 text-gold">
             <FileArchive size={17} />
           </span>
           <div>
@@ -122,7 +122,7 @@ export function DeliveryVault({ downloads }: { downloads: DownloadEntitlement[] 
                     href={`/products/${item.product.slug}`}
                     icon={ExternalLink}
                     intent="secondary"
-                    className="h-9 bg-[#fff8e8] px-3 text-xs font-black hover:bg-[#f7d17e]"
+                    className="h-9 bg-cream px-3 text-xs font-black hover:bg-gold"
                   >
                     Product page
                   </ActionLink>
@@ -154,11 +154,11 @@ export function DeliveryVault({ downloads }: { downloads: DownloadEntitlement[] 
                           >
                             <span className="min-w-0">
                               <span className="block truncate text-xs font-black text-white">{asset.fileName}</span>
-                              <span className="mt-0.5 block text-[0.68rem] font-bold uppercase tracking-[0.12em] text-white/42">
+                              <span className="mt-0.5 block text-micro font-bold uppercase tracking-caps text-white/42">
                                 {asset.assetType.replace('_', ' ')} / {asset.mimeType}
                               </span>
                             </span>
-                            <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded bg-[#fff8e8] px-2 text-xs font-black text-[#101513]">
+                            <span className="inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded bg-cream px-2 text-xs font-black text-cream-ink">
                               <Download size={13} />
                               {loadingKey === key ? 'Preparing' : 'Download'}
                             </span>
@@ -181,12 +181,12 @@ export function DeliveryVault({ downloads }: { downloads: DownloadEntitlement[] 
         </div>
       ) : (
         <Panel tone="glass" className="p-4 shadow-none">
-          <ShieldCheck className="text-[#f7d17e]" size={20} />
+          <ShieldCheck className="text-gold" size={20} />
           <p className="mt-3 text-sm font-black text-white">No unlocked files yet.</p>
           <p className="mt-2 text-sm leading-6 text-white/58">
             After payment approval, purchased designs show here with license, order number, and download limits.
           </p>
-          <ActionLink href="/?intro=0#latest-designs" intent="secondary" className="mt-4 h-10 bg-[#fff8e8] font-black hover:bg-[#f7d17e]">
+          <ActionLink href="/?intro=0#latest-designs" intent="secondary" className="mt-4 h-10 bg-cream font-black hover:bg-gold">
             Browse designs
           </ActionLink>
         </Panel>
@@ -198,8 +198,8 @@ export function DeliveryVault({ downloads }: { downloads: DownloadEntitlement[] 
 function VaultMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded border border-white/[0.1] bg-black/15 px-3 py-2">
-      <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-white/38">{label}</p>
-      <p className="mt-1 text-sm font-black text-[#f7d17e]">{value}</p>
+      <p className="text-nano font-black uppercase tracking-caps-relaxed text-white/38">{label}</p>
+      <p className="mt-1 text-sm font-black text-gold">{value}</p>
     </div>
   );
 }
@@ -215,9 +215,9 @@ function downloadDisabledReason(item: DownloadEntitlement, preparing: boolean) {
 function VaultFact({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2">
-      <Icon className="shrink-0 text-[#f7d17e]" size={15} />
+      <Icon className="shrink-0 text-gold" size={15} />
       <div className="min-w-0">
-        <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-white/38">{label}</p>
+        <p className="text-nano font-black uppercase tracking-caps-relaxed text-white/38">{label}</p>
         <p className="truncate text-xs font-black text-white/76">{value}</p>
       </div>
     </div>

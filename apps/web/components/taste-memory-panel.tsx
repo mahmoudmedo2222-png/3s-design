@@ -101,7 +101,7 @@ export function TasteMemoryPanel() {
   return (
     <section className="rounded-lg border border-white/[0.12] bg-white/[0.06] p-4 backdrop-blur-xl">
       <div className="flex items-start gap-3">
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded bg-gold/15 text-gold">
           <BrainCircuit size={17} />
         </span>
         <div>
@@ -122,7 +122,7 @@ export function TasteMemoryPanel() {
       <button
         type="button"
         onClick={openTasteSearch}
-        className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-[#fff8e8] px-4 text-sm font-black text-[#101513] transition hover:bg-[#f7d17e]"
+        className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-cream px-4 text-sm font-black text-cream-ink transition hover:bg-gold"
       >
         Build from memory
         <Sparkles size={16} />
@@ -134,7 +134,7 @@ export function TasteMemoryPanel() {
 function MemoryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded border border-white/[0.1] bg-white/[0.05] p-2.5">
-      <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/38">{label}</p>
+      <p className="text-micro font-black uppercase tracking-caps-wide text-white/38">{label}</p>
       <p className="mt-1 text-sm font-black text-white">{value}</p>
     </div>
   );
