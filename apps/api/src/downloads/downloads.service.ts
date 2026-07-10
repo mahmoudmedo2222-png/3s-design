@@ -87,6 +87,8 @@ export class DownloadsService {
     const db = this.database.requireDb();
 
     const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`download:${entitlementId}`}))`);
+
       const [row] = await tx
         .select({
           entitlement: entitlements,
@@ -148,20 +150,26 @@ export class DownloadsService {
         throw new ForbiddenException('Hourly download limit reached');
       }
 
-      await tx
+      const [updatedEntitlement] = await tx
         .update(entitlements)
         .set({
           downloadsUsed: sql`${entitlements.downloadsUsed} + 1`,
           updatedAt: new Date(),
         })
-        .where(eq(entitlements.id, entitlement.id));
+        .where(and(eq(entitlements.id, entitlement.id), sql`${entitlements.downloadsUsed} < ${maxDownloads}`))
+        .returning({ downloadsUsed: entitlements.downloadsUsed });
+
+      if (!updatedEntitlement) {
+        await this.recordDownloadEvent(tx, entitlement.id, userId, asset.id, 'denied', 'total_limit_exceeded', meta);
+        throw new ForbiddenException('Download limit reached');
+      }
 
       await this.recordDownloadEvent(tx, entitlement.id, userId, asset.id, 'allowed', undefined, meta);
 
       return {
         asset,
         maxDownloads,
-        downloadsUsed: entitlement.downloadsUsed + 1,
+        downloadsUsed: updatedEntitlement.downloadsUsed,
         hourlyUsed: hourlyUsed + 1,
       };
     });

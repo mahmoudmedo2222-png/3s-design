@@ -8,6 +8,7 @@ const webDir = path.resolve('apps/web');
 const nextBin = path.join(webDir, 'node_modules/next/dist/bin/next');
 
 cleanupStaleProjectBuilds();
+await removeStaleTypecheckState();
 runTypecheck({
   cwd: webDir,
   env: {
@@ -22,7 +23,7 @@ runNextBuild({
   env: {
     ...process.env,
     NEXT_PRIVATE_BUILD_WORKER: '0',
-    NODE_OPTIONS: process.env.NODE_OPTIONS ?? '--max-old-space-size=4096',
+    NODE_OPTIONS: safeBuildNodeOptions(process.env.NODE_OPTIONS),
     SITE_AUDIT_SKIP_NEXT_TYPECHECK: 'true',
   },
 });
@@ -67,6 +68,18 @@ function runNextBuild(options = {}) {
   }
 }
 
+function safeBuildNodeOptions(value) {
+  const options = (value ?? '').split(/\s+/).filter(Boolean);
+  const allowedPrefixes = ['--max-old-space-size='];
+  const safeOptions = options.filter((option) => allowedPrefixes.some((prefix) => option.startsWith(prefix)));
+
+  if (!safeOptions.some((option) => option.startsWith('--max-old-space-size='))) {
+    safeOptions.push('--max-old-space-size=4096');
+  }
+
+  return safeOptions.join(' ');
+}
+
 function cleanupStaleProjectBuilds() {
   if (process.platform !== 'win32') {
     return;
@@ -92,6 +105,10 @@ function cleanupStaleProjectBuilds() {
 
 async function removeStaleBuildLock() {
   await fs.rm(path.join(webDir, '.next/lock'), { force: true });
+}
+
+async function removeStaleTypecheckState() {
+  await fs.rm(path.join(webDir, 'tsconfig.tsbuildinfo'), { force: true });
 }
 
 async function waitForProductionBuild(buildStartedAt) {

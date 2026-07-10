@@ -12,7 +12,7 @@ import {
   userProfiles,
   users,
 } from '@3s-design/db/schema';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { DatabaseService } from '../database/database.service';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
@@ -132,32 +132,34 @@ export class OrdersService {
     const db = this.database.requireDb();
     const checkoutInput = input ?? {};
 
-    if (checkoutInput.idempotencyKey) {
-      const [existingOrder] = await db
-        .select({ id: orders.id })
-        .from(orders)
-        .where(and(eq(orders.userId, userId), eq(orders.idempotencyKey, checkoutInput.idempotencyKey)))
-        .limit(1);
-
-      if (existingOrder) {
-        return this.findOrder(userId, existingOrder.id);
-      }
-    }
-
-    const cart = await this.getOrCreateCart(userId);
-    const lines = await this.getCartLines(cart.id);
-
-    if (!lines.length) {
-      throw new BadRequestException('Cart is empty');
-    }
-
-    await Promise.all(lines.map((line) => this.assertNotAlreadyOwned(userId, line.product.id, line.variant?.id, line.license.id)));
-
-    const totals = this.calculateTotals(lines);
-    const orderNumber = this.createOrderNumber();
-    const billingSnapshot = await this.createBillingSnapshot(userId, checkoutInput);
-
     const result = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`checkout:${userId}`}))`);
+
+      if (checkoutInput.idempotencyKey) {
+        const [existingOrder] = await tx
+          .select({ id: orders.id })
+          .from(orders)
+          .where(and(eq(orders.userId, userId), eq(orders.idempotencyKey, checkoutInput.idempotencyKey)))
+          .limit(1);
+
+        if (existingOrder) {
+          return existingOrder;
+        }
+      }
+
+      const cart = await this.getOrCreateCart(userId, tx);
+      const lines = await this.getCartLines(cart.id, tx);
+
+      if (!lines.length) {
+        throw new BadRequestException('Cart is empty');
+      }
+
+      await Promise.all(lines.map((line) => this.assertNotAlreadyOwned(userId, line.product.id, line.variant?.id, line.license.id, tx)));
+
+      const totals = this.calculateTotals(lines);
+      const orderNumber = this.createOrderNumber();
+      const billingSnapshot = await this.createBillingSnapshot(userId, checkoutInput, tx);
+
       const [createdOrder] = await tx
         .insert(orders)
         .values({
@@ -227,8 +229,8 @@ export class OrdersService {
     };
   }
 
-  private async getOrCreateCart(userId: string) {
-    const db = this.database.requireDb();
+  private async getOrCreateCart(userId: string, executor: ReturnType<DatabaseService['requireDb']> = this.database.requireDb()) {
+    const db = executor;
     const [existing] = await db.select().from(carts).where(eq(carts.userId, userId)).limit(1);
 
     if (existing) {
@@ -250,9 +252,11 @@ export class OrdersService {
     return cartAfterRace;
   }
 
-  private async getCartLines(cartId: string): Promise<CartLine[]> {
-    const rows = await this.database
-      .requireDb()
+  private async getCartLines(
+    cartId: string,
+    executor: ReturnType<DatabaseService['requireDb']> = this.database.requireDb(),
+  ): Promise<CartLine[]> {
+    const rows = await executor
       .select({
         item: cartItems,
         product: products,
@@ -321,9 +325,14 @@ export class OrdersService {
     return row.item;
   }
 
-  private async assertNotAlreadyOwned(userId: string, productId: string, variantId: string | undefined | null, licenseId: string) {
-    const [existing] = await this.database
-      .requireDb()
+  private async assertNotAlreadyOwned(
+    userId: string,
+    productId: string,
+    variantId: string | undefined | null,
+    licenseId: string,
+    executor: ReturnType<DatabaseService['requireDb']> = this.database.requireDb(),
+  ) {
+    const [existing] = await executor
       .select({ id: entitlements.id })
       .from(entitlements)
       .where(
@@ -342,9 +351,12 @@ export class OrdersService {
     }
   }
 
-  private async createBillingSnapshot(userId: string, input: CreateCheckoutDto) {
-    const [row] = await this.database
-      .requireDb()
+  private async createBillingSnapshot(
+    userId: string,
+    input: CreateCheckoutDto,
+    executor: ReturnType<DatabaseService['requireDb']> = this.database.requireDb(),
+  ) {
+    const [row] = await executor
       .select({
         user: {
           email: users.email,

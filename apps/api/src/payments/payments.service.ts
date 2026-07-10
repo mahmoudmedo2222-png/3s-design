@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { downloadEvents, entitlements, orders, payments, paymentWebhookEvents, users } from '@3s-design/db/schema';
-import { and, desc, eq, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { AuditService } from '../audit/audit.service';
 import { DatabaseService } from '../database/database.service';
 import { DownloadsService } from '../downloads/downloads.service';
@@ -256,26 +256,43 @@ export class PaymentsService {
       throw new BadRequestException('Payment is not pending');
     }
 
-    await db.transaction(async (tx) => {
-      await tx
+    const now = new Date();
+    const [updatedPayment] = await db.transaction(async (tx) => {
+      const [updated] = await tx
         .update(payments)
         .set({
           status: 'paid',
           providerPaymentId: providerPaymentId ?? payment.providerPaymentId,
-          paidAt: new Date(),
-          updatedAt: new Date(),
+          paidAt: now,
+          updatedAt: now,
         })
-        .where(eq(payments.id, payment.id));
+        .where(and(eq(payments.id, payment.id), inArray(payments.status, ['pending', 'failed', 'expired'])))
+        .returning();
+
+      if (!updated) {
+        return [];
+      }
 
       await tx
         .update(orders)
         .set({
           status: 'paid',
-          paidAt: new Date(),
-          updatedAt: new Date(),
+          paidAt: now,
+          updatedAt: now,
         })
         .where(eq(orders.id, payment.orderId));
+
+      return [updated];
     });
+
+    if (!updatedPayment) {
+      const [current] = await db.select().from(payments).where(eq(payments.id, payment.id)).limit(1);
+      if (current?.status === 'paid') {
+        return this.finishPaidOrder(payment.orderId);
+      }
+
+      throw new BadRequestException('Payment is not pending');
+    }
 
     await this.audit.record({
       actorUserId,
@@ -283,11 +300,7 @@ export class PaymentsService {
       entityType: 'payment',
       entityId: payment.id,
       before: this.toAuditObject(payment),
-      after: {
-        ...this.toAuditObject(payment),
-        status: 'paid',
-        providerPaymentId: providerPaymentId ?? payment.providerPaymentId,
-      },
+      after: this.toAuditObject(updatedPayment),
     });
 
     return this.finishPaidOrder(payment.orderId);
@@ -308,19 +321,21 @@ export class PaymentsService {
     const [updated] = await db
       .update(payments)
       .set({ status: 'failed', updatedAt: new Date() })
-      .where(eq(payments.id, payment.id))
+      .where(and(eq(payments.id, payment.id), eq(payments.status, 'pending')))
       .returning();
 
-    if (updated) {
-      await this.audit.record({
-        actorUserId,
-        action: actorUserId ? 'admin.payments.mark_failed' : 'payments.mark_failed',
-        entityType: 'payment',
-        entityId: payment.id,
-        before: this.toAuditObject(payment),
-        after: this.toAuditObject(updated),
-      });
+    if (!updated) {
+      throw new BadRequestException('Payment is not pending');
     }
+
+    await this.audit.record({
+      actorUserId,
+      action: actorUserId ? 'admin.payments.mark_failed' : 'payments.mark_failed',
+      entityType: 'payment',
+      entityId: payment.id,
+      before: this.toAuditObject(payment),
+      after: this.toAuditObject(updated),
+    });
 
     return updated;
   }
