@@ -72,10 +72,11 @@ Before deploying API code:
 
 1. Backup staging database if it already has useful data.
 2. Run `pnpm phase2:env:staging`.
-3. Apply pending migrations.
-4. Confirm the `0009`, `0010`, and `0011` migration preflights pass.
-5. Confirm cart, asset, refund, and status constraints exist.
-6. Confirm API starts cleanly after migration.
+3. Run `pnpm phase2:migration-preflight:staging`.
+4. Apply pending migrations.
+5. Confirm the `0009`, `0010`, and `0011` migration preflights pass.
+6. Confirm cart, asset, refund, and status constraints exist.
+7. Confirm API starts cleanly after migration.
 
 Current migration:
 
@@ -83,7 +84,7 @@ Current migration:
 packages/db/drizzle/0011_loving_whistler.sql
 ```
 
-If `0010` or `0011` fails with a dirty-data preflight message, stop the deploy and follow `docs/ops/database-migrations.md`. Do not manually update customer payment/refund records without a reviewed repair note.
+If `phase2:migration-preflight:staging`, `0010`, or `0011` fails with a dirty-data message, stop the deploy and follow `docs/ops/migration-repair-playbook.md`. Do not manually update customer payment/refund records without a reviewed repair note.
 
 ## 5. Deploy Order
 

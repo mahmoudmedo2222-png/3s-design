@@ -83,6 +83,26 @@ If a migration fails on a preflight:
 
 Do not change `refund_requests`, `payments`, `orders`, or `entitlements` from a generated migration unless the change is purely structural.
 
+Detailed repair rules live in `docs/ops/migration-repair-playbook.md`.
+
+## Preflight Command
+
+Run this before applying pending migrations to any non-empty staging database:
+
+```powershell
+pnpm phase2:migration-preflight:staging
+```
+
+The command checks data that can break `0009`, `0010`, and `0011`:
+
+- Duplicate carts per user.
+- Duplicate cart lines.
+- Duplicate product asset storage keys.
+- Duplicate open refund requests per order.
+- Invalid status values for products, assets, downloads, orders, payments, refund requests, and refunds.
+
+The command prints counts and sample identifiers, not secrets.
+
 ## Release Order
 
 For additive migrations:

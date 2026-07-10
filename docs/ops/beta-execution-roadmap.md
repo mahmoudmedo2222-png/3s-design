@@ -86,6 +86,7 @@ Blockers:
 Exit criteria:
 
 - `pnpm phase2:env:staging` passes against the real staging env file.
+- `pnpm phase2:migration-preflight:staging` passes before pending migrations are applied.
 - `pnpm phase2:paymob-readiness` passes.
 - Staging API returns `GET /api/health/beta-readiness` with `ok=true`.
 - Admin user exists only through controlled seed flow.
