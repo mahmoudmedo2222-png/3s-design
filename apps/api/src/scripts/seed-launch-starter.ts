@@ -14,6 +14,7 @@ import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { assertNonProductionSeed, requireDatabaseUrl } from './seed-policy';
 
 dotenv.config({ path: fileURLToPath(new URL('../../../../.env', import.meta.url)) });
 
@@ -276,16 +277,9 @@ const starterProducts: LaunchProductSeed[] = [
   },
 ];
 
-function requireDatabaseUrl() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('Missing DATABASE_URL');
-  }
-
-  return databaseUrl;
-}
-
 async function main() {
+  assertNonProductionSeed('seed:launch-starter');
+
   const pool = new pg.Pool({ connectionString: requireDatabaseUrl() });
   const db = drizzle(pool);
 

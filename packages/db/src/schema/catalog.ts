@@ -1,4 +1,4 @@
-import { bigint, boolean, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, boolean, check, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 const timestamps = () => ({
@@ -23,66 +23,84 @@ export const products = pgTable(
     ...timestamps(),
   },
   (table) => ({
+    statusCheck: check('products_status_check', sql`${table.status} in ('draft', 'published', 'archived')`),
     slugIdx: uniqueIndex('products_slug_idx').on(table.slug),
+    publishedListingIdx: index('products_published_listing_idx').on(table.status, table.isFeatured, table.publishedAt, table.title),
   }),
 );
 
-export const productVariants = pgTable('product_variants', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  productId: uuid('product_id')
-    .notNull()
-    .references(() => products.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  description: text('description'),
-  fileFormats: jsonb('file_formats')
-    .$type<string[]>()
-    .notNull()
-    .default(sql`'[]'::jsonb`),
-  dimensions: jsonb('dimensions')
-    .$type<Array<{ label: string; width?: number; height?: number; unit?: string }>>()
-    .notNull()
-    .default(sql`'[]'::jsonb`),
-  softwareCompatibility: jsonb('software_compatibility')
-    .$type<string[]>()
-    .notNull()
-    .default(sql`'[]'::jsonb`),
-  priceDelta: numeric('price_delta', { precision: 12, scale: 2 }).notNull().default('0'),
-  isDefault: boolean('is_default').notNull().default(false),
-  sortOrder: integer('sort_order').notNull().default(0),
-  ...timestamps(),
-});
+export const productVariants = pgTable(
+  'product_variants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    description: text('description'),
+    fileFormats: jsonb('file_formats')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    dimensions: jsonb('dimensions')
+      .$type<Array<{ label: string; width?: number; height?: number; unit?: string }>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    softwareCompatibility: jsonb('software_compatibility')
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    priceDelta: numeric('price_delta', { precision: 12, scale: 2 }).notNull().default('0'),
+    isDefault: boolean('is_default').notNull().default(false),
+    sortOrder: integer('sort_order').notNull().default(0),
+    ...timestamps(),
+  },
+  (table) => ({
+    productSortIdx: index('product_variants_product_sort_idx').on(table.productId, table.sortOrder, table.name),
+  }),
+);
 
-export const productAssets = pgTable('product_assets', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  productId: uuid('product_id')
-    .notNull()
-    .references(() => products.id, { onDelete: 'cascade' }),
-  variantId: uuid('variant_id').references(() => productVariants.id, { onDelete: 'cascade' }),
-  assetType: text('asset_type').notNull(),
-  storageKey: text('storage_key').notNull(),
-  fileName: text('file_name').notNull(),
-  mimeType: text('mime_type').notNull(),
-  fileSize: bigint('file_size', { mode: 'number' }).notNull(),
-  width: integer('width'),
-  height: integer('height'),
-  checksum: text('checksum'),
-  assetStatus: text('asset_status').notNull().default('uploaded'),
-  scanStatus: text('scan_status').notNull().default('pending'),
-  scanResult: jsonb('scan_result')
-    .$type<{
-      provider?: string;
-      verdict?: 'clean' | 'suspicious' | 'infected' | 'unknown';
-      reason?: string;
-      scannedAt?: string;
-    }>()
-    .notNull()
-    .default(sql`'{}'::jsonb`),
-  altText: text('alt_text'),
-  sortOrder: integer('sort_order').notNull().default(0),
-  isPrimary: boolean('is_primary').notNull().default(false),
-  isPublicPreview: boolean('is_public_preview').notNull().default(false),
-  ...timestamps(),
-});
+export const productAssets = pgTable(
+  'product_assets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    variantId: uuid('variant_id').references(() => productVariants.id, { onDelete: 'cascade' }),
+    assetType: text('asset_type').notNull(),
+    storageKey: text('storage_key').notNull(),
+    fileName: text('file_name').notNull(),
+    mimeType: text('mime_type').notNull(),
+    fileSize: bigint('file_size', { mode: 'number' }).notNull(),
+    width: integer('width'),
+    height: integer('height'),
+    checksum: text('checksum'),
+    assetStatus: text('asset_status').notNull().default('uploaded'),
+    scanStatus: text('scan_status').notNull().default('pending'),
+    scanResult: jsonb('scan_result')
+      .$type<{
+        provider?: string;
+        verdict?: 'clean' | 'suspicious' | 'infected' | 'unknown';
+        reason?: string;
+        scannedAt?: string;
+      }>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    altText: text('alt_text'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isPrimary: boolean('is_primary').notNull().default(false),
+    isPublicPreview: boolean('is_public_preview').notNull().default(false),
+    ...timestamps(),
+  },
+  (table) => ({
+    assetStatusCheck: check('product_assets_asset_status_check', sql`${table.assetStatus} in ('uploaded', 'processing', 'ready', 'rejected')`),
+    scanStatusCheck: check('product_assets_scan_status_check', sql`${table.scanStatus} in ('pending', 'passed', 'failed', 'skipped')`),
+    storageKeyIdx: uniqueIndex('product_assets_storage_key_idx').on(table.storageKey),
+    productSortIdx: index('product_assets_product_sort_idx').on(table.productId, table.sortOrder, table.fileName),
+    productAssetTypeIdx: index('product_assets_product_asset_type_idx').on(table.productId, table.assetType),
+  }),
+);
 
 export const licenses = pgTable(
   'licenses',

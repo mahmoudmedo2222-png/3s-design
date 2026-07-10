@@ -12,7 +12,7 @@
     "seed:launch-starter": "tsx src/scripts/seed-launch-starter.ts",
     "start": "tsx src/main.ts",
     "start:prod": "node dist/main.js",
-    "test": "node --import tsx --test test/auth-policy.test.ts test/payment-webhook-policy.test.ts test/admin-asset-policy.test.ts test/admin-catalog-audit.test.ts test/admin-product-asset-policy.test.ts test/analytics-policy.test.ts test/db-migration-policy.test.ts test/health-readiness.test.ts test/rate-limit.test.ts test/refund-policy.test.ts",
+    "test": "node --import tsx --test test/auth-policy.test.ts test/payment-webhook-policy.test.ts test/admin-asset-policy.test.ts test/admin-catalog-audit.test.ts test/admin-product-asset-policy.test.ts test/analytics-policy.test.ts test/db-migration-policy.test.ts test/health-readiness.test.ts test/rate-limit.test.ts test/refund-policy.test.ts test/seed-policy.test.ts",
     "test:admin-flow": "tsx test/admin-to-buyer-regression.test.ts",
     "test:auth": "tsx test/auth-regression.test.ts",
     "test:cart": "tsx test/cart-regression.test.ts",

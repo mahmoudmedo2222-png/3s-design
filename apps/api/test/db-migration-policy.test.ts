@@ -56,3 +56,67 @@ void test('db migration policy: cart uniqueness migration cleans duplicates befo
   assert.ok(cartItemsReassignment < cartsUniqueIndex, 'Cart item reassignment must run before carts_user_id_idx is created.');
   assert.ok(cartsCleanup < cartsUniqueIndex, 'Duplicate cart cleanup must run before carts_user_id_idx is created.');
 });
+
+void test('db migration policy: index migration protects dirty data before adding unique indexes', async () => {
+  const migration = await readFile(path.join(drizzleDir, '0010_absurd_hammerhead.sql'), 'utf8');
+  const storageDuplicateCheck = migration.indexOf('duplicate product_assets.storage_key values exist');
+  const storageUniqueIndex = migration.indexOf('CREATE UNIQUE INDEX "product_assets_storage_key_idx"');
+  const refundDuplicateCheck = migration.indexOf('duplicate open/approved refund requests exist');
+  const refundUniqueIndex = migration.indexOf('CREATE UNIQUE INDEX "refund_requests_open_order_idx"');
+
+  assert.ok(storageDuplicateCheck >= 0, 'Storage-key uniqueness migration must fail clearly when duplicate storage keys exist.');
+  assert.ok(storageUniqueIndex >= 0, 'Storage-key uniqueness migration must create the storage key unique index.');
+  assert.ok(refundDuplicateCheck >= 0, 'Refund uniqueness migration must fail clearly when duplicate open refund requests exist.');
+  assert.ok(refundUniqueIndex >= 0, 'Refund uniqueness migration must create the open refund request unique index.');
+  assert.ok(storageDuplicateCheck < storageUniqueIndex, 'Storage duplicate check must run before storage key uniqueness is created.');
+  assert.ok(refundDuplicateCheck < refundUniqueIndex, 'Refund duplicate check must run before open refund uniqueness is created.');
+  assert.equal(
+    migration.includes('Auto-closed by migration'),
+    false,
+    'Financial/refund migrations must not auto-close customer requests without an explicit operational decision.',
+  );
+});
+
+void test('db migration policy: status constraints preflight dirty data before checks', async () => {
+  const migration = await readFile(path.join(drizzleDir, '0011_loving_whistler.sql'), 'utf8');
+  const preflight = migration.indexOf('invalid product asset status values exist');
+  const firstConstraint = migration.indexOf('ALTER TABLE "product_assets" ADD CONSTRAINT "product_assets_asset_status_check"');
+  const expectedConstraints = [
+    'product_assets_asset_status_check',
+    'product_assets_scan_status_check',
+    'products_status_check',
+    'download_events_status_check',
+    'orders_status_check',
+    'payments_status_check',
+    'refund_requests_status_check',
+    'refunds_status_check',
+  ];
+
+  assert.ok(preflight >= 0, 'Status constraint migration must preflight invalid existing values.');
+  assert.ok(firstConstraint >= 0, 'Status constraint migration must add check constraints.');
+  assert.ok(preflight < firstConstraint, 'Status preflight must run before check constraints are added.');
+
+  for (const constraint of expectedConstraints) {
+    assert.ok(migration.includes(`ADD CONSTRAINT "${constraint}"`), `Missing status check constraint: ${constraint}`);
+  }
+});
+
+void test('db migration policy: status check migration preflights existing dirty status values', async () => {
+  const migration = await readFile(path.join(drizzleDir, '0011_loving_whistler.sql'), 'utf8');
+  const preflight = migration.indexOf('invalid payment status values exist');
+  const paymentCheck = migration.indexOf('ALTER TABLE "payments" ADD CONSTRAINT "payments_status_check"');
+  const refundRequestPreflight = migration.indexOf('invalid refund request status values exist');
+  const refundRequestCheck = migration.indexOf('ALTER TABLE "refund_requests" ADD CONSTRAINT "refund_requests_status_check"');
+  const orderPreflight = migration.indexOf('invalid order status values exist');
+  const orderCheck = migration.indexOf('ALTER TABLE "orders" ADD CONSTRAINT "orders_status_check"');
+
+  assert.ok(preflight >= 0, 'Payment status check migration must fail clearly when dirty payment statuses exist.');
+  assert.ok(refundRequestPreflight >= 0, 'Refund request status check migration must fail clearly when dirty refund statuses exist.');
+  assert.ok(orderPreflight >= 0, 'Order status check migration must fail clearly when dirty order statuses exist.');
+  assert.ok(preflight < paymentCheck, 'Payment status preflight must run before the payment status check constraint.');
+  assert.ok(
+    refundRequestPreflight < refundRequestCheck,
+    'Refund request status preflight must run before the refund request status check constraint.',
+  );
+  assert.ok(orderPreflight < orderCheck, 'Order status preflight must run before the order status check constraint.');
+});

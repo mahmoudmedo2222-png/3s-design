@@ -307,6 +307,36 @@ Next migration target:
 - Product detail page sections in `apps/web/app/products/[slug]/page.tsx`.
 - `product-card.tsx` notice states.
 
+## Token Migration Pass 3-34
+
+Completed product detail page migration:
+
+- Migrated repeated product-detail page surfaces from hardcoded dark backgrounds to semantic `surface` and `paper` tokens.
+- Migrated gold/cream decision states in delivery metadata and design passport blocks to semantic tokens.
+- Migrated product-card notice states to `gold`, `success`, and `berry` semantic tokens.
+- Kept the product-media gradient overlay as a one-off art-direction layer.
+
+Updated counts after this pass:
+
+| Pattern                          | Before 3-34 | After 3-34 |
+| -------------------------------- | ----------: | ---------: |
+| Hex colors                       |         367 |        329 |
+| `rgba(...)` usage                |         252 |        252 |
+| `bg-[...]` arbitrary classes     |         118 |         87 |
+| `text-[...]` arbitrary classes   |         140 |        127 |
+| `border-[...]` arbitrary classes |          16 |         13 |
+| `shadow-[...]` arbitrary classes |          12 |         12 |
+
+Verification:
+
+- Web typecheck passed.
+- Production build did not complete in this pass: Next.js build process repeatedly exited/crashed during the production build phase and left stale `.next` build state. A webpack fallback reached compile and TypeScript successfully but did not finish page-data collection reliably.
+
+Next migration target:
+
+- Diagnose the Next.js production build crash separately from visual-token migration.
+- Continue token migration on checkout/account/search surfaces once build stability is restored.
+
 ## Screenshots Captured
 
 Stored in `outputs/`:

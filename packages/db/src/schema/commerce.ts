@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { boolean, inet, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, index, inet, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { licenses, productAssets, productVariants, products } from './catalog';
 import { users } from './users';
 
@@ -120,31 +120,41 @@ export const orders = pgTable(
     ...timestamps(),
   },
   (table) => ({
+    statusCheck: check('orders_status_check', sql`${table.status} in ('pending', 'paid', 'refunded')`),
     orderNumberIdx: uniqueIndex('orders_order_number_idx').on(table.orderNumber),
     checkoutSessionIdx: uniqueIndex('orders_checkout_session_idx').on(table.checkoutSessionId),
     userIdempotencyIdx: uniqueIndex('orders_user_idempotency_idx').on(table.userId, table.idempotencyKey),
+    userCreatedAtIdx: index('orders_user_created_at_idx').on(table.userId, table.createdAt),
+    statusCreatedAtIdx: index('orders_status_created_at_idx').on(table.status, table.createdAt),
   }),
 );
 
-export const orderItems = pgTable('order_items', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  orderId: uuid('order_id')
-    .notNull()
-    .references(() => orders.id, { onDelete: 'cascade' }),
-  productId: uuid('product_id')
-    .notNull()
-    .references(() => products.id, { onDelete: 'restrict' }),
-  variantId: uuid('variant_id').references(() => productVariants.id, { onDelete: 'restrict' }),
-  licenseId: uuid('license_id')
-    .notNull()
-    .references(() => licenses.id, { onDelete: 'restrict' }),
-  productSnapshot: jsonb('product_snapshot').$type<Record<string, unknown>>().notNull(),
-  licenseSnapshot: jsonb('license_snapshot').$type<Record<string, unknown>>().notNull(),
-  unitPrice: numeric('unit_price', { precision: 12, scale: 2 }).notNull(),
-  quantity: integer('quantity').notNull().default(1),
-  total: numeric('total', { precision: 12, scale: 2 }).notNull(),
-  ...timestamps(),
-});
+export const orderItems = pgTable(
+  'order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    productId: uuid('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'restrict' }),
+    variantId: uuid('variant_id').references(() => productVariants.id, { onDelete: 'restrict' }),
+    licenseId: uuid('license_id')
+      .notNull()
+      .references(() => licenses.id, { onDelete: 'restrict' }),
+    productSnapshot: jsonb('product_snapshot').$type<Record<string, unknown>>().notNull(),
+    licenseSnapshot: jsonb('license_snapshot').$type<Record<string, unknown>>().notNull(),
+    unitPrice: numeric('unit_price', { precision: 12, scale: 2 }).notNull(),
+    quantity: integer('quantity').notNull().default(1),
+    total: numeric('total', { precision: 12, scale: 2 }).notNull(),
+    ...timestamps(),
+  },
+  (table) => ({
+    orderIdx: index('order_items_order_idx').on(table.orderId),
+    productCreatedAtIdx: index('order_items_product_created_at_idx').on(table.productId, table.createdAt),
+  }),
+);
 
 export const payments = pgTable(
   'payments',
@@ -167,12 +177,15 @@ export const payments = pgTable(
     ...timestamps(),
   },
   (table) => ({
+    statusCheck: check('payments_status_check', sql`${table.status} in ('pending', 'paid', 'failed', 'expired', 'refunded')`),
     providerPaymentIdx: uniqueIndex('payments_provider_payment_idx').on(table.provider, table.providerPaymentId),
     orderProviderIdempotencyIdx: uniqueIndex('payments_order_provider_idempotency_idx').on(
       table.orderId,
       table.provider,
       table.idempotencyKey,
     ),
+    orderStatusCreatedAtIdx: index('payments_order_status_created_at_idx').on(table.orderId, table.status, table.createdAt),
+    statusCreatedAtIdx: index('payments_status_created_at_idx').on(table.status, table.createdAt),
   }),
 );
 
@@ -220,26 +233,41 @@ export const entitlements = pgTable(
   },
   (table) => ({
     orderItemIdx: uniqueIndex('entitlements_order_item_idx').on(table.orderItemId),
+    userCreatedAtIdx: index('entitlements_user_created_at_idx').on(table.userId, table.createdAt),
+    orderActiveIdx: index('entitlements_order_active_idx').on(table.orderId, table.isActive),
+    productCreatedAtIdx: index('entitlements_product_created_at_idx').on(table.productId, table.createdAt),
   }),
 );
 
-export const downloadEvents = pgTable('download_events', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  entitlementId: uuid('entitlement_id')
-    .notNull()
-    .references(() => entitlements.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  productAssetId: uuid('product_asset_id')
-    .notNull()
-    .references(() => productAssets.id, { onDelete: 'restrict' }),
-  ipAddress: inet('ip_address'),
-  userAgent: text('user_agent'),
-  status: text('status').notNull().default('allowed'),
-  reason: text('reason'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const downloadEvents = pgTable(
+  'download_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    entitlementId: uuid('entitlement_id')
+      .notNull()
+      .references(() => entitlements.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    productAssetId: uuid('product_asset_id')
+      .notNull()
+      .references(() => productAssets.id, { onDelete: 'restrict' }),
+    ipAddress: inet('ip_address'),
+    userAgent: text('user_agent'),
+    status: text('status').notNull().default('allowed'),
+    reason: text('reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    statusCheck: check('download_events_status_check', sql`${table.status} in ('allowed', 'denied')`),
+    entitlementStatusCreatedAtIdx: index('download_events_entitlement_status_created_at_idx').on(
+      table.entitlementId,
+      table.status,
+      table.createdAt,
+    ),
+    userCreatedAtIdx: index('download_events_user_created_at_idx').on(table.userId, table.createdAt),
+  }),
+);
 
 export const downloadLimitOverrides = pgTable('download_limit_overrides', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -274,32 +302,49 @@ export const couponRedemptions = pgTable(
   }),
 );
 
-export const refundRequests = pgTable('refund_requests', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  orderId: uuid('order_id')
-    .notNull()
-    .references(() => orders.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  status: text('status').notNull().default('requested'),
-  reason: text('reason').notNull(),
-  adminNote: text('admin_note'),
-  requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
-  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
-});
+export const refundRequests = pgTable(
+  'refund_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('requested'),
+    reason: text('reason').notNull(),
+    adminNote: text('admin_note'),
+    requestedAt: timestamp('requested_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (table) => ({
+    statusCheck: check('refund_requests_status_check', sql`${table.status} in ('requested', 'under_review', 'approved', 'rejected')`),
+    userRequestedAtIdx: index('refund_requests_user_requested_at_idx').on(table.userId, table.requestedAt),
+    orderRequestedAtIdx: index('refund_requests_order_requested_at_idx').on(table.orderId, table.requestedAt),
+    openOrderIdx: uniqueIndex('refund_requests_open_order_idx')
+      .on(table.orderId)
+      .where(sql`${table.status} in ('requested', 'under_review', 'approved')`),
+  }),
+);
 
-export const refunds = pgTable('refunds', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  paymentId: uuid('payment_id')
-    .notNull()
-    .references(() => payments.id, { onDelete: 'cascade' }),
-  orderId: uuid('order_id')
-    .notNull()
-    .references(() => orders.id, { onDelete: 'cascade' }),
-  providerRefundId: text('provider_refund_id'),
-  amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
-  currency: text('currency').notNull().default('USD'),
-  status: text('status').notNull().default('requested'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const refunds = pgTable(
+  'refunds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    paymentId: uuid('payment_id')
+      .notNull()
+      .references(() => payments.id, { onDelete: 'cascade' }),
+    orderId: uuid('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    providerRefundId: text('provider_refund_id'),
+    amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+    currency: text('currency').notNull().default('USD'),
+    status: text('status').notNull().default('requested'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    statusCheck: check('refunds_status_check', sql`${table.status} in ('requested', 'approved', 'failed')`),
+  }),
+);

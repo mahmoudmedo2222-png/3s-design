@@ -71,6 +71,20 @@
       "when": 1783640368499,
       "tag": "0009_woozy_rictor",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783641196553,
+      "tag": "0010_absurd_hammerhead",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1783641625248,
+      "tag": "0011_loving_whistler",
+      "breakpoints": true
     }
   ]
 }

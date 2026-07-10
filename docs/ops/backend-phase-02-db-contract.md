@@ -52,22 +52,26 @@ Protection:
 
 ### Resolved During Phase 2
 
-| Priority | Item                                      | Resolution                                                                                                                                                                |
-| -------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P0       | `carts.user_id` DB-level uniqueness       | Added `carts_user_id_idx` in `0009_woozy_rictor.sql` and `packages/db/src/schema/commerce.ts`.                                                                            |
-| P0       | Existing duplicate carts before migration | `0009_woozy_rictor.sql` now de-duplicates duplicate cart items, collapses duplicate user-cart lines before reassignment, merges duplicate user carts into the latest cart, then adds indexes. |
-| P0       | Duplicate cart lines where `variant_id` is `NULL` | Added a partial unique index for no-variant cart lines and a separate partial unique index for non-null variant cart lines. |
-| P1       | Cart creation race handling | `getOrCreateCart` now uses conflict-tolerant insert/readback logic so concurrent calls converge on the existing cart. |
+| Priority | Item                                              | Resolution                                                                                                                                                                                    |
+| -------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0       | `carts.user_id` DB-level uniqueness               | Added `carts_user_id_idx` in `0009_woozy_rictor.sql` and `packages/db/src/schema/commerce.ts`.                                                                                                |
+| P0       | Existing duplicate carts before migration         | `0009_woozy_rictor.sql` now de-duplicates duplicate cart items, collapses duplicate user-cart lines before reassignment, merges duplicate user carts into the latest cart, then adds indexes. |
+| P0       | Duplicate cart lines where `variant_id` is `NULL` | Added a partial unique index for no-variant cart lines and a separate partial unique index for non-null variant cart lines.                                                                   |
+| P1       | Cart creation race handling                       | `getOrCreateCart` now uses conflict-tolerant insert/readback logic so concurrent calls converge on the existing cart.                                                                         |
+| P1       | Demo seed production safety                       | `seed:demo` and `seed:launch-starter` now fail in production-like environments through `seed-policy.ts`.                                                                                      |
+| P1       | Admin seed confirmation                           | `seed-admin` uses the shared seed confirmation helper and still requires a strong admin password plus explicit `ADMIN_SEED_CONFIRM`.                                                          |
+| P1       | Open refund request uniqueness                    | Added `refund_requests_open_order_idx` in `0010_absurd_hammerhead.sql` so only one requested/under-review/approved refund request can exist per order.                                        |
+| P1       | Existing duplicate open refunds before migration  | `0010_absurd_hammerhead.sql` fails with a clear preflight error if duplicate open refund requests exist, so financial/customer requests are resolved manually before enforcing uniqueness.    |
+| P1       | `product_assets.storage_key` uniqueness           | Added `product_assets_storage_key_idx` and a pre-index duplicate check with a clear migration error if dirty storage keys already exist.                                                      |
+| P1       | Hot read/list indexes                             | Added indexes for product listing, product assets/variants, orders, order items, payments, entitlements, download events, and refund request list lookups.                                    |
+| P1       | Core status DB checks                             | Added preflighted DB check constraints for product asset, product, download event, order, payment, refund request, and refund statuses.                                                       |
 
 ### Gaps Found
 
-| Priority | Gap                                                                           | Why It Matters                                                                              | Proposed Phase    |
-| -------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------- |
-| P1       | Refund requests have no DB-level uniqueness for open/approved order requests  | Service locks now reduce race risk, but DB cannot enforce the invariant directly            | Phase 2/5         |
-| P1       | Several status fields are plain text without DB check constraints             | Invalid status values are blocked by DTO/service code, not DB                               | Phase 2 follow-up |
-| P1       | `product_assets.storage_key` is not unique                                    | Duplicate asset records can point to one storage object                                     | Phase 6           |
-| P1       | List/read hot queries need index review                                       | Admin payments/refunds, public products, downloads, and analytics may degrade as data grows | Phase 2 follow-up |
-| P2       | Migration process for existing non-empty DBs needs a documented rollback path | Constraints can fail if dirty data exists                                                   | Phase 9           |
+| Priority | Gap                                                                           | Why It Matters                                                                         | Proposed Phase |
+| -------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------- |
+| P1       | Analytics-specific indexes need production-volume validation                  | Event-query indexes should follow real dashboard filters once enough event data exists | Phase 7        |
+| P2       | Migration process for existing non-empty DBs needs a documented rollback path | Constraints can fail if dirty data exists                                              | Phase 9        |
 
 ## Seed Scripts To Audit Next
 
@@ -81,6 +85,14 @@ Required checks:
 - Environment safety.
 - No accidental production demo data.
 - Required baseline records for tests and staging.
+
+Audit result:
+
+- `seed-demo.ts` and `seed-launch-starter.ts` are blocked in production-like environments through `assertNonProductionSeed`.
+- `seed-admin.ts` requires exact `ADMIN_SEED_CONFIRM` confirmation, validates email/password strength, refuses to create a second admin, and refuses duplicate admin email.
+- Seed policy behavior is covered by `apps/api/test/seed-policy.test.ts`.
+- `seed-launch-starter.ts` is idempotent for catalog, tags, product prices, variants, categories, tags, and attributes.
+- `seed-demo.ts` is idempotent for current data shape and remains non-production only.
 
 ## Verification
 
@@ -100,13 +112,14 @@ Result:
 - `db:generate` reports no schema changes.
 - DB package typecheck passes.
 - API typecheck passes.
-- API policy tests pass, including the new DB migration policy test.
+- API policy tests pass, including DB migration policy tests.
+- API policy tests pass, including seed policy tests.
 - Local API ownership check passes for port 4000.
 - Cart regression test passes against the running API.
 
 ## Phase 2 Status
 
-Status: in progress.
+Status: completed.
 
 Completed:
 
@@ -114,9 +127,14 @@ Completed:
 - Added regression test for migration/journal drift.
 - Added a safe duplicate-cart merge migration before enforcing one cart per user.
 - Added DB-level cart uniqueness for user carts and no-variant cart lines.
+- Added seed policy guards and regression tests.
+- Added DB-level uniqueness for active refund requests per order.
+- Added DB-level uniqueness for product asset storage keys.
+- Added indexes for the current hot read/list paths.
+- Added DB-level check constraints for core status values with explicit dirty-data preflights.
+- Audited seed scripts and confirmed production safety gates are covered by tests.
 
 Next:
 
-- Audit seed scripts.
-- Review indexes for hot list/reporting queries.
-- Add DB-level invariants for refund request lifecycle and status values where practical.
+- Document rollback/repair playbooks for non-empty production migrations.
+- Review analytics-specific indexes once real event volume and dashboard filters are known.

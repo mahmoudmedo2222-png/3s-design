@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { requireConfirmation, requireDatabaseUrl } from './seed-policy';
 
 dotenv.config({ path: fileURLToPath(new URL('../../../../.env', import.meta.url)) });
 
@@ -41,16 +42,12 @@ function assertEmail(email: string) {
 }
 
 async function main() {
-  const databaseUrl = requireEnv('DATABASE_URL');
-  const confirmation = requireEnv('ADMIN_SEED_CONFIRM');
+  const databaseUrl = requireDatabaseUrl();
   const email = requireEnv('ADMIN_EMAIL').toLowerCase();
   const fullName = requireEnv('ADMIN_FULL_NAME');
   const password = requireEnv('ADMIN_PASSWORD');
 
-  if (confirmation !== CONFIRMATION_TEXT) {
-    throw new Error(`ADMIN_SEED_CONFIRM must equal ${CONFIRMATION_TEXT}`);
-  }
-
+  requireConfirmation('ADMIN_SEED_CONFIRM', CONFIRMATION_TEXT);
   assertStrongPassword(password);
   assertEmail(email);
 
