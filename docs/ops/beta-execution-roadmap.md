@@ -10,7 +10,7 @@ This roadmap turns 3S Design from a strong local demo into a controlled paid bet
 
 ## Current Position
 
-Estimated project readiness: 55%.
+Estimated project readiness: 60%.
 
 Reason:
 
@@ -38,7 +38,7 @@ Evidence:
 
 ## Phase 1: Database Contract
 
-Status: in progress.
+Status: complete for beta baseline.
 
 Goal:
 
@@ -50,18 +50,21 @@ Done:
 - Migration policy test added.
 - One-cart-per-user constraint added.
 - `0009_woozy_rictor.sql` now cleans duplicate cart items, merges duplicate user carts, deletes duplicate carts, then creates the unique indexes.
-
-Next:
-
-- Audit seed scripts for idempotency and production safety.
-- Review hot indexes for admin payments/refunds, downloads, public products, and analytics.
-- Decide whether open refund uniqueness should be enforced by DB index or service transaction policy.
+- Seed scripts are production-guarded and covered by regression tests.
+- Hot indexes were added for public listing, assets/variants, orders, payments, entitlements, downloads, and refunds.
+- Open refund request uniqueness is enforced by DB index with a dirty-data preflight.
+- Core status fields now have DB check constraints with dirty-data preflights.
 
 Exit criteria:
 
 - `pnpm --filter @3s-design/db db:generate` reports no schema changes.
 - `pnpm --filter @3s-design/db typecheck` passes.
 - `pnpm --filter @3s-design/api test` passes.
+
+Deferred:
+
+- Analytics-specific indexes should be adjusted after real dashboard filters and event volume exist.
+- Production rollback/repair playbooks must be attached to the release PR before paid traffic.
 
 ## Phase 2: Staging Readiness
 

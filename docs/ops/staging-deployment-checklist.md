@@ -64,14 +64,17 @@ Before deploying API code:
 
 1. Backup staging database if it already has useful data.
 2. Apply pending migrations.
-3. Confirm `user_profiles.buyer_profile` exists.
-4. Confirm API starts cleanly after migration.
+3. Confirm the `0009`, `0010`, and `0011` migration preflights pass.
+4. Confirm cart, asset, refund, and status constraints exist.
+5. Confirm API starts cleanly after migration.
 
 Current migration:
 
 ```txt
-packages/db/drizzle/0008_account_buyer_profile.sql
+packages/db/drizzle/0011_loving_whistler.sql
 ```
+
+If `0010` or `0011` fails with a dirty-data preflight message, stop the deploy and follow `docs/ops/database-migrations.md`. Do not manually update customer payment/refund records without a reviewed repair note.
 
 ## 5. Deploy Order
 
@@ -140,6 +143,7 @@ Staging is ready for production review only when:
 - CI passes.
 - Staging deploy succeeds.
 - Migration is applied.
+- Migration dirty-data preflights are clean or have reviewed repair evidence.
 - Payment flow is verified.
 - Refund flow is verified.
 - Download lock/unlock behavior is verified.

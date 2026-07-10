@@ -13,10 +13,16 @@ updated: 2026-07-09
 The latest migration is:
 
 ```txt
-packages/db/drizzle/0008_account_buyer_profile.sql
+packages/db/drizzle/0011_loving_whistler.sql
 ```
 
-It adds `user_profiles.buyer_profile` as a non-null JSONB column with an empty object default. This is safe for existing rows because the default backfills the new column.
+Current migration chain summary:
+
+- `0009_woozy_rictor.sql`: cleans duplicate carts/cart items, then enforces one cart per user and unique cart lines.
+- `0010_absurd_hammerhead.sql`: adds hot read/list indexes, enforces unique product asset storage keys, and enforces one open/approved refund request per order.
+- `0011_loving_whistler.sql`: adds DB check constraints for core status fields.
+
+`0010` and `0011` include explicit dirty-data preflights. If they fail, do not edit production data blindly. Export the failing rows, decide the business resolution, apply a reviewed repair script, then rerun the migration.
 
 ## Local Development
 
@@ -51,6 +57,7 @@ For each migration PR, document:
 - Whether the migration is additive or destructive.
 - Whether the application can run during a rolling deploy.
 - How to roll forward if the migration partially applies.
+- The exact preflight queries or expected failure messages for dirty existing data.
 
 ## Safe Migration Checklist
 
@@ -59,6 +66,22 @@ For each migration PR, document:
 - Avoid long table locks during peak traffic.
 - Keep defaults explicit when application code expects non-null values.
 - Never run migrations against production without a database backup.
+- Never auto-close, refund, reject, or otherwise mutate customer money/support records inside a migration unless the action has a reviewed operational decision attached.
+- Prefer explicit preflight failure over silent repair for financial records.
+
+## Dirty-Data Repair Rule
+
+If a migration fails on a preflight:
+
+1. Stop the deploy.
+2. Snapshot the affected rows with `SELECT ... FOR SHARE` or an exported read-only report.
+3. Classify rows as duplicate test data, customer-impacting data, or operational mistake.
+4. Prepare a small reviewed repair script.
+5. Backup database again if the repair touches financial/customer records.
+6. Apply repair in staging first.
+7. Rerun migrations.
+
+Do not change `refund_requests`, `payments`, `orders`, or `entitlements` from a generated migration unless the change is purely structural.
 
 ## Release Order
 
@@ -82,8 +105,10 @@ For destructive migrations:
 Run these against staging before production:
 
 ```bash
-pnpm quality
-pnpm build
+pnpm --filter @3s-design/db typecheck
+pnpm --filter @3s-design/api test
+pnpm --filter @3s-design/web typecheck
+pnpm --filter @3s-design/web test
 ```
 
 When a staging API and database are running:
