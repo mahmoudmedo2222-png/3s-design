@@ -120,3 +120,23 @@ void test('db migration policy: status check migration preflights existing dirty
   );
   assert.ok(orderPreflight < orderCheck, 'Order status preflight must run before the order status check constraint.');
 });
+
+void test('db migration policy: auth security indexes preflight duplicate token hashes', async () => {
+  const migration = await readFile(path.join(drizzleDir, '0012_dashing_songbird.sql'), 'utf8');
+  const sessionDuplicateCheck = migration.indexOf('duplicate refresh token hashes exist');
+  const sessionUniqueIndex = migration.indexOf('CREATE UNIQUE INDEX "auth_sessions_refresh_token_hash_idx"');
+  const verificationDuplicateCheck = migration.indexOf('duplicate verification token hashes exist');
+  const verificationUniqueIndex = migration.indexOf('CREATE UNIQUE INDEX "auth_verification_tokens_token_hash_idx"');
+  const rateLimitIndex = migration.indexOf('CREATE INDEX "rate_limit_events_key_action_window_idx"');
+
+  assert.ok(sessionDuplicateCheck >= 0, 'Auth session token hash uniqueness must fail clearly when duplicates exist.');
+  assert.ok(verificationDuplicateCheck >= 0, 'Auth verification token hash uniqueness must fail clearly when duplicates exist.');
+  assert.ok(sessionUniqueIndex >= 0, 'Auth sessions must have a unique refresh token hash index.');
+  assert.ok(verificationUniqueIndex >= 0, 'Auth verification tokens must have a unique token hash index.');
+  assert.ok(rateLimitIndex >= 0, 'Rate-limit events must have a lookup index for key/action/window checks.');
+  assert.ok(sessionDuplicateCheck < sessionUniqueIndex, 'Auth session duplicate preflight must run before unique index creation.');
+  assert.ok(
+    verificationDuplicateCheck < verificationUniqueIndex,
+    'Auth verification duplicate preflight must run before unique index creation.',
+  );
+});

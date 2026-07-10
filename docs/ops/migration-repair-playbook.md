@@ -138,6 +138,24 @@ Allowed in migration:
 - No for `orders`, `payments`, `refund_requests`, `refunds`, and `entitlements`.
 - Maybe for non-customer catalog data after review.
 
+### Duplicate Auth Token Hashes
+
+Risk:
+
+- Duplicate refresh-token hashes or verification-token hashes break single-use token guarantees.
+- A collision or duplicated seed/test row can make token rotation and verification ambiguous.
+
+Preferred repair:
+
+- Treat duplicates as a security incident until proven to be test data.
+- Revoke the affected session family for duplicated `auth_sessions.refresh_token_hash`.
+- Mark duplicated verification tokens as used or delete only if they are known test data and expired.
+- Ask affected users to log in again if sessions are revoked.
+
+Allowed in migration:
+
+- No. Requires security/admin decision.
+
 ## Go/No-Go
 
 You can continue a staging migration only when:

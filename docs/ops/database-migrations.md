@@ -13,7 +13,7 @@ updated: 2026-07-09
 The latest migration is:
 
 ```txt
-packages/db/drizzle/0011_loving_whistler.sql
+packages/db/drizzle/0012_dashing_songbird.sql
 ```
 
 Current migration chain summary:
@@ -21,8 +21,9 @@ Current migration chain summary:
 - `0009_woozy_rictor.sql`: cleans duplicate carts/cart items, then enforces one cart per user and unique cart lines.
 - `0010_absurd_hammerhead.sql`: adds hot read/list indexes, enforces unique product asset storage keys, and enforces one open/approved refund request per order.
 - `0011_loving_whistler.sql`: adds DB check constraints for core status fields.
+- `0012_dashing_songbird.sql`: adds auth token uniqueness and lookup indexes for refresh rotation, verification tokens, session families, and rate-limit checks.
 
-`0010` and `0011` include explicit dirty-data preflights. If they fail, do not edit production data blindly. Export the failing rows, decide the business resolution, apply a reviewed repair script, then rerun the migration.
+`0010`, `0011`, and `0012` include explicit dirty-data preflights. If they fail, do not edit production data blindly. Export the failing rows, decide the business resolution, apply a reviewed repair script, then rerun the migration.
 
 ## Local Development
 
@@ -100,6 +101,7 @@ The command checks data that can break `0009`, `0010`, and `0011`:
 - Duplicate product asset storage keys.
 - Duplicate open refund requests per order.
 - Invalid status values for products, assets, downloads, orders, payments, refund requests, and refunds.
+- Duplicate auth refresh-token hashes and verification-token hashes.
 
 The command prints counts and sample identifiers, not secrets.
 

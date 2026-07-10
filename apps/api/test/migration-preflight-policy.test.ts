@@ -18,6 +18,8 @@ void test('migration preflight policy: checks dirty data that can block beta mig
     "status not in ('requested', 'under_review', 'approved', 'rejected')",
     "asset_status not in ('uploaded', 'processing', 'ready', 'rejected')",
     "scan_status not in ('pending', 'passed', 'failed', 'skipped')",
+    'duplicate auth session refresh token hashes',
+    'duplicate auth verification token hashes',
   ];
 
   for (const signal of requiredSignals) {

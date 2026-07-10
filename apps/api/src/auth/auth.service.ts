@@ -13,7 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { auditLogs, authSessions, authVerificationTokens, rateLimitEvents, users } from '@3s-design/db/schema';
 import bcrypt from 'bcryptjs';
-import { and, eq, gt, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import { DatabaseService } from '../database/database.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -41,6 +41,8 @@ type AuthenticatedUser = {
 
 const loginWindowMs = 15 * 60 * 1000;
 const maxFailedLogins = 5;
+const stepUpWindowMs = 15 * 60 * 1000;
+const maxFailedStepUps = 5;
 
 @Injectable()
 export class AuthService {
@@ -127,49 +129,61 @@ export class AuthService {
   async refresh(input: RefreshTokenDto, context: AuthContext = {}) {
     const db = this.database.requireDb();
     const tokenHash = this.hashToken(input.refreshToken);
-    const [session] = await db.select().from(authSessions).where(eq(authSessions.refreshTokenHash, tokenHash)).limit(1);
+    const { user, next } = await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`auth-refresh:${tokenHash}`}))`);
 
-    if (!session) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
+      const [session] = await tx.select().from(authSessions).where(eq(authSessions.refreshTokenHash, tokenHash)).limit(1);
 
-    if (session.revokedAt || session.replacedBySessionId) {
-      await this.revokeSessionFamily(session.familyId, 'auth.refresh_reuse_detected');
-      throw new UnauthorizedException('Refresh token was already used');
-    }
+      if (!session) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
 
-    if (session.expiresAt <= new Date()) {
-      await this.revokeSession(session.id);
-      throw new UnauthorizedException('Refresh token expired');
-    }
+      if (session.revokedAt || session.replacedBySessionId) {
+        await this.revokeSessionFamily(session.familyId, 'auth.refresh_reuse_detected', tx);
+        throw new UnauthorizedException('Refresh token was already used');
+      }
 
-    const [user] = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        fullName: users.fullName,
-        role: users.role,
-        isEmailVerified: users.isEmailVerified,
-        deletedAt: users.deletedAt,
-      })
-      .from(users)
-      .where(eq(users.id, session.userId))
-      .limit(1);
+      if (session.expiresAt <= new Date()) {
+        await this.revokeSession(session.id, tx);
+        throw new UnauthorizedException('Refresh token expired');
+      }
 
-    if (!user || user.deletedAt) {
-      await this.revokeSessionFamily(session.familyId, 'auth.refresh_user_invalid');
-      throw new UnauthorizedException('Invalid refresh token');
-    }
+      const [user] = await tx
+        .select({
+          id: users.id,
+          email: users.email,
+          fullName: users.fullName,
+          role: users.role,
+          isEmailVerified: users.isEmailVerified,
+          deletedAt: users.deletedAt,
+        })
+        .from(users)
+        .where(eq(users.id, session.userId))
+        .limit(1);
 
-    const next = await this.createSession(user.id, context, session.familyId);
-    await db
-      .update(authSessions)
-      .set({
-        revokedAt: new Date(),
-        replacedBySessionId: next.sessionId,
-        updatedAt: new Date(),
-      })
-      .where(eq(authSessions.id, session.id));
+      if (!user || user.deletedAt) {
+        await this.revokeSessionFamily(session.familyId, 'auth.refresh_user_invalid', tx);
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const next = await this.createSession(user.id, context, session.familyId, tx);
+      const now = new Date();
+      const [rotated] = await tx
+        .update(authSessions)
+        .set({
+          revokedAt: now,
+          replacedBySessionId: next.sessionId,
+          updatedAt: now,
+        })
+        .where(and(eq(authSessions.id, session.id), isNull(authSessions.revokedAt), isNull(authSessions.replacedBySessionId)))
+        .returning({ id: authSessions.id });
+
+      if (!rotated) {
+        throw new UnauthorizedException('Refresh token was already used');
+      }
+
+      return { user, next };
+    });
 
     return {
       user: this.serializeUser(user),
@@ -260,6 +274,8 @@ export class AuthService {
       throw new BadRequestException('Step-up password is required');
     }
 
+    await this.assertStepUpAllowed(userId, action);
+
     const [user] = await this.database
       .requireDb()
       .select({
@@ -278,6 +294,7 @@ export class AuthService {
     const passwordOk = await bcrypt.compare(password, user.passwordHash);
 
     if (!passwordOk) {
+      await this.recordStepUpFailure(user.id, action);
       await this.recordAudit(user.id, `${action}.step_up_failed`, 'user', user.id);
       throw new UnauthorizedException('Step-up authentication failed');
     }
@@ -297,11 +314,15 @@ export class AuthService {
     };
   }
 
-  private async createSession(userId: string, context: AuthContext, familyId: string = randomUUID()) {
+  private async createSession(
+    userId: string,
+    context: AuthContext,
+    familyId: string = randomUUID(),
+    executor: ReturnType<DatabaseService['requireDb']> = this.database.requireDb(),
+  ) {
     const refreshToken = this.createOpaqueToken();
     const expiresAt = new Date(Date.now() + this.refreshTokenTtlMs());
-    const [session] = await this.database
-      .requireDb()
+    const [session] = await executor
       .insert(authSessions)
       .values({
         userId: userId as Uuid,
@@ -343,26 +364,41 @@ export class AuthService {
 
   private async consumeVerificationToken(token: string, purpose: string) {
     const db = this.database.requireDb();
-    const [row] = await db
-      .select()
-      .from(authVerificationTokens)
-      .where(
-        and(
-          eq(authVerificationTokens.tokenHash, this.hashToken(token)),
-          eq(authVerificationTokens.purpose, purpose),
-          isNull(authVerificationTokens.usedAt),
-          gt(authVerificationTokens.expiresAt, new Date()),
-        ),
-      )
-      .limit(1);
+    const tokenHash = this.hashToken(token);
 
-    if (!row) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
+    return db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`auth-token:${purpose}:${tokenHash}`}))`);
 
-    await db.update(authVerificationTokens).set({ usedAt: new Date() }).where(eq(authVerificationTokens.id, row.id));
+      const now = new Date();
+      const [row] = await tx
+        .select()
+        .from(authVerificationTokens)
+        .where(
+          and(
+            eq(authVerificationTokens.tokenHash, tokenHash),
+            eq(authVerificationTokens.purpose, purpose),
+            isNull(authVerificationTokens.usedAt),
+            gt(authVerificationTokens.expiresAt, now),
+          ),
+        )
+        .limit(1);
 
-    return row;
+      if (!row) {
+        throw new UnauthorizedException('Invalid or expired token');
+      }
+
+      const [used] = await tx
+        .update(authVerificationTokens)
+        .set({ usedAt: now })
+        .where(and(eq(authVerificationTokens.id, row.id), isNull(authVerificationTokens.usedAt), gt(authVerificationTokens.expiresAt, now)))
+        .returning();
+
+      if (!used) {
+        throw new UnauthorizedException('Invalid or expired token');
+      }
+
+      return used;
+    });
   }
 
   private async assertLoginAllowed(email: string) {
@@ -406,22 +442,56 @@ export class AuthService {
     }
   }
 
-  private async revokeSession(sessionId: string) {
-    await this.database
+  private async assertStepUpAllowed(userId: string, action: string) {
+    const now = Date.now();
+    const windowStart = new Date(now - stepUpWindowMs);
+    const failures = await this.database
       .requireDb()
-      .update(authSessions)
-      .set({ revokedAt: new Date(), updatedAt: new Date() })
-      .where(eq(authSessions.id, sessionId));
+      .select({ id: rateLimitEvents.id })
+      .from(rateLimitEvents)
+      .where(
+        and(
+          eq(rateLimitEvents.key, this.stepUpRateLimitKey(userId, action)),
+          eq(rateLimitEvents.action, 'auth.step_up_failed'),
+          gt(rateLimitEvents.windowEnd, windowStart),
+        ),
+      );
+
+    if (failures.length >= maxFailedStepUps) {
+      throw new HttpException('Too many failed step-up attempts. Try again later.', HttpStatus.TOO_MANY_REQUESTS);
+    }
   }
 
-  private async revokeSessionFamily(familyId: string, action: string) {
+  private async recordStepUpFailure(userId: string, action: string) {
+    const now = new Date();
     await this.database
       .requireDb()
+      .insert(rateLimitEvents)
+      .values({
+        userId,
+        key: this.stepUpRateLimitKey(userId, action),
+        action: 'auth.step_up_failed',
+        count: 1,
+        windowStart: new Date(now.getTime() - stepUpWindowMs),
+        windowEnd: new Date(now.getTime() + stepUpWindowMs),
+      });
+  }
+
+  private async revokeSession(sessionId: string, executor: ReturnType<DatabaseService['requireDb']> = this.database.requireDb()) {
+    await executor.update(authSessions).set({ revokedAt: new Date(), updatedAt: new Date() }).where(eq(authSessions.id, sessionId));
+  }
+
+  private async revokeSessionFamily(
+    familyId: string,
+    action: string,
+    executor: ReturnType<DatabaseService['requireDb']> = this.database.requireDb(),
+  ) {
+    await executor
       .update(authSessions)
       .set({ revokedAt: new Date(), reuseDetectedAt: new Date(), updatedAt: new Date() })
       .where(eq(authSessions.familyId, familyId as Uuid));
 
-    await this.recordAudit(undefined, action, 'auth_session_family', familyId);
+    await this.recordAudit(undefined, action, 'auth_session_family', familyId, undefined, executor);
   }
 
   private async recordAudit(
@@ -430,8 +500,9 @@ export class AuthService {
     entityType: string,
     entityId: string,
     after?: Record<string, unknown>,
+    executor: ReturnType<DatabaseService['requireDb']> = this.database.requireDb(),
   ) {
-    await this.database.requireDb().insert(auditLogs).values({
+    await executor.insert(auditLogs).values({
       actorUserId,
       action,
       entityType,
@@ -486,6 +557,10 @@ export class AuthService {
 
   private loginRateLimitKey(email: string) {
     return `email:${email}`;
+  }
+
+  private stepUpRateLimitKey(userId: string, action: string) {
+    return `step-up:${userId}:${action}`;
   }
 
   private safeIp(value: string | undefined) {

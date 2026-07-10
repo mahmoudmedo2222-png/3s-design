@@ -209,6 +209,32 @@ const checks: QueryCheck[] = [
       limit 10
     `,
   },
+  {
+    key: 'duplicate_auth_session_refresh_token_hashes',
+    title: 'duplicate auth session refresh token hashes',
+    severity: 'blocker',
+    sql: `
+      select refresh_token_hash as sample, count(*)::int as duplicate_count
+      from auth_sessions
+      group by refresh_token_hash
+      having count(*) > 1
+      order by duplicate_count desc
+      limit 10
+    `,
+  },
+  {
+    key: 'duplicate_auth_verification_token_hashes',
+    title: 'duplicate auth verification token hashes',
+    severity: 'blocker',
+    sql: `
+      select token_hash as sample, count(*)::int as duplicate_count
+      from auth_verification_tokens
+      group by token_hash
+      having count(*) > 1
+      order by duplicate_count desc
+      limit 10
+    `,
+  },
 ];
 
 async function main() {

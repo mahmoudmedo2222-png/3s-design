@@ -1,10 +1,16 @@
 import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { users } from '@3s-design/db/schema';
+import { eq } from 'drizzle-orm';
+import { DatabaseService } from '../database/database.service';
 import { AuthUser, RequestWithUser } from './auth.types';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(@Inject(JwtService) private readonly jwt: JwtService) {}
+  constructor(
+    @Inject(JwtService) private readonly jwt: JwtService,
+    @Inject(DatabaseService) private readonly database: DatabaseService,
+  ) {}
 
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
@@ -16,10 +22,26 @@ export class JwtAuthGuard implements CanActivate {
 
     try {
       const payload = await this.jwt.verifyAsync<AuthUser>(token);
+      const [user] = await this.database
+        .requireDb()
+        .select({
+          id: users.id,
+          email: users.email,
+          role: users.role,
+          deletedAt: users.deletedAt,
+        })
+        .from(users)
+        .where(eq(users.id, payload.id))
+        .limit(1);
+
+      if (!user || user.deletedAt) {
+        throw new UnauthorizedException('Invalid bearer token');
+      }
+
       request.user = {
-        id: payload.id,
-        email: payload.email,
-        role: payload.role,
+        id: user.id,
+        email: user.email,
+        role: user.role,
       };
       return true;
     } catch {
