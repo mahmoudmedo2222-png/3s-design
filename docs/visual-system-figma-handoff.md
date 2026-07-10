@@ -338,14 +338,14 @@ Build work attempted:
 
 - Diagnosed production build failure as static generation conflicting with request cookie usage in `RootLayout`.
 - Added `export const dynamic = 'force-dynamic'` to `apps/web/app/layout.tsx`.
-- Removed the temporary `webpackBuildWorker` override from `apps/web/next.config.ts` so the config returns to the standard Next.js path.
+- Kept `experimental.webpackBuildWorker: false` in `apps/web/next.config.ts` because worker-backed builds were unstable on this Windows workspace.
 
 Verification:
 
 - Direct `next typegen` passed.
 - Direct `tsc -p tsconfig.json --noEmit` passed.
 - `@3s-design/web` tests passed.
-- Official `next build` is not yet reliable on this Windows workspace; it can exit after reporting an active build lock/worker. Keep this open until a clean production build completes from a fresh workspace state.
+- Official `corepack pnpm --filter @3s-design/web build` remains unstable on this local Node `24.18.0` Windows workspace and can exit while leaving a short-lived `.next/build` worker. Release gates must run on pinned Node `22.x`.
 
 ## Token Migration Pass 3-36
 
@@ -369,12 +369,14 @@ Updated counts after this pass:
 Verification:
 
 - Web typecheck passed.
-- Tailwind CSS generation passed through the production build.
-- Web build passed.
+- Web tests passed.
+- Production build is not accepted as verified until it passes under pinned Node `22.x`.
+- Local Node emitted an environment warning: project engines expect Node `>=22 <23`, while local Node is `24.18.0`.
 
 Next migration target:
 
 - Account/search surfaces still carrying hardcoded visual debt.
+- Local Node runtime drift should be cleaned up before heavier release verification.
 
 ## Screenshots Captured
 

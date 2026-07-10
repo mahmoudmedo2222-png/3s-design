@@ -1,7 +1,7 @@
 ---
 title: Beta Execution Roadmap
 status: active
-updated: 2026-07-09
+updated: 2026-07-10
 ---
 
 # Beta Execution Roadmap
@@ -21,7 +21,7 @@ Reason:
 
 ## Phase 0: Baseline and Safety
 
-Status: mostly complete.
+Status: active.
 
 Exit criteria:
 
@@ -29,12 +29,23 @@ Exit criteria:
 - Backend module map and route surface are documented.
 - Critical flows are listed.
 - Existing tests pass.
+- Release/runtime checks run on Node `22.x`.
+- `pnpm runtime:check:strict` passes before release-quality gates.
 
 Evidence:
 
 - `docs/ops/backend-phase-01-baseline.md`
 - `docs/ops/backend-phase-02-db-contract.md`
 - `pnpm --filter @3s-design/api test`
+- `.nvmrc`
+- `.node-version`
+- `scripts/verify-runtime.mjs`
+
+Current implementation note:
+
+- Node `22.x` is now the pinned project runtime.
+- Current local machine is still running Node `24.18.0`, so `pnpm runtime:check` warns and `pnpm runtime:check:strict` correctly fails until the runtime is switched.
+- Web `typecheck`, `lint`, and `test` still pass under the current local runtime, but release-quality gates should not be trusted until the strict runtime check passes.
 
 ## Phase 1: Database Contract
 

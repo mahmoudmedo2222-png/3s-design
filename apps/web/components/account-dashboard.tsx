@@ -170,7 +170,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
             </Link>
 
             <div className="mt-7">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded bg-[#f7d17e]/15 text-gold">
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded bg-gold/15 text-gold">
                 <ShieldCheck size={19} />
               </span>
               <h1 className="mt-4 text-2xl font-black">Sign in to open your client studio.</h1>
@@ -255,7 +255,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
             </div>
 
             {!user?.isEmailVerified ? (
-              <Notice tone="info" className="mt-5 border-[#f7d17e]/25 bg-[#f7d17e]/10 text-white">
+              <Notice tone="info" className="mt-5 border-gold/25 bg-gold/10 text-white">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <h2 className="text-lg font-black">Verify email before serious delivery.</h2>
@@ -268,12 +268,12 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
                     onClick={() => void sendVerification()}
                     icon={MailCheck}
                     intent="secondary"
-                    className="rounded-full bg-[#fff8e8] font-black hover:bg-[#f7d17e]"
+                    className="rounded-full bg-cream font-black hover:bg-gold"
                   >
                     Send verification
                   </Button>
                 </div>
-                {verificationMessage ? <p className="mt-3 text-sm font-bold text-[#f7d17e]">{verificationMessage}</p> : null}
+                {verificationMessage ? <p className="mt-3 text-sm font-bold text-gold">{verificationMessage}</p> : null}
                 {verificationToken ? (
                   <div className="mt-3 rounded border border-white/[0.12] bg-black/20 p-3">
                     <p className="text-xs font-black uppercase tracking-[0.14em] text-white/55">Development token</p>
@@ -292,15 +292,15 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
 
             <div className="mt-5 grid gap-3 md:grid-cols-2">
               <Button type="button" onClick={openAiFinder} intent="gold" className="group block h-auto rounded-lg p-4 text-start">
-                <BrainCircuit className="text-[#f7d17e] transition group-hover:text-[#101513]" size={21} />
+                <BrainCircuit className="text-gold transition group-hover:text-cream-ink" size={21} />
                 <h2 className="mt-3 text-lg font-black">Continue with AI finder</h2>
-                <p className="mt-2 text-sm leading-6 text-white/66 group-hover:text-[#101513]/75">
+                <p className="mt-2 text-sm leading-6 text-white/66 group-hover:text-cream-ink/75">
                   Tell us the feeling and unlock full matched pages because you are signed in.
                 </p>
               </Button>
 
               <ActionLink href="/?intro=0#latest-designs" intent="ghost" className="group block h-auto rounded-lg p-4 text-start">
-                <Search className="text-[#f7d17e]" size={21} />
+                <Search className="text-gold" size={21} />
                 <h2 className="mt-3 text-lg font-black">Browse staged designs</h2>
                 <p className="mt-2 text-sm leading-6 text-white/66">
                   Compare finished products, prices, moods, and commercial use before buying.
@@ -327,7 +327,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
 
           <Panel tone="glass" className="p-4">
             <div className="mb-4 flex items-center gap-2">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-gold/15 text-gold">
                 <BrainCircuit size={17} />
               </span>
               <div>
@@ -341,7 +341,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
                   <Link
                     key={search.id}
                     href={`/search?q=${encodeURIComponent(search.prompt)}` as Route}
-                    className="block rounded border border-white/[0.1] bg-white/[0.05] p-3 transition hover:-translate-y-0.5 hover:border-[#f7d17e]/45 hover:bg-white/[0.08]"
+                    className="block rounded border border-white/[0.1] bg-white/[0.05] p-3 transition hover:-translate-y-0.5 hover:border-gold/45 hover:bg-white/[0.08]"
                   >
                     <p className="line-clamp-2 text-sm font-black">{search.prompt}</p>
                     <p className="mt-1 text-xs text-white/55">
@@ -359,7 +359,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
 
           <Panel tone="glass" className="p-4">
             <div className="mb-4 flex items-center gap-2">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-gold/15 text-gold">
                 <ShoppingCart size={17} />
               </span>
               <div>
@@ -385,7 +385,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
 
           <Panel tone="glass" className="p-4">
             <div className="mb-4 flex items-center gap-2">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-[#f7d17e]/15 text-[#f7d17e]">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded bg-gold/15 text-gold">
                 <Download size={17} />
               </span>
               <div>
@@ -445,7 +445,7 @@ export function AccountDashboard({ locale }: { locale: AppLocale }) {
               onClick={() => void refreshWorkspace()}
               icon={ArrowUpRight}
               intent="secondary"
-              className="mt-4 rounded-full bg-[#fff8e8] font-black hover:bg-[#f7d17e]"
+              className="mt-4 rounded-full bg-cream font-black hover:bg-gold"
             >
               Refresh studio
             </Button>

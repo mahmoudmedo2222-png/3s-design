@@ -2,7 +2,7 @@ import { ArrowUpRight, Crown, Flame, HeartHandshake, Sparkles, Wand2 } from 'luc
 import type { Route } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { CompareTray } from '../components/compare-tray';
+import { CompareTrayLoader } from '../components/compare-tray-loader';
 import { CustomerTrustStrip } from '../components/customer-experience';
 import { DesignPreview } from '../components/design-preview';
 import {
@@ -14,7 +14,7 @@ import {
 } from '../components/home-deferred';
 import { IntentLink } from '../components/intent-link';
 import { ShowcaseHeader } from '../components/showcase-header';
-import { SiteIntro } from '../components/site-intro';
+import { SiteIntroLoader } from '../components/site-intro-loader';
 import { ActionLink, Badge, Panel } from '../components/ui';
 import { fetchBestSellers, fetchProducts, type ProductSummary } from '../lib/api';
 import { type AppLocale, homeCopy } from '../lib/locale';
@@ -39,9 +39,9 @@ export default async function HomePage() {
 
   return (
     <main className="showcase-page min-h-screen overflow-hidden text-white">
-      <SiteIntro />
+      <SiteIntroLoader />
       <ShowcaseHeader locale={locale} />
-      <CompareTray />
+      <CompareTrayLoader />
 
       <section className="hero-stage relative overflow-hidden px-4 pb-8 pt-24 sm:px-6 lg:px-8">
         <Image src="/intro/cinematic-03.png" alt="" fill priority sizes="100vw" className="object-cover opacity-[0.34]" />

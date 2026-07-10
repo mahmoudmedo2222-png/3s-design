@@ -23,7 +23,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { BrandMirror } from '../../../components/brand-mirror';
 import { CartButton } from '../../../components/cart-button';
-import { CompareTray } from '../../../components/compare-tray';
+import { CompareTrayLoader } from '../../../components/compare-tray-loader';
 import {
   BuyerDecisionCard,
   ConfidenceBadge,
@@ -162,7 +162,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
           </div>
         </div>
       </header>
-      <CompareTray />
+      <CompareTrayLoader />
 
       <div className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
         <section className="space-y-5">
@@ -642,10 +642,7 @@ function DeliveryAssetList({ product }: { product: ProductDetail }) {
       </div>
       <div className="mt-3 grid gap-2">
         {deliveryAssets.slice(0, 5).map((asset) => (
-          <div
-            key={asset.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded border border-line bg-surface p-2"
-          >
+          <div key={asset.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-line bg-surface p-2">
             <span className="min-w-0 truncate text-xs font-black text-ink">{asset.fileName}</span>
             <span className="shrink-0 rounded bg-pine/10 px-2 py-1 text-[0.68rem] font-black text-pine">{asset.mimeType}</span>
           </div>
